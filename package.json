@@ -3,10 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
-    "dev": "next dev",
-    "lint": "next lint",
-    "start": "next start"
+    "dev": "webpack serve --config webpack.config.js --mode development",
+    "build": "webpack --config webpack.config.js --mode production",
+    "preview": "npx http-server ./dist -c-1 -o"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -46,13 +45,13 @@
     "geist": "latest",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "next": "15.2.4",
     "next-themes": "^0.4.6",
-    "react": "^19",
+    "react": "^18.3.1",
     "react-day-picker": "9.8.0",
-    "react-dom": "^19",
+    "react-dom": "^18.3.1",
     "react-hook-form": "^7.60.0",
     "react-resizable-panels": "^2.1.7",
+    "react-router-dom": "^6.26.2",
     "recharts": "2.15.4",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",
@@ -63,11 +62,21 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^22",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "copy-webpack-plugin": "^12.0.2",
+    "css-loader": "^7.1.2",
+    "html-webpack-plugin": "^5.6.0",
+    "http-server": "^14.1.1",
     "postcss": "^8.5",
+    "postcss-loader": "^8.1.1",
+    "style-loader": "^4.0.0",
     "tailwindcss": "^4.1.9",
+    "ts-loader": "^9.5.1",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.0.4"
   }
 }
