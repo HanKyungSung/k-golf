@@ -120,7 +120,7 @@ export default function HomePage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
                 </div>
@@ -197,196 +197,123 @@ export default function HomePage() {
       <section id="pricing" className="py-20 bg-slate-900/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h3 className="text-4xl font-bold text-white mb-4">Premium Packages</h3>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Choose the perfect experience for your game</p>
+            <h3 className="text-4xl font-bold text-white mb-4">Simple Pricing</h3>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+              All 4 rooms are identical with the same premium experience - just pick your preferred time slot
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Standard Package */}
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-              <CardContent className="p-8">
-                <div className="text-center mb-8">
-                  <h4 className="text-xl font-semibold text-white mb-2">Standard Suite</h4>
-                  <div className="text-3xl font-bold text-amber-400 mb-1">$45</div>
-                  <div className="text-slate-400">per hour</div>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    HD Simulator Experience
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    50+ Golf Courses
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Basic Analytics
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Up to 4 Players
-                  </li>
-                </ul>
-                <Button className="w-full bg-slate-700 hover:bg-slate-600 text-white">Book Standard</Button>
-              </CardContent>
-            </Card>
 
-            {/* Premium Package */}
+          <div className="max-w-2xl mx-auto">
             <Card className="bg-gradient-to-b from-amber-500/10 to-yellow-500/10 border-amber-500/50 backdrop-blur-sm relative">
               <div className="absolute top-4 right-4 bg-amber-500 text-slate-900 px-3 py-1 rounded-full text-sm font-semibold">
-                Popular
+                All Rooms
               </div>
-              <CardContent className="p-8">
-                <div className="text-center mb-8">
-                  <h4 className="text-xl font-semibold text-white mb-2">Premium Suite</h4>
-                  <div className="text-3xl font-bold text-amber-400 mb-1">$75</div>
-                  <div className="text-slate-400">per hour</div>
+              <CardContent className="p-8 text-center">
+                <div className="mb-8">
+                  <h4 className="text-2xl font-semibold text-white mb-4">Premium Screen Golf Experience</h4>
+                  <div className="text-4xl font-bold text-amber-400 mb-2">$50</div>
+                  <div className="text-slate-400 text-lg">per person/hour</div>
+                  <div className="text-sm text-slate-500 mt-2">Max 4 players per room</div>
                 </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    4K Ultra HD Experience
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    150+ Premium Courses
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Advanced AI Analytics
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Premium Refreshments
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Up to 6 Players
-                  </li>
-                </ul>
-                <Button className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold">
-                  Book Premium
-                </Button>
-              </CardContent>
-            </Card>
 
-            {/* VIP Package */}
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-              <CardContent className="p-8">
-                <div className="text-center mb-8">
-                  <h4 className="text-xl font-semibold text-white mb-2">VIP Experience</h4>
-                  <div className="text-3xl font-bold text-amber-400 mb-1">$120</div>
-                  <div className="text-slate-400">per hour</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 text-left">
+                  <ul className="space-y-3 text-sm">
+                    <li className="flex items-center text-slate-300">
+                      <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      4K Ultra HD Display
+                    </li>
+                    <li className="flex items-center text-slate-300">
+                      <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      200+ Premium Golf Courses
+                    </li>
+                    <li className="flex items-center text-slate-300">
+                      <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Advanced Swing Analytics
+                    </li>
+                  </ul>
+                  <ul className="space-y-3 text-sm">
+                    <li className="flex items-center text-slate-300">
+                      <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Climate Controlled Suite
+                    </li>
+                    <li className="flex items-center text-slate-300">
+                      <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Premium Refreshments
+                    </li>
+                    <li className="flex items-center text-slate-300">
+                      <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Professional Equipment
+                    </li>
+                  </ul>
                 </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Private Luxury Suite
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    All Premium Courses
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Personal Golf Pro
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Gourmet Catering
-                  </li>
-                  <li className="flex items-center text-slate-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Up to 8 Players
-                  </li>
-                </ul>
-                <Button className="w-full bg-slate-700 hover:bg-slate-600 text-white">Book VIP</Button>
+
+                <Link href="/booking">
+                  <Button className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold text-lg py-4 shadow-lg">
+                    Book Your Room Now
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
+          </div>
+
+          <div className="mt-12 text-center">
+            <div className="bg-slate-800/30 border border-slate-700 rounded-xl p-6 max-w-3xl mx-auto">
+              <h4 className="text-lg font-semibold text-white mb-3">How Pricing Works</h4>
+              <p className="text-slate-300 mb-4">
+                Simple and transparent - each person gets 1 full hour of screen golf time. All 4 rooms offer the same
+                premium experience.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <div className="text-amber-400 font-semibold">1 Player</div>
+                  <div className="text-slate-400">1 hour × $50 = $50</div>
+                </div>
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <div className="text-amber-400 font-semibold">3 Players</div>
+                  <div className="text-slate-400">3 hours × $50 = $150</div>
+                </div>
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <div className="text-amber-400 font-semibold">4 Players</div>
+                  <div className="text-slate-400">4 hours × $50 = $200</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -4,7 +4,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/hooks/use-auth"
@@ -15,8 +14,9 @@ interface Room {
   id: string
   name: string
   capacity: number
-  hourlyRate: number
-  halfHourRate: number
+  standardRate: number
+  premiumRate: number
+  vipRate: number
   features: string[]
   image: string
   premium: boolean
@@ -25,74 +25,76 @@ interface Room {
 interface TimeSlot {
   time: string
   available: boolean
-  price: number
 }
 
 const rooms: Room[] = [
   {
     id: "1",
-    name: "Premium Suite A",
+    name: "Room 1",
     capacity: 4,
-    hourlyRate: 80,
-    halfHourRate: 45,
-    features: ["4K Display", "Premium Sound", "Climate Control", "Refreshments"],
-    image: "/luxury-golf-simulator-room.png",
-    premium: true,
-  },
-  {
-    id: "2",
-    name: "Standard Room B",
-    capacity: 2,
-    hourlyRate: 50,
-    halfHourRate: 30,
-    features: ["HD Display", "Sound System", "Air Conditioning"],
+    standardRate: 50,
+    premiumRate: 50,
+    vipRate: 50,
+    features: ["4K Ultra HD", "200+ Golf Courses", "Advanced Analytics", "Premium Suite"],
     image: "/golf-simulator-room.png",
     premium: false,
   },
   {
+    id: "2",
+    name: "Room 2",
+    capacity: 4,
+    standardRate: 50,
+    premiumRate: 50,
+    vipRate: 50,
+    features: ["4K Ultra HD", "200+ Golf Courses", "Advanced Analytics", "Premium Suite"],
+    image: "/luxury-golf-simulator-room.png",
+    premium: false,
+  },
+  {
     id: "3",
-    name: "Group Suite C",
-    capacity: 8,
-    hourlyRate: 120,
-    halfHourRate: 70,
-    features: ["Ultra 4K Display", "Surround Sound", "VIP Lounge", "Catering Service"],
+    name: "Room 3",
+    capacity: 4,
+    standardRate: 50,
+    premiumRate: 50,
+    vipRate: 50,
+    features: ["4K Ultra HD", "200+ Golf Courses", "Advanced Analytics", "Premium Suite"],
     image: "/large-golf-simulator-suite.png",
-    premium: true,
+    premium: false,
+  },
+  {
+    id: "4",
+    name: "Room 4",
+    capacity: 4,
+    standardRate: 50,
+    premiumRate: 50,
+    vipRate: 50,
+    features: ["4K Ultra HD", "200+ Golf Courses", "Advanced Analytics", "Premium Suite"],
+    image: "/golf-simulator-room.png",
+    premium: false,
   },
 ]
 
 const timeSlots: TimeSlot[] = [
-  { time: "09:00", available: true, price: 50 },
-  { time: "09:30", available: true, price: 30 },
-  { time: "10:00", available: true, price: 50 },
-  { time: "10:30", available: false, price: 30 },
-  { time: "11:00", available: false, price: 50 },
-  { time: "11:30", available: true, price: 30 },
-  { time: "12:00", available: true, price: 60 },
-  { time: "12:30", available: true, price: 35 },
-  { time: "13:00", available: true, price: 60 },
-  { time: "13:30", available: true, price: 35 },
-  { time: "14:00", available: true, price: 60 },
-  { time: "14:30", available: false, price: 35 },
-  { time: "15:00", available: false, price: 60 },
-  { time: "15:30", available: true, price: 35 },
-  { time: "16:00", available: true, price: 70 },
-  { time: "16:30", available: true, price: 40 },
-  { time: "17:00", available: true, price: 70 },
-  { time: "17:30", available: true, price: 40 },
-  { time: "18:00", available: true, price: 80 },
-  { time: "18:30", available: false, price: 45 },
-  { time: "19:00", available: false, price: 80 },
-  { time: "19:30", available: true, price: 45 },
-  { time: "20:00", available: true, price: 80 },
-  { time: "20:30", available: true, price: 45 },
+  { time: "09:00", available: true },
+  { time: "10:00", available: true },
+  { time: "11:00", available: false },
+  { time: "12:00", available: true },
+  { time: "13:00", available: true },
+  { time: "14:00", available: true },
+  { time: "15:00", available: false },
+  { time: "16:00", available: true },
+  { time: "17:00", available: true },
+  { time: "18:00", available: true },
+  { time: "19:00", available: false },
+  { time: "20:00", available: true },
+  { time: "21:00", available: true },
 ]
 
 export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [selectedRoom, setSelectedRoom] = useState<string>("")
   const [selectedTime, setSelectedTime] = useState<string>("")
-  const [duration, setDuration] = useState<string>("1")
+  const [numberOfPlayers, setNumberOfPlayers] = useState<string>("1")
   const { user } = useAuth()
   const router = useRouter()
 
@@ -109,33 +111,31 @@ export default function BookingPage() {
 
     // Mock booking process
     alert(
-      `Booking confirmed!\nRoom: ${rooms.find((r) => r.id === selectedRoom)?.name}\nDate: ${selectedDate.toDateString()}\nTime: ${selectedTime}\nDuration: ${duration === "0.5" ? "30 minutes" : `${duration} hour(s)`}`,
+      `Booking confirmed!\nRoom: ${rooms.find((r) => r.id === selectedRoom)?.name}\nDate: ${selectedDate.toDateString()}\nTime: ${selectedTime}\nPlayers: ${numberOfPlayers}\nTotal Hours: ${numberOfPlayers}`,
     )
     router.push("/dashboard")
   }
 
   const selectedRoomData = rooms.find((r) => r.id === selectedRoom)
-  const selectedTimeData = timeSlots.find((t) => t.time === selectedTime)
 
   const calculatePrice = () => {
     if (!selectedRoomData) return 0
-    const durationNum = Number.parseFloat(duration)
-    if (durationNum === 0.5) {
-      return selectedRoomData.halfHourRate
-    }
-    return selectedRoomData.hourlyRate * durationNum
+    const players = Number.parseInt(numberOfPlayers)
+    const ratePerPerson = 50 // Fixed rate for all rooms
+    return ratePerPerson * players
   }
 
   const totalPrice = calculatePrice()
+  const totalHours = Number.parseInt(numberOfPlayers)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black">
+    <div className="min-h-screen bg-slate-950">
       {/* Header */}
-      <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700">
+      <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">
                 K-Golf
               </h1>
               <span className="ml-2 text-sm text-slate-400">Premium Screen Golf</span>
@@ -172,7 +172,7 @@ export default function BookingPage() {
         <div className="mb-8">
           <h2 className="text-4xl font-bold text-white mb-2">Book Your Premium Experience</h2>
           <p className="text-slate-400 text-lg">
-            Select your preferred room, date, and time slot for the ultimate screen golf experience
+            Choose from our 4 identical premium rooms. Each player gets 1 hour of screen golf time at $50 per person.
           </p>
         </div>
 
@@ -182,9 +182,9 @@ export default function BookingPage() {
             <div>
               <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
                 <Star className="h-6 w-6 text-amber-400" />
-                Choose Your Room
+                Choose Your Room (All Identical)
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 {rooms.map((room) => (
                   <Card
                     key={room.id}
@@ -200,36 +200,19 @@ export default function BookingPage() {
                         <img
                           src={room.image || "/placeholder.svg"}
                           alt={room.name}
-                          className="w-full h-40 object-cover rounded-lg mb-4"
+                          className="w-full h-24 object-cover rounded-lg mb-3"
                         />
-                        {room.premium && (
-                          <Badge className="absolute top-2 right-2 bg-amber-500 text-black font-semibold">
-                            Premium
-                          </Badge>
-                        )}
                       </div>
-                      <CardTitle className="text-xl text-white">{room.name}</CardTitle>
-                      <CardDescription className="text-slate-400 flex items-center gap-4">
-                        <span className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          Up to {room.capacity} players
-                        </span>
-                        <span className="text-amber-400 font-semibold">
-                          ${room.halfHourRate}/30min • ${room.hourlyRate}/hour
-                        </span>
+                      <CardTitle className="text-base text-white">{room.name}</CardTitle>
+                      <CardDescription className="text-slate-400 flex items-center gap-2 text-sm">
+                        <Users className="h-3 w-3" />
+                        Up to {room.capacity} players
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {room.features.map((feature) => (
-                          <Badge
-                            key={feature}
-                            variant="secondary"
-                            className="bg-slate-700 text-slate-300 border-slate-600"
-                          >
-                            {feature}
-                          </Badge>
-                        ))}
+                    <CardContent className="pt-0">
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-amber-400">$50</div>
+                        <div className="text-xs text-slate-400">per person/hour</div>
                       </div>
                     </CardContent>
                   </Card>
@@ -263,9 +246,9 @@ export default function BookingPage() {
                       <Button
                         key={slot.time}
                         variant={selectedTime === slot.time ? "default" : "outline"}
-                        className={`h-14 ${
+                        className={`h-12 ${
                           selectedTime === slot.time
-                            ? "bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                            ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold"
                             : slot.available
                               ? "border-slate-600 text-slate-300 hover:border-amber-500/50 hover:bg-slate-700/50 bg-slate-800/50"
                               : "opacity-30 cursor-not-allowed bg-slate-900/50 border-slate-800"
@@ -273,12 +256,7 @@ export default function BookingPage() {
                         disabled={!slot.available}
                         onClick={() => setSelectedTime(slot.time)}
                       >
-                        <div className="text-center">
-                          <div className="font-medium text-base">{slot.time}</div>
-                          <div className="text-xs opacity-75">
-                            {slot.time.includes(":30") ? "30min slot" : "1hr slot"}
-                          </div>
-                        </div>
+                        {slot.time}
                       </Button>
                     ))}
                   </div>
@@ -290,7 +268,7 @@ export default function BookingPage() {
           {/* Booking Summary */}
           <div className="lg:col-span-1">
             <Card className="sticky top-4 bg-slate-800/50 border-slate-700 shadow-xl">
-              <CardHeader className="bg-gradient-to-r from-amber-500/10 to-amber-600/10 border-b border-slate-700">
+              <CardHeader className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-b border-slate-700">
                 <CardTitle className="text-white text-xl">Booking Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6 p-6">
@@ -302,9 +280,30 @@ export default function BookingPage() {
                         <Users className="h-4 w-4" />
                         Up to {selectedRoomData.capacity} players
                       </p>
-                      {selectedRoomData.premium && (
-                        <Badge className="bg-amber-500 text-black font-semibold">Premium Experience</Badge>
-                      )}
+                      <div className="text-amber-400 font-semibold">$50 per person/hour</div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block font-semibold text-white">Number of Players</label>
+                      <Select value={numberOfPlayers} onValueChange={setNumberOfPlayers}>
+                        <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-700">
+                          <SelectItem value="1" className="text-white hover:bg-slate-700">
+                            1 Player (1 hour total)
+                          </SelectItem>
+                          <SelectItem value="2" className="text-white hover:bg-slate-700">
+                            2 Players (2 hours total)
+                          </SelectItem>
+                          <SelectItem value="3" className="text-white hover:bg-slate-700">
+                            3 Players (3 hours total)
+                          </SelectItem>
+                          <SelectItem value="4" className="text-white hover:bg-slate-700">
+                            4 Players (4 hours total)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     {selectedDate && (
@@ -318,39 +317,10 @@ export default function BookingPage() {
 
                     {selectedTime && (
                       <div className="space-y-2">
-                        <p className="font-semibold text-white">Time</p>
+                        <p className="font-semibold text-white">Start Time</p>
                         <p className="text-slate-300 bg-slate-700/50 px-3 py-2 rounded-md">{selectedTime}</p>
                       </div>
                     )}
-
-                    <div className="space-y-2">
-                      <label className="block font-semibold text-white">Duration</label>
-                      <Select value={duration} onValueChange={setDuration}>
-                        <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-800 border-slate-700">
-                          <SelectItem value="0.5" className="text-white hover:bg-slate-700">
-                            30 minutes
-                          </SelectItem>
-                          <SelectItem value="1" className="text-white hover:bg-slate-700">
-                            1 hour
-                          </SelectItem>
-                          <SelectItem value="1.5" className="text-white hover:bg-slate-700">
-                            1.5 hours
-                          </SelectItem>
-                          <SelectItem value="2" className="text-white hover:bg-slate-700">
-                            2 hours
-                          </SelectItem>
-                          <SelectItem value="3" className="text-white hover:bg-slate-700">
-                            3 hours
-                          </SelectItem>
-                          <SelectItem value="4" className="text-white hover:bg-slate-700">
-                            4 hours
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
 
                     <div className="border-t border-slate-700 pt-6">
                       <div className="flex justify-between items-center mb-4">
@@ -358,13 +328,14 @@ export default function BookingPage() {
                         <span className="text-3xl font-bold text-amber-400">${totalPrice}</span>
                       </div>
                       <div className="text-xs text-slate-400 mb-4">
-                        {duration === "0.5" ? "30-minute session" : `${duration} hour session`}
+                        {numberOfPlayers} player{numberOfPlayers !== "1" ? "s" : ""} × {totalHours} hour
+                        {totalHours !== 1 ? "s" : ""} total
                       </div>
                     </div>
 
                     <Button
                       onClick={handleBooking}
-                      className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold py-3 text-lg shadow-lg"
+                      className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold py-3 text-lg shadow-lg"
                       disabled={!selectedTime || !selectedDate}
                     >
                       {user ? "Confirm Booking" : "Login to Book"}
