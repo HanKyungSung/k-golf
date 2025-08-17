@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "dev": "concurrently \"npm:dev:frontend\" \"npm:dev:backend\"",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "dev:backend": "npm --workspace backend run dev",
+    "build": "npm --workspace backend run build && npm --workspace frontend run build",
+    "build:frontend": "npm --workspace frontend run build",
+    "build:backend": "npm --workspace backend run build",
+    "start:backend": "npm --workspace backend run start",
+    "preview:frontend": "npm --workspace frontend run preview",
+    "lint": "npm --workspace backend run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
