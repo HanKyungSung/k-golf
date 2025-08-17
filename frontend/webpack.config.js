@@ -20,8 +20,6 @@ module.exports = {
     extensions: ['.tsx', '.ts', '.jsx', '.js'],
     alias: {
       '@': path.resolve(__dirname, './'),
-      'next/link': path.resolve(__dirname, 'src/shims/next-link.tsx'),
-      'next/navigation': path.resolve(__dirname, 'src/shims/next-navigation.ts'),
     },
   },
   module: {

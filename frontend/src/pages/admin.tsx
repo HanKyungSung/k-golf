@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
+import { useNavigate, Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -76,7 +75,7 @@ const mockRooms: Room[] = [
 
 export default function AdminPage() {
   const { user, logout } = useAuth()
-  const router = useRouter()
+  const navigate = useNavigate()
   const [bookings, setBookings] = useState<AdminBooking[]>(mockBookings)
   const [rooms, setRooms] = useState<Room[]>(mockRooms)
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0])
@@ -84,9 +83,9 @@ export default function AdminPage() {
   useEffect(() => {
     // In a real app, check if user is admin
     if (!user) {
-      router.push("/login")
+      navigate('/login')
     }
-  }, [user, router])
+  }, [user, navigate])
 
   if (!user) {
     return null
@@ -132,7 +131,7 @@ export default function AdminPage() {
       <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center">
+            <Link to="/" className="flex items-center">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
                 K-Golf
               </h1>
@@ -140,7 +139,7 @@ export default function AdminPage() {
             </Link>
             <div className="flex items-center gap-4">
               <span className="text-sm text-slate-300">Admin: {user.name}</span>
-              <Link href="/dashboard">
+              <Link to="/dashboard">
                 <Button
                   variant="outline"
                   className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 bg-transparent"

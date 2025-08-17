@@ -1,9 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/use-auth"
 
 interface AdminRouteProps {
@@ -12,14 +11,14 @@ interface AdminRouteProps {
 
 export function AdminRoute({ children }: AdminRouteProps) {
   const { user } = useAuth()
-  const router = useRouter()
+  const navigate = useNavigate()
 
   useEffect(() => {
     // In a real app, check if user has admin role
     if (!user) {
-      router.push("/login")
+      navigate("/login")
     }
-  }, [user, router])
+  }, [user, navigate])
 
   if (!user) {
     return (

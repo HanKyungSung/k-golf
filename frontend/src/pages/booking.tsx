@@ -1,13 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/hooks/use-auth"
-import Link from "next/link"
 import { Clock, Users, Star } from "lucide-react"
 
 interface Room {
@@ -96,11 +95,11 @@ export default function BookingPage() {
   const [selectedTime, setSelectedTime] = useState<string>("")
   const [numberOfPlayers, setNumberOfPlayers] = useState<string>("1")
   const { user } = useAuth()
-  const router = useRouter()
+  const navigate = useNavigate()
 
   const handleBooking = () => {
     if (!user) {
-      router.push("/login")
+      navigate('/login')
       return
     }
 
@@ -113,7 +112,7 @@ export default function BookingPage() {
     alert(
       `Booking confirmed!\nRoom: ${rooms.find((r) => r.id === selectedRoom)?.name}\nDate: ${selectedDate.toDateString()}\nTime: ${selectedTime}\nPlayers: ${numberOfPlayers}\nTotal Hours: ${numberOfPlayers}`,
     )
-    router.push("/dashboard")
+    navigate('/dashboard')
   }
 
   const selectedRoomData = rooms.find((r) => r.id === selectedRoom)
@@ -134,7 +133,7 @@ export default function BookingPage() {
       <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center">
+            <Link to="/" className="flex items-center">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">
                 K-Golf
               </h1>
@@ -144,7 +143,7 @@ export default function BookingPage() {
               {user ? (
                 <>
                   <span className="text-sm text-slate-300">Welcome, {user.name}</span>
-                  <Link href="/dashboard">
+                  <Link to="/dashboard">
                     <Button
                       variant="outline"
                       className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 bg-transparent"
@@ -154,7 +153,7 @@ export default function BookingPage() {
                   </Link>
                 </>
               ) : (
-                <Link href="/login">
+                <Link to="/login">
                   <Button
                     variant="outline"
                     className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 bg-transparent"

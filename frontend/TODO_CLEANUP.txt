@@ -1,0 +1,19 @@
+Remove legacy Next-style app/ directory when confident all components migrated to react-router.
+
+Completed:
+- Removed app/ directory & Next special files
+- Repointed global styles to styles/globals.css
+- Replaced all next/link & next/navigation usages
+- Added new HomePage at src/pages/home.tsx
+
+Pending:
+- Remove unused dependencies (geist, next-themes if not needed)
+- Decide on dark mode strategy without next-themes (or keep if working)
+- Integrate backend API for bookings
+- Implement PostgreSQL/Prisma
+
+Verify:
+- No imports from 'next/link' or 'next/navigation'
+- No usage of useRouter
+- All navigation uses react-router-dom Link/useNavigate
+- App.tsx only imports from src/pages/*

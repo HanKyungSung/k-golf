@@ -1,5 +1,5 @@
 "use client"
-import Link from "next/link"
+import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -36,7 +36,7 @@ const DashboardPage = () => {
       <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center">
+            <Link to="/" className="flex items-center">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
                 K-Golf
               </h1>
@@ -70,7 +70,7 @@ const DashboardPage = () => {
               <CardDescription className="text-slate-400">Book your next premium screen golf session</CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/booking">
+              <Link to="/booking">
                 <Button className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold">
                   Book Now
                 </Button>

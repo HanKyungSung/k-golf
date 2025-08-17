@@ -1,8 +1,14 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+// Added client directive for consistency with other pages
+"use client"
+
+// Replace Next.js Link with react-router-dom Link and integrate auth
+import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function HomePage() {
+  const { user, logout } = useAuth()
   return (
     <div className="min-h-screen bg-slate-950">
       {/* Header */}
@@ -30,19 +36,41 @@ export default function HomePage() {
               </a>
             </nav>
             <div className="flex items-center gap-4">
-              <Link href="/login">
-                <Button
-                  variant="outline"
-                  className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 bg-transparent"
-                >
-                  Login
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold">
-                  Sign Up
-                </Button>
-              </Link>
+              {user ? (
+                <>
+                  <Link to="/dashboard">
+                    <Button
+                      variant="outline"
+                      className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 bg-transparent"
+                    >
+                      Dashboard
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    onClick={logout}
+                    className="border-red-400/50 text-red-400 hover:bg-red-500/10 bg-transparent"
+                  >
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login">
+                    <Button
+                      variant="outline"
+                      className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 bg-transparent"
+                    >
+                      Login
+                    </Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold">
+                      Sign Up
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -65,7 +93,7 @@ export default function HomePage() {
               world-renowned courses. Where technology meets luxury.
             </p>
             <div className="mt-12 flex flex-col sm:flex-row justify-center gap-6">
-              <Link href="/booking">
+              <Link to="/booking">
                 <Button
                   size="lg"
                   className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold text-lg px-10 py-4 shadow-2xl shadow-amber-500/25"
@@ -283,7 +311,7 @@ export default function HomePage() {
                   </ul>
                 </div>
 
-                <Link href="/booking">
+                <Link to="/booking">
                   <Button className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold text-lg py-4 shadow-lg">
                     Book Your Room Now
                   </Button>
@@ -302,15 +330,15 @@ export default function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div className="bg-slate-900/50 rounded-lg p-4">
                   <div className="text-amber-400 font-semibold">1 Player</div>
-                  <div className="text-slate-400">1 hour × $50 = $50</div>
+                  <div className="text-slate-400">1 hour x $50 = $50</div>
                 </div>
                 <div className="bg-slate-900/50 rounded-lg p-4">
                   <div className="text-amber-400 font-semibold">3 Players</div>
-                  <div className="text-slate-400">3 hours × $50 = $150</div>
+                  <div className="text-slate-400">3 hours x $50 = $150</div>
                 </div>
                 <div className="bg-slate-900/50 rounded-lg p-4">
                   <div className="text-amber-400 font-semibold">4 Players</div>
-                  <div className="text-slate-400">4 hours × $50 = $200</div>
+                  <div className="text-slate-400">4 hours x $50 = $200</div>
                 </div>
               </div>
             </div>
