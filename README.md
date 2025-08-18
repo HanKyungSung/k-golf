@@ -77,12 +77,121 @@ PostgreSQL service defined (see `docker-compose.yml`). Useful scripts in root `p
 - `npm run db:up` / `db:down` / `db:logs` / `db:ps` / `db:exec`.
 
 ## Planned Next Steps
-1. Add Prisma & migrations for booking backend.
-2. Implement POS domain schema with Drizzle (dual: SQLite + Postgres) or reuse Prisma (less ideal for dual engines).
-3. Build POS sync engine (operations queue + push/pull endpoints) and server endpoints.
-4. Add printing service (start with mock; integrate real ESC/POS or system print).
-5. Implement auth & secure LAN access tokens.
-6. Integrate frontend booking app with real backend persistence & auth.
+The immediate priority is to COMPLETE the customer booking web application (rooms, bookings, authentication, pricing) before investing further in the POS hub. Below is a phased, granular roadmap with clear DONE / NEXT indicators.
+
+### Legend
+- ✅ Done
+- 🔜 In progress / next action
+- ⏭ Scheduled (later phase)
+
+### Phase 0 – Current State (Baseline)
+- ✅ Frontend React SPA (routing migrated off Next.js)
+- ✅ Dockerized PostgreSQL running locally (`db` service)
+- ✅ In‑memory booking endpoints (temporary)
+- ✅ Pricing rule defined ($50 * players * hours, hours = players)
+- 🔜 Persistence layer not yet implemented (Prisma + migrations)
+
+### Phase 1 – Persistence Foundation (Database + ORM)
+1. 🔜 Add dependencies to `backend`:
+  - `prisma`, `@prisma/client`, (dev) `ts-node`, `tsx` if needed
+2. Create `backend/prisma/schema.prisma` with models:
+  - `User`, `AuthProvider`, `VerificationToken`, `Session`
+  - `Room` (capacity, active)
+  - `Booking` (roomId, userId, startTime, endTime, players, priceCents, status)
+3. Add PostgreSQL extensions migration (if using EXCLUDE constraint requires `btree_gist`).
+4. Run: `npx prisma migrate dev --name init` (writes migrations folder)
+5. Implement a seed script (`backend/prisma/seed.ts`) to insert initial rooms (e.g., 4 demo simulators).
+6. Add npm scripts:
+  - `db:migrate`, `db:generate`, `db:seed`
+7. Verify DB objects exist (inspect via `psql` or Prisma Studio).
+
+### Phase 2 – Booking Domain Implementation (Server)
+1. Replace in‑memory storage with Prisma repository modules:
+  - `repositories/bookingRepo.ts`
+  - `repositories/roomRepo.ts`
+2. Add overlap prevention:
+  - Option A: EXCLUDE constraint on `(room_id WITH =, tstzrange(start_time, end_time) WITH &&)`
+  - Option B: Serializable transaction + manual check (fallback)
+3. Unified price calculation util (single source of truth) used in POST /bookings.
+4. Endpoints (REST):
+  - `GET /api/rooms` (list active rooms)
+  - `GET /api/availability?roomId=&date=` (returns 30/60‑min slots with booking status)
+  - `POST /api/bookings` (payload: roomId, startTime, players) → validates capacity & pricing
+  - `GET /api/bookings/:id`
+  - `GET /api/bookings` (current user’s bookings)
+  - `PATCH /api/bookings/:id/cancel` (soft cancel if > threshold time)
+5. Central error handler + zod schemas for request validation.
+
+### Phase 3 – Authentication & Sessions
+1. Email magic link / OTP:
+  - `POST /auth/request` (email) → create `VerificationToken`
+  - `POST /auth/verify` (token or code) → upsert user, issue session cookie
+2. Google OAuth:
+  - Frontend obtains credential (Google Identity Services) → `POST /auth/google` with ID token
+  - Backend verifies token, upserts provider row
+3. Session strategy:
+  - Signed httpOnly cookie (JWT with userId + sessionId) or DB `Session` table with rolling expiration
+4. Middleware: `requireAuth` attaches `req.user`.
+5. `GET /auth/me` endpoint returns user profile + basic stats.
+
+### Phase 4 – Frontend Integration (Bookings + Auth)
+1. Update `useAuth` hook to call backend (`/auth/me`, login flows) instead of localStorage mock.
+2. Build authentication screens (login, signup / request code, verify code).
+3. Replace booking form submit: POST to `/api/bookings` + show success + redirect to dashboard.
+4. Availability view: call `/api/availability` to disable already booked or invalid slots.
+5. Dashboard page: fetch real bookings, render status, allow cancellation.
+6. Global error + toast handling for API failures (network, validation, auth expiry).
+
+### Phase 5 – Validation, Pricing & Edge Cases
+1. Server rejects: overlapping booking, players > room capacity, startTime in past, endTime beyond hours of operation.
+2. Add hours-of-operation config (e.g., 08:00–22:00) and enforce.
+3. Round start times to slot size (e.g., 60 min) server-side.
+4. Price recalculation on every GET of booking (avoid stale storing other than canonical `price_cents`).
+5. Cancellation window rule (e.g., cannot cancel within 1 hour of start) enforced in endpoint.
+
+### Phase 6 – Observability & Quality
+1. Logging: pino logger with request ID middleware.
+2. Metrics stub (expose `/metrics` for future Prometheus) – optional.
+3. Health endpoints: `/healthz` (basic), `/readyz` (DB connectivity check).
+4. Tests:
+  - Unit: price calculator, availability logic.
+  - Integration: booking creation + overlap rejection.
+5. Add Prisma seed test data for local dev convenience.
+
+### Phase 7 – Security Hardening
+1. CORS: restrict allowed origins (env list).
+2. Rate limiting: lightweight in-memory or Redis (later) on auth + booking creation.
+3. Helmet middleware (selected headers) – adjust for SPA.
+4. Secure cookies (SameSite=Lax, Secure in prod, HttpOnly) + CSRF token for non-GET if required.
+5. Input sanitization / output escaping where needed.
+
+### Phase 8 – Deployment & Environments
+1. Backend Dockerfile (multi-stage: build + runtime slim).
+2. Compose override for production (expose only necessary ports, persistent volume for Postgres).
+3. Nginx reverse proxy (TLS termination, compress, cache static frontend build).
+4. Environment variable matrix (dev, staging, prod) documented.
+5. Automated migration step on container start (`prisma migrate deploy`).
+
+### Phase 9 – Documentation & Cleanup
+1. Update README with actual API contract examples.
+2. Remove unused legacy packages (e.g., `next-themes` if abandoned).
+3. Consolidate shared utility functions (pricing, time) into a module.
+4. Add architectural decision records (ADR) for: ORM choice, auth strategy, booking overlap enforcement.
+5. Prepare POS integration prerequisites (shared types package) – ⏭ after web app stable.
+
+### Phase 10 – (Optional) Enhancements
+- WebSocket push for booking updates (optimistic UI improvement).
+- Admin reporting endpoints (revenue by day, utilization %).
+- Email notifications (booking confirmation, reminders, cancellations).
+- Rate / dynamic pricing rules (holiday, peak hours) abstraction.
+
+### Immediate Next Action (Recommended Now)
+Implement Phase 1 steps 1–3:
+1. Add Prisma dependencies & init (`npx prisma init`).
+2. Write `schema.prisma` with core models.
+3. Run first migration.
+
+After that, seed rooms and refactor booking endpoints to use Prisma (Phase 2 part 1). Request “add prisma now” when ready and we’ll perform those edits.
 
 ## Getting Started (Current)
 ```
