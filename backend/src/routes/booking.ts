@@ -1,59 +1,62 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { createBooking, findConflict, listBookings } from '../repositories/bookingRepo';
 
 const router = Router();
 
-// Simple in-memory store (replace with DB later)
-interface Booking {
-  id: string;
-  roomId: string;
-  date: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  players: number;
-  hours: number;
-  createdAt: string;
-}
-
-const bookings: Booking[] = [];
+// NOTE: Temporary userId placeholder until auth implemented
+const TEMP_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 const createBookingSchema = z.object({
-  roomId: z.string(),
-  date: z.string().regex(/\d{4}-\d{2}-\d{2}/),
-  startTime: z.string().regex(/^[0-2]\d:[0-5]\d$/),
+  roomId: z.string().uuid().or(z.string()),
+  startTimeIso: z.string().datetime(), // ISO string from client (UTC)
   players: z.number().int().min(1).max(4),
 });
 
-router.get('/', (_req, res) => {
+router.get('/', async (_req, res) => {
+  const bookings = await listBookings();
   res.json({ bookings });
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const parsed = createBookingSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
-  const { roomId, date, startTime, players } = parsed.data;
-  // Each player = 1 hour rule
-  const hours = players;
+  const { roomId, startTimeIso, players } = parsed.data;
 
-  // Basic conflict check
-  const conflict = bookings.some(
-    (b) => b.roomId === roomId && b.date === date && b.startTime === startTime
-  );
+  let start: Date;
+  try {
+    start = new Date(startTimeIso);
+    if (isNaN(start.getTime())) throw new Error('Invalid date');
+  } catch {
+    return res.status(400).json({ error: 'Invalid startTimeIso' });
+  }
+
+  // Conflict: same room & exact start time (full overlap logic TBD)
+  const conflict = await findConflict(roomId, start);
   if (conflict) {
     return res.status(409).json({ error: 'Time slot already booked' });
   }
-  const booking: Booking = {
-    id: crypto.randomUUID(),
-    roomId,
-    date,
-    startTime,
-    players,
-    hours,
-    createdAt: new Date().toISOString(),
-  };
-  bookings.push(booking);
-  res.status(201).json({ booking });
+
+  const priceCents = players * players * 5000; // $50/hour * hours(players)
+
+  try {
+    const booking = await createBooking({
+      roomId,
+      userId: TEMP_USER_ID,
+      startTime: start,
+      players,
+      priceCents,
+    });
+    res.status(201).json({ booking });
+  } catch (e: any) {
+    if (e.code === 'P2002') { // unique constraint
+      return res.status(409).json({ error: 'Time slot already booked' });
+    }
+    console.error(e);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 export { router as bookingRouter };

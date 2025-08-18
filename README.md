@@ -203,5 +203,10 @@ npm run dev
 ```
 POS hub dev scripts will be added as implementation progresses.
 
+## Quick Concepts
+**Repository (e.g. bookingRepo)**: A thin module wrapping all database calls for one domain (create/find/list/cancel bookings) so route handlers stay simple (validate → call → respond) and future logic/ORM changes live in one place.
+
+**Zod**: A TypeScript-first schema validator used to define expected request body shapes once, validate incoming JSON at runtime, and infer static types—reducing boilerplate and preventing malformed data from reaching business logic.
+
 ---
 This README will expand as the POS hub and persistence layers are implemented.
