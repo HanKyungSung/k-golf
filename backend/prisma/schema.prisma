@@ -1,0 +1,100 @@
+// K-Golf Booking Platform Prisma Schema (Phase 1.2)
+// NOTE: Overlap constraint added via a raw SQL migration after initial migrate.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELED
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  name               String?
+  role               UserRole            @default(CUSTOMER)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  bookings           Booking[]
+  authProviders      AuthProvider[]
+  sessions           Session[]
+  verificationTokens VerificationToken[]
+}
+
+model Room {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  capacity  Int       @default(4)
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
+}
+
+model Booking {
+  id         String        @id @default(uuid())
+  room       Room          @relation(fields: [roomId], references: [id])
+  roomId     String
+  user       User          @relation(fields: [userId], references: [id])
+  userId     String
+  startTime  DateTime
+  endTime    DateTime
+  players    Int
+  priceCents Int
+  status     BookingStatus @default(CONFIRMED)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([roomId, startTime])
+  @@index([userId, startTime])
+}
+
+model AuthProvider {
+  id             String   @id @default(uuid())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
+  provider       String
+  providerUserId String?
+  createdAt      DateTime @default(now())
+
+  @@unique([provider, providerUserId])
+}
+
+model VerificationToken {
+  id         String   @id @default(uuid())
+  user       User?    @relation(fields: [userId], references: [id])
+  userId     String?
+  identifier String
+  tokenHash  String
+  type       String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([identifier])
+  @@index([expiresAt])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+  sessionToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
