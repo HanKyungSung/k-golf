@@ -5,6 +5,7 @@ import BookingPage from './pages/booking'
 import DashboardPage from './pages/dashboard'
 import LoginPage from './pages/login'
 import SignUpPage from './pages/signup'
+import VerifyPage from './pages/verify'
 import { AuthProvider } from '../hooks/use-auth'
 import { ThemeProvider } from '../components/theme-provider'
 
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/verify" element={<VerifyPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
