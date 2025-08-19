@@ -123,16 +123,70 @@ The immediate priority is to COMPLETE the customer booking web application (room
 5. Central error handler + zod schemas for request validation.
 
 ### Phase 3 – Authentication & Sessions
-1. Email magic link / OTP:
-  - `POST /auth/request` (email) → create `VerificationToken`
-  - `POST /auth/verify` (token or code) → upsert user, issue session cookie
-2. Google OAuth:
-  - Frontend obtains credential (Google Identity Services) → `POST /auth/google` with ID token
-  - Backend verifies token, upserts provider row
-3. Session strategy:
-  - Signed httpOnly cookie (JWT with userId + sessionId) or DB `Session` table with rolling expiration
-4. Middleware: `requireAuth` attaches `req.user`.
-5. `GET /auth/me` endpoint returns user profile + basic stats.
+Registration is implemented FIRST (before full booking UX dependency on auth). Two parallel methods: email verification (passwordless) and Google OAuth.
+
+#### 3.1 Email Registration & Verification (Passwordless Start)
+Flow (magic link OR 6-digit code—choose one initial, link recommended):
+1. `POST /auth/register` { email }:
+  - Normalize email (lowercase/trim).
+  - If existing verified user: respond 200 with generic message (avoid user enumeration).
+  - Create user row if not exists (role=CUSTOMER, unverified flag implicit until token consumed).
+  - Insert `VerificationToken` (identifier=email, tokenHash=hashedRandom, type='magic_link', expiresAt=+15m).
+  - Send email with link: `https://app.example.com/verify?token=plainToken&email=...` (plain token only in email, NOT stored in DB except hashed).
+2. `POST /auth/verify` { email, token }:
+  - Look up token by email (identifier) & unconsumed & not expired.
+  - Hash incoming token & compare.
+  - Mark consumedAt, create session (Session row or sign JWT w/ sessionId), set httpOnly cookie.
+  - Return user profile.
+3. Subsequent requests include session cookie → `GET /auth/me` returns user data.
+
+Optional variant (OTP code): store 6-digit numeric code instead of random token; limit attempts; same expiration.
+
+Security notes:
+- Always respond 200 on register/verify with generic messages to prevent enumeration.
+- Hash tokens (e.g., SHA256) before storage.
+- Rate limit register + verify endpoints per IP + per email.
+
+#### 3.2 Google OAuth (gmail first)
+1. Frontend loads Google Identity Services and obtains ID token.
+2. `POST /auth/google` { idToken }:
+  - Backend verifies signature (Google certs) & audience, extracts sub, email.
+  - Upsert user (verified implicitly if Google says email_verified=true).
+  - Upsert `AuthProvider` (provider='google', providerUserId=sub).
+  - Create session (cookie) and return profile.
+
+#### 3.3 Endpoints Summary (Initial Set)
+- `POST /auth/register` (idempotent, begins email flow)
+- `POST /auth/verify` (completes email flow, issues session)
+- `POST /auth/google` (Google sign-in)
+- `GET /auth/me` (current session user)
+- (Later) `POST /auth/logout` (invalidate session)
+
+#### 3.4 Session Strategy
+- Start with DB-backed Session table (simpler revocation) storing: id, userId, sessionToken (random), expiresAt.
+- Set cookie: `session=<token>; HttpOnly; Secure (prod); SameSite=Lax`.
+- Rolling refresh: each request optionally extends expiry (guard with max age cap).
+
+#### 3.5 Middleware
+- `requireAuth` loads session by cookie token → attaches `req.user` (selected user fields) → 401 if missing/expired.
+
+#### 3.6 Email vs SMS Verification Decision
+| Aspect | Email | SMS |
+|--------|-------|-----|
+| Direct cost | ~$0.0001–$0.001 per msg (often free in starter tiers) | ~$0.007–$0.02 US per SMS (Twilio-like pricing) |
+| Setup | Simple (transactional email provider + DKIM/SPF) | Requires phone number purchasing, compliance (opt-in, regional rules) |
+| Speed | Fast enough (< a few seconds) | Usually very fast (<5s) |
+| Reliability | Can land in spam if misconfigured | Delivery sometimes blocked or delayed; carrier filtering |
+| UX friction | User needs inbox access | User must reveal phone number |
+| Abuse surface | Disposable email risk | SIM swap / cost abuse risk |
+
+Initial recommendation: EMAIL ONLY (passwordless link) for MVP; add SMS later only if conversion or security metrics justify cost.
+
+#### 3.7 Future Enhancements (Deferred)
+- Add refresh token rotation & device management.
+- Add optional password set (convert to hybrid auth) if needed.
+- Integrate rate limiter & IP allow/deny lists.
+- Add audit log (user sign-ins, verification attempts).
 
 ### Phase 4 – Frontend Integration (Bookings + Auth)
 1. Update `useAuth` hook to call backend (`/auth/me`, login flows) instead of localStorage mock.

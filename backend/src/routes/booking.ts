@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createBooking, findConflict, listBookings } from '../repositories/bookingRepo';
+import { createBooking, findConflict, listBookings, listUserBookings } from '../repositories/bookingRepo';
+import { requireAuth } from '../middleware/requireAuth';
 
 const router = Router();
 
-// NOTE: Temporary userId placeholder until auth implemented
-const TEMP_USER_ID = '00000000-0000-0000-0000-000000000001';
+// Auth enforced for mutating and user-specific endpoints.
 
 const createBookingSchema = z.object({
   roomId: z.string().uuid().or(z.string()),
@@ -18,7 +18,12 @@ router.get('/', async (_req, res) => {
   res.json({ bookings });
 });
 
-router.post('/', async (req, res) => {
+router.get('/mine', requireAuth, async (req, res) => {
+  const bookings = await listUserBookings(req.user!.id);
+  res.json({ bookings });
+});
+
+router.post('/', requireAuth, async (req, res) => {
   const parsed = createBookingSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
@@ -44,7 +49,7 @@ router.post('/', async (req, res) => {
   try {
     const booking = await createBooking({
       roomId,
-      userId: TEMP_USER_ID,
+      userId: req.user!.id,
       startTime: start,
       players,
       priceCents,

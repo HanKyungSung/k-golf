@@ -26,6 +26,7 @@ model User {
   id                 String              @id @default(uuid())
   email              String              @unique
   name               String?
+  emailVerifiedAt    DateTime?
   role               UserRole            @default(CUSTOMER)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
