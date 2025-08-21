@@ -16,7 +16,8 @@ export default function VerifyPage() {
     (async () => {
       setState('verifying');
       try {
-        const apiBase = (import.meta as any).env.VITE_API_BASE || 'http://localhost:8080';
+        const envAny = (import.meta as any).env || {};
+        const apiBase = envAny.API_BASE || 'http://localhost:8080';
         const res = await fetch(`${apiBase}/api/auth/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

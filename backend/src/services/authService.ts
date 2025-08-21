@@ -7,35 +7,56 @@ export function generatePlainToken(bytes = 32) {
   return crypto.randomBytes(bytes).toString('hex');
 }
 
-export function hashToken(token: string) {
-  return crypto.createHash('sha256').update(token).digest('hex');
-}
+// Password hashing (scrypt). Stored format: scrypt:N=16384,r=8,p=1:<saltB64>:<keyB64>
+const SCRYPT_N = 16384; // 2^14
+const SCRYPT_r = 8;
+const SCRYPT_p = 1;
+const KEY_LEN = 64;
 
-export async function createOrReuseUser(email: string) {
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return existing;
-  return prisma.user.create({ data: { email } });
-}
-
-export async function createVerificationToken(email: string, type: string, expiresMinutes = 15) {
-  const plain = generatePlainToken(24);
-  const tokenHash = hashToken(plain);
-  const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
-  await prisma.verificationToken.create({
-    data: { identifier: email, tokenHash, type, expiresAt }
+export async function hashPassword(password: string) {
+  const salt = crypto.randomBytes(16);
+  const derived = await new Promise<Buffer>((resolve, reject) => {
+    crypto.scrypt(password, salt, KEY_LEN, { N: SCRYPT_N, r: SCRYPT_r, p: SCRYPT_p }, (err, buf) => {
+      if (err) reject(err); else resolve(buf);
+    });
   });
-  return { plain, expiresAt };
+  return `scrypt:N=${SCRYPT_N},r=${SCRYPT_r},p=${SCRYPT_p}:${salt.toString('base64')}:${derived.toString('base64')}`;
 }
 
-export async function consumeVerificationToken(email: string, plainToken: string) {
-  const tokenHash = hashToken(plainToken);
-  const record = await prisma.verificationToken.findFirst({
-    where: { identifier: email, tokenHash, consumedAt: null, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: 'desc' }
-  });
-  if (!record) return null;
-  await prisma.verificationToken.update({ where: { id: record.id }, data: { consumedAt: new Date() } });
-  return record;
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  try {
+    if (!stored.startsWith('scrypt:')) return false; // unsupported algo
+    const parts = stored.split(':');
+    if (parts.length !== 3) return false;
+    const paramsPart = parts[1]; // N=...,r=...,p=...
+    const [saltB64, hashB64] = parts.slice(1)[0].includes(',') ? [parts[2], parts[3]] : [parts[1], parts[2]]; // fallback if unexpected
+    // Re-parse robustly
+    const tokens = stored.split(':');
+    // tokens[0] = scrypt (with params), tokens[1]=salt, tokens[2]=hash when using strict format we produced above
+    const salt = Buffer.from(tokens[1], 'base64');
+    const expected = Buffer.from(tokens[2], 'base64');
+    // Extract param numbers
+    const paramString = tokens[0].split('scrypt:')[1];
+    const paramPairs = paramString.split(',').reduce<Record<string,string>>((acc, kv) => { const [k,v] = kv.split('='); if (k&&v) acc[k]=v; return acc; }, {});
+    const N = parseInt(paramPairs.N || `${SCRYPT_N}`, 10);
+    const r = parseInt(paramPairs.r || `${SCRYPT_r}`, 10);
+    const p = parseInt(paramPairs.p || `${SCRYPT_p}`, 10);
+    const derived = await new Promise<Buffer>((resolve, reject) => {
+      crypto.scrypt(password, salt, expected.length, { N, r, p }, (err, buf) => { if (err) reject(err); else resolve(buf); });
+    });
+    if (derived.length !== expected.length) return false;
+    return crypto.timingSafeEqual(derived, expected);
+  } catch {
+    return false;
+  }
+}
+
+export async function createUser(email: string, name: string | null, passwordHash: string) {
+  return prisma.user.create({ data: { email, name, passwordHash: passwordHash as any, passwordUpdatedAt: new Date() } as any });
+}
+
+export async function findUserByEmail(email: string) {
+  return prisma.user.findUnique({ where: { email } }) as any;
 }
 
 export async function createSession(userId: string, ttlHours = 24) {

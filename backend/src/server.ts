@@ -9,7 +9,7 @@ import cookieParser from 'cookie-parser';
 const app = express();
 const logger = pino({ transport: { target: 'pino-pretty' } });
 
-app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || '*'}));
+app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || '*', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 

@@ -1,45 +1,45 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createOrReuseUser, createVerificationToken, consumeVerificationToken, createSession, getSession, invalidateSession } from '../services/authService';
-import { sendVerificationEmail } from '../services/emailService';
+import { createUser, findUserByEmail, hashPassword, verifyPassword, createSession, getSession, invalidateSession } from '../services/authService';
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const router = Router();
 
-const registerSchema = z.object({ email: z.string().email() });
-const verifySchema = z.object({ email: z.string().email(), token: z.string().min(10) });
+const registerSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1),
+  password: z.string().min(10).regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, 'Password must contain a letter and a number')
+});
+const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
-// POST /auth/register - idempotent
+// POST /auth/register (password-based)
 router.post('/register', async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const email = parsed.data.email.toLowerCase();
-  await createOrReuseUser(email);
-  const { plain, expiresAt } = await createVerificationToken(email, 'magic_link');
-  try {
-    await sendVerificationEmail({ to: email, email, token: plain, expiresAt });
-  } catch (e) {
-    console.error('sendVerificationEmail error', e);
-  }
-  return res.json({ ok: true }); // generic response (avoid enumeration details)
+  const { email, name, password } = parsed.data;
+  const normEmail = email.toLowerCase();
+  const existing = await findUserByEmail(normEmail);
+  if (existing) return res.status(409).json({ error: 'Email already in use' });
+  const passwordHash = await hashPassword(password);
+  const user = await createUser(normEmail, name, passwordHash);
+  const { sessionToken } = await createSession(user.id);
+  setAuthCookie(res, sessionToken);
+  return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name } });
 });
 
-// POST /auth/verify
-router.post('/verify', async (req, res) => {
-  const parsed = verifySchema.safeParse(req.body);
+// POST /auth/login
+router.post('/login', async (req, res) => {
+  const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const { email, token } = parsed.data;
-  const consumed = await consumeVerificationToken(email.toLowerCase(), token);
-  if (!consumed) return res.status(400).json({ error: 'Invalid or expired token' });
-  // ensure user exists (should from register)
-  let user = await createOrReuseUser(email.toLowerCase());
-  if (!user.emailVerifiedAt) {
-    user = await prisma.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
-  }
-  const { session, sessionToken } = await createSession(user.id);
+  const { email, password } = parsed.data;
+  const user = await findUserByEmail(email.toLowerCase());
+  if (!user || !(user as any).passwordHash) return res.status(401).json({ error: 'Invalid credentials' });
+  const ok = await verifyPassword(password, (user as any).passwordHash);
+  if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+  const { sessionToken } = await createSession(user.id);
   setAuthCookie(res, sessionToken);
-  return res.json({ user: { id: user.id, email: user.email, emailVerifiedAt: user.emailVerifiedAt }, session: { expiresAt: session.expiresAt } });
+  return res.json({ user: { id: user.id, email: user.email, name: user.name } });
 });
 
 // GET /auth/me
@@ -48,7 +48,7 @@ router.get('/me', async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Unauthenticated' });
   const session = await getSession(token);
   if (!session) return res.status(401).json({ error: 'Unauthenticated' });
-  return res.json({ user: { id: session.user.id, email: session.user.email, emailVerifiedAt: (session.user as any).emailVerifiedAt } });
+  return res.json({ user: { id: session.user.id, email: session.user.email, name: (session.user as any).name } });
 });
 
 // POST /auth/logout

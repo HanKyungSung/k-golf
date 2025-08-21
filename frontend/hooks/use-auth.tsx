@@ -23,45 +23,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check for existing session on mount
-    const savedUser = localStorage.getItem("k-golf-user")
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
-    }
-    setIsLoading(false)
+    const load = async () => {
+      try {
+        const apiBase = process.env.REACT_APP_API_BASE;
+        const res = await fetch(`${apiBase}/api/auth/me`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
   }, [])
 
   const login = async (email: string, password: string) => {
-    // Mock authentication - replace with real API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const mockUser = {
-      id: "1",
-      name: "John Doe",
-      email: email,
-    }
-
-    setUser(mockUser)
-    localStorage.setItem("k-golf-user", JSON.stringify(mockUser))
+    const apiBase = process.env.REACT_APP_API_BASE;
+    const res = await fetch(`${apiBase}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password })
+    });
+    if (!res.ok) throw new Error('Login failed');
+    const data = await res.json();
+    setUser(data.user);
   }
 
   const signup = async (name: string, email: string, password: string) => {
-    // Mock signup - replace with real API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const mockUser = {
-      id: Date.now().toString(),
-      name: name,
-      email: email,
-    }
-
-    setUser(mockUser)
-    localStorage.setItem("k-golf-user", JSON.stringify(mockUser))
+    const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+    const res = await fetch(`${apiBase}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name, email, password })
+    });
+    if (!res.ok) throw new Error('Signup failed');
+    const data = await res.json();
+    setUser(data.user);
   }
 
   const logout = () => {
-    setUser(null)
-    localStorage.removeItem("k-golf-user")
+    setUser(null);
+    const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+    fetch(`${apiBase}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(()=>{});
   }
 
   return <AuthContext.Provider value={{ user, login, signup, logout, isLoading }}>{children}</AuthContext.Provider>

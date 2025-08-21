@@ -3,6 +3,8 @@
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
+const webpack = require('webpack')
+require('dotenv').config({ path: path.resolve(__dirname, '.env') })
 
 /** @type {import('webpack').Configuration} */
 module.exports = {
@@ -69,6 +71,9 @@ module.exports = {
     ],
   },
   plugins: [
+    new webpack.DefinePlugin({
+      'process.env.REACT_APP_API_BASE': JSON.stringify(process.env.REACT_APP_API_BASE || 'http://localhost:8080')
+    }),
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, 'index.html'),
     }),
