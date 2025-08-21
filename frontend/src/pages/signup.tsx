@@ -73,7 +73,7 @@ export default function SignUpPage() {
               <div className="space-y-4 text-slate-300">
                 <p className="text-sm">We sent a verification link to <span className="font-medium text-white">{sent.email}</span>. Check your inbox (and spam) and click the link within 15 minutes to activate your account.</p>
                 <p className="text-xs text-slate-500">After verifying, return to the login page to sign in.</p>
-                <Button type="button" onClick={()=>setSent(null)} variant="outline" className="w-full border-slate-600 text-slate-200">Back</Button>
+                <Button type="button" onClick={()=>navigate('/')} variant="outline" className="w-full border-slate-600 text-slate-200">Go to Home</Button>
               </div>
             ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
