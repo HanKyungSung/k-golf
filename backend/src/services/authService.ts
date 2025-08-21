@@ -73,3 +73,28 @@ export async function getSession(token: string) {
 export async function invalidateSession(token: string) {
   await prisma.session.deleteMany({ where: { sessionToken: token } });
 }
+
+// --- Email Verification Tokens ---
+function hashToken(token: string) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+export async function createEmailVerificationToken(userId: string, expiresMinutes = 15) {
+  await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+  const plain = generatePlainToken(24);
+  const tokenHash = hashToken(plain);
+  const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
+  await prisma.emailVerificationToken.create({ data: { userId, tokenHash, expiresAt } });
+  return { plain, expiresAt };
+}
+
+export async function consumeEmailVerificationToken(userId: string, plain: string) {
+  const tokenHash = hashToken(plain);
+  const record = await prisma.emailVerificationToken.findUnique({ where: { userId } });
+  if (!record) return null;
+  if (record.tokenHash !== tokenHash) return null;
+  if (record.consumedAt) return null;
+  if (record.expiresAt <= new Date()) return null;
+  await prisma.emailVerificationToken.update({ where: { userId }, data: { consumedAt: new Date() } });
+  return record;
+}

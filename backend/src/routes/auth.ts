@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createUser, findUserByEmail, hashPassword, verifyPassword, createSession, getSession, invalidateSession } from '../services/authService';
+import { createUser, findUserByEmail, hashPassword, verifyPassword, createSession, getSession, invalidateSession, createEmailVerificationToken, consumeEmailVerificationToken } from '../services/authService';
+import { sendVerificationEmail } from '../services/emailService';
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
@@ -12,8 +13,9 @@ const registerSchema = z.object({
   password: z.string().min(10).regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, 'Password must contain a letter and a number')
 });
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
+const verifySchema = z.object({ email: z.string().email(), token: z.string().min(10) });
 
-// POST /auth/register (password-based)
+// POST /auth/register (password-based, sends verification email; no session until verified)
 router.post('/register', async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -23,23 +25,48 @@ router.post('/register', async (req, res) => {
   if (existing) return res.status(409).json({ error: 'Email already in use' });
   const passwordHash = await hashPassword(password);
   const user = await createUser(normEmail, name, passwordHash);
-  const { sessionToken } = await createSession(user.id);
-  setAuthCookie(res, sessionToken);
-  return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name } });
+  const { plain, expiresAt } = await createEmailVerificationToken(user.id);
+  try {
+    await sendVerificationEmail({ to: user.email, email: user.email, token: plain, expiresAt });
+  } catch (e) {
+    console.error('sendVerificationEmail error', e);
+  }
+  return res.status(201).json({ message: 'Verification email sent', expiresAt });
 });
 
-// POST /auth/login
+// POST /auth/login (requires verified email)
 router.post('/login', async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { email, password } = parsed.data;
   const user = await findUserByEmail(email.toLowerCase());
   if (!user || !(user as any).passwordHash) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!user.emailVerifiedAt) return res.status(403).json({ error: 'EMAIL_NOT_VERIFIED' });
   const ok = await verifyPassword(password, (user as any).passwordHash);
   if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
   const { sessionToken } = await createSession(user.id);
   setAuthCookie(res, sessionToken);
   return res.json({ user: { id: user.id, email: user.email, name: user.name } });
+});
+
+// POST /auth/verify (email + token) => sets emailVerifiedAt and issues session
+router.post('/verify', async (req, res) => {
+  const parsed = verifySchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const { email, token } = parsed.data;
+  const user = await findUserByEmail(email.toLowerCase());
+  if (!user) return res.status(400).json({ error: 'Invalid or expired token' });
+  if (user.emailVerifiedAt) {
+    const { sessionToken } = await createSession(user.id);
+    setAuthCookie(res, sessionToken);
+    return res.json({ user: { id: user.id, email: user.email, name: user.name, emailVerifiedAt: user.emailVerifiedAt } });
+  }
+  const consumed = await consumeEmailVerificationToken(user.id, token);
+  if (!consumed) return res.status(400).json({ error: 'Invalid or expired token' });
+  const updated = await prisma.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
+  const { sessionToken } = await createSession(user.id);
+  setAuthCookie(res, sessionToken);
+  return res.json({ user: { id: updated.id, email: updated.email, name: updated.name, emailVerifiedAt: updated.emailVerifiedAt } });
 });
 
 // GET /auth/me

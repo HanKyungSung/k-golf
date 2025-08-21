@@ -18,6 +18,7 @@ export default function SignUpPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const { signup } = useAuth()
+  const [sent, setSent] = useState<{ email: string; expiresAt?: string } | null>(null)
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,8 +32,8 @@ export default function SignUpPage() {
     setIsLoading(true)
 
     try {
-      await signup(formData.name, formData.email, formData.password)
-      navigate('/dashboard')
+      const result = await signup(formData.name, formData.email, formData.password)
+      setSent({ email: formData.email, expiresAt: result.expiresAt })
     } catch (error) {
       console.error("Signup failed:", error)
     } finally {
@@ -68,6 +69,13 @@ export default function SignUpPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {sent ? (
+              <div className="space-y-4 text-slate-300">
+                <p className="text-sm">We sent a verification link to <span className="font-medium text-white">{sent.email}</span>. Check your inbox (and spam) and click the link within 15 minutes to activate your account.</p>
+                <p className="text-xs text-slate-500">After verifying, return to the login page to sign in.</p>
+                <Button type="button" onClick={()=>setSent(null)} variant="outline" className="w-full border-slate-600 text-slate-200">Back</Button>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-slate-300">
@@ -137,6 +145,7 @@ export default function SignUpPage() {
                 {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
+            )}
 
             <div className="mt-6 text-center">
               <p className="text-sm text-slate-400">

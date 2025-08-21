@@ -11,7 +11,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<void>
-  signup: (name: string, email: string, password: string) => Promise<void>
+  signup: (name: string, email: string, password: string) => Promise<{ message: string; expiresAt?: string }>
   logout: () => void
   isLoading: boolean
 }
@@ -61,7 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (!res.ok) throw new Error('Signup failed');
     const data = await res.json();
-    setUser(data.user);
+    // No user set yet; waiting for verification
+    return data;
   }
 
   const logout = () => {
