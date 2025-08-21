@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signup = async (name: string, email: string, password: string) => {
-    const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+    const apiBase = process.env.REACT_APP_API_BASE;
     const res = await fetch(`${apiBase}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+    const apiBase = process.env.REACT_APP_API_BASE;
     fetch(`${apiBase}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(()=>{});
   }
 
