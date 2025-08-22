@@ -1,50 +1,133 @@
-import { useEffect, useState } from 'react';
+"use client"
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
 
 export default function VerifyPage() {
-  const [state, setState] = useState<'idle'|'verifying'|'success'|'error'>('idle');
-  const [message, setMessage] = useState('');
+  const [state, setState] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle')
+  const [message, setMessage] = useState('')
+  const search = useMemo(() => new URLSearchParams(window.location.search), [])
+  const email = search.get('email')
+  const token = search.get('token')
+
+  const verify = useCallback(async () => {
+    if (!email || !token) {
+      setState('error')
+      setMessage('Missing email or token in URL.')
+      return
+    }
+    setState('verifying')
+    try {
+      const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080'
+      const res = await fetch(`${apiBase}/api/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, token }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Verification failed' }))
+        throw new Error(data.error || 'Verification failed')
+      }
+      setState('success')
+      setMessage('Email verified. Signing you in...')
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 1200)
+    } catch (e: any) {
+      setState('error')
+      setMessage(e?.message || 'Unexpected error')
+    }
+  }, [email, token])
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const email = params.get('email');
-    const token = params.get('token');
-    if (!email || !token) {
-      setState('error');
-      setMessage('Missing email or token in URL.');
-      return;
-    }
-  (async () => {
-      setState('verifying');
-      try {
-        // Use the same env var mechanism as the rest of the app (webpack DefinePlugin)
-        const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
-        const res = await fetch(`${apiBase}/api/auth/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ email, token })
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(()=>({error:'Verification failed'}));
-          throw new Error(data.error || 'Verification failed');
-        }
-        setState('success');
-        setMessage('Signed in. Redirecting...');
-        setTimeout(() => { window.location.href = '/'; }, 1500);
-      } catch (e:any) {
-        setState('error');
-        setMessage(e.message || 'Unexpected error');
-      }
-    })();
-  }, []);
+    verify()
+  }, [verify])
 
   return (
-    <main style={{maxWidth:480,margin:'60px auto',fontFamily:'system-ui',padding:'0 16px'}}>
-      <h1>Email Verification</h1>
-      {state==='verifying' && <p>Verifying link...</p>}
-      {state==='success' && <p style={{color:'green'}}>{message}</p>}
-      {state==='error' && <p style={{color:'crimson'}}>{message}</p>}
-      {state==='error' && <button onClick={()=>window.location.reload()}>Retry</button>}
-    </main>
-  );
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-block">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
+              K-Golf
+            </h1>
+            <p className="text-sm text-slate-400 mt-1">Premium Screen Golf</p>
+          </Link>
+        </div>
+
+        <Card className="shadow-2xl bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold text-white">Verify your email</CardTitle>
+            <CardDescription className="text-slate-400">
+              We’re confirming your sign-in link
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {state === 'verifying' && (
+              <div className="flex flex-col items-center gap-4 py-6 text-slate-200">
+                <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+                <p className="text-sm">Verifying your email...</p>
+                <p className="text-xs text-slate-500">This may take a moment.</p>
+              </div>
+            )}
+
+            {state === 'success' && (
+              <div className="flex flex-col items-center gap-4 py-6 text-slate-200">
+                <CheckCircle2 className="h-10 w-10 text-emerald-400" />
+                <p className="text-sm text-center">{message}</p>
+                <p className="text-xs text-slate-500">Redirecting to home...</p>
+                <Button
+                  type="button"
+                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"
+                  onClick={() => (window.location.href = '/')}
+                >
+                  Go to Home
+                </Button>
+              </div>
+            )}
+
+            {state === 'error' && (
+              <div className="flex flex-col items-center gap-4 py-6 text-slate-200">
+                <XCircle className="h-10 w-10 text-red-400" />
+                <p className="text-sm text-center">{message}</p>
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full border-slate-600 text-slate-200"
+                    onClick={() => verify()}
+                  >
+                    Try Again
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-slate-600 text-slate-200"
+                    onClick={() => (window.location.href = '/login')}
+                  >
+                    Go to Login
+                  </Button>
+                </div>
+                <div className="w-full">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full text-slate-300 hover:text-white"
+                    onClick={() => (window.location.href = '/')}
+                  >
+                    Back to Home
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }
