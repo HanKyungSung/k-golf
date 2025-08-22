@@ -22,7 +22,8 @@ function getTransport() {
 }
 
 export async function sendVerificationEmail({ to, token, expiresAt, email }: VerificationEmailParams) {
-  const origin = process.env.FRONTEND_ORIGIN || process.env.APP_ORIGIN || 'http://localhost:5173';
+  // Always point verification links to the FRONTEND app
+  const origin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
   // Frontend page will handle POST /api/auth/verify
   const link = `${origin.replace(/\/$/, '')}/verify?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
   const subject = 'Your K-Golf sign-in link';

@@ -13,11 +13,11 @@ export default function VerifyPage() {
       setMessage('Missing email or token in URL.');
       return;
     }
-    (async () => {
+  (async () => {
       setState('verifying');
       try {
-        const envAny = (import.meta as any).env || {};
-        const apiBase = envAny.API_BASE || 'http://localhost:8080';
+        // Use the same env var mechanism as the rest of the app (webpack DefinePlugin)
+        const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
         const res = await fetch(`${apiBase}/api/auth/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
