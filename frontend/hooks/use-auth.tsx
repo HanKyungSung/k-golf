@@ -14,6 +14,7 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string) => Promise<{ message: string; expiresAt?: string }>
   logout: () => void
   isLoading: boolean
+  resendVerification: (email: string) => Promise<{ message: string; expiresAt?: string; retryAfterSeconds?: number }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -65,13 +66,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data;
   }
 
+  const resendVerification = async (email: string): Promise<{ message: string; expiresAt?: string; retryAfterSeconds?: number }> => {
+    const apiBase = process.env.REACT_APP_API_BASE;
+    const res = await fetch(`${apiBase}/api/auth/resend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email })
+    });
+    if (!res.ok) {
+      // 429 or 400 returns generic message; surface best effort
+      const data = await res.json().catch(()=>({message:'Please try again shortly.'}));
+      return data;
+    }
+    const data = await res.json();
+    return data;
+  }
+
   const logout = () => {
     setUser(null);
     const apiBase = process.env.REACT_APP_API_BASE;
     fetch(`${apiBase}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(()=>{});
   }
 
-  return <AuthContext.Provider value={{ user, login, signup, logout, isLoading }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, login, signup, logout, isLoading, resendVerification }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

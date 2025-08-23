@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/use-auth"
+import { Mail } from "lucide-react"
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -17,8 +18,9 @@ export default function SignUpPage() {
     confirmPassword: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const { signup } = useAuth()
+  const { signup, resendVerification } = useAuth()
   const [sent, setSent] = useState<{ email: string; expiresAt?: string } | null>(null)
+  const [resendInfo, setResendInfo] = useState<{ message?: string; retryAfterSeconds?: number } | null>(null)
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,8 +74,29 @@ export default function SignUpPage() {
             {sent ? (
               <div className="space-y-4 text-slate-300">
                 <p className="text-sm">We sent a verification link to <span className="font-medium text-white">{sent.email}</span>. Check your inbox (and spam) and click the link within 15 minutes to activate your account.</p>
+                <div className="flex flex-col gap-3">
+                  <Button type="button" onClick={() => navigate('/')} variant="outline" className="w-full border-slate-600 text-slate-200">Go to Home</Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full border-slate-600 text-slate-200"
+                    onClick={async () => {
+                      const r = await resendVerification(sent.email)
+                      setResendInfo({ message: r?.message, retryAfterSeconds: r?.retryAfterSeconds })
+                    }}
+                  >
+                    <Mail className="h-4 w-4 mr-2" /> Resend verification email
+                  </Button>
+                </div>
+                {resendInfo?.message && (
+                  <p className="text-xs text-slate-500">
+                    {resendInfo.message}
+                    {typeof resendInfo.retryAfterSeconds === 'number' && resendInfo.retryAfterSeconds > 0 && (
+                      <> Please try again in {resendInfo.retryAfterSeconds}s.</>
+                    )}
+                  </p>
+                )}
                 <p className="text-xs text-slate-500">After verifying, you'll be signed in automatically and redirected.</p>
-                <Button type="button" onClick={()=>navigate('/')} variant="outline" className="w-full border-slate-600 text-slate-200">Go to Home</Button>
               </div>
             ) : (
             <form onSubmit={handleSubmit} className="space-y-4">

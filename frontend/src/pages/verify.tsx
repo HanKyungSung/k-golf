@@ -4,11 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, Mail } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function VerifyPage() {
+  const { resendVerification } = useAuth()
   const [state, setState] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
+  const [resendMsg, setResendMsg] = useState<string>('')
+  const [retryAfter, setRetryAfter] = useState<number | undefined>(undefined)
+  const [resending, setResending] = useState(false)
   const search = useMemo(() => new URLSearchParams(window.location.search), [])
   const email = search.get('email')
   const token = search.get('token')
@@ -113,6 +118,38 @@ export default function VerifyPage() {
                     Go to Login
                   </Button>
                 </div>
+                {email && (
+                  <div className="w-full space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={resending}
+                      className="w-full border-slate-600 text-slate-200"
+                      onClick={async () => {
+                        setResendMsg('')
+                          setRetryAfter(undefined)
+                        setResending(true)
+                        try {
+                            const r = await resendVerification(email)
+                            setResendMsg(r?.message || 'If the account exists, a new link will be sent.')
+                            if (typeof r?.retryAfterSeconds === 'number') setRetryAfter(r.retryAfterSeconds)
+                        } finally {
+                          setResending(false)
+                        }
+                      }}
+                    >
+                      <Mail className="h-4 w-4 mr-2" /> {resending ? 'Sending…' : 'Resend Verification Email'}
+                    </Button>
+                      {resendMsg && (
+                        <p className="text-xs text-slate-500 text-center">
+                          {resendMsg}
+                          {typeof retryAfter === 'number' && retryAfter > 0 && (
+                            <> Please try again in {retryAfter}s.</>
+                          )}
+                        </p>
+                      )}
+                  </div>
+                )}
                 <div className="w-full">
                   <Button
                     type="button"

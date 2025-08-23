@@ -14,6 +14,7 @@ const registerSchema = z.object({
 });
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 const verifySchema = z.object({ email: z.string().email(), token: z.string().min(10) });
+const resendSchema = z.object({ email: z.string().email() });
 
 // POST /auth/register (password-based, sends verification email; no session until verified)
 router.post('/register', async (req, res) => {
@@ -84,6 +85,43 @@ router.post('/logout', async (req, res) => {
   if (token) await invalidateSession(token);
   clearAuthCookie(res);
   return res.json({ ok: true });
+});
+
+// POST /auth/resend (resend verification email if account exists and not verified)
+// Simple in-memory cooldown to avoid abuse in dev/single instance
+const RESEND_COOLDOWN_MS = 60_000; // 60s
+const resendCooldown = new Map<string, number>();
+router.post('/resend', async (req, res) => {
+  const parsed = resendSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const email = parsed.data.email.toLowerCase();
+
+  // Generic response to avoid account enumeration
+  const generic = { message: 'If the account exists and is not verified, a new link will be sent shortly.' } as const;
+
+  // Cooldown with remaining seconds feedback
+  const now = Date.now();
+  const last = resendCooldown.get(email) || 0;
+  const remainingMs = RESEND_COOLDOWN_MS - (now - last);
+  if (remainingMs > 0) {
+    return res.status(429).json({ ...generic, retryAfterSeconds: Math.ceil(remainingMs / 1000) });
+  }
+
+  // Set cooldown regardless of account existence to keep responses generic
+  resendCooldown.set(email, now);
+
+  const user = await findUserByEmail(email);
+  if (!user) return res.json({ ...generic, retryAfterSeconds: Math.ceil(RESEND_COOLDOWN_MS / 1000) });
+  if ((user as any).emailVerifiedAt) return res.json({ message: 'Email is already verified.' });
+
+  const { plain, expiresAt } = await createEmailVerificationToken(user.id);
+  try {
+    await sendVerificationEmail({ to: user.email, email: user.email, token: plain, expiresAt });
+  } catch (e) {
+    console.error('sendVerificationEmail error (resend)', e);
+    // Still return generic to avoid info leakage
+  }
+  return res.json({ message: 'Verification email resent.', expiresAt, retryAfterSeconds: Math.ceil(RESEND_COOLDOWN_MS / 1000) });
 });
 
 // --- Cookie Helpers ---
