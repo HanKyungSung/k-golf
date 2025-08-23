@@ -1,5 +1,3 @@
-"use client"
-
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
 interface User {
@@ -60,7 +58,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
       body: JSON.stringify({ name, email, password })
     });
-    if (!res.ok) throw new Error('Signup failed');
+    if (!res.ok) {
+      // Try to extract useful error details from backend
+      const data = await res.json().catch(() => ({} as any));
+      const msg =
+        (typeof data?.error === 'string' && data.error) ||
+        (data?.error?.formErrors?.join?.(' ') || '') ||
+        (data?.error?.fieldErrors && Object.values(data.error.fieldErrors).flat().join(' ')) ||
+        data?.message ||
+        (res.status === 409 ? 'Email already in use' : 'Signup failed');
+      throw new Error(msg);
+    }
     const data = await res.json();
     // No user set yet; waiting for verification
     return data;

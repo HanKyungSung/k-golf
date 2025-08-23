@@ -1,5 +1,3 @@
-"use client"
-
 import type React from "react"
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
@@ -9,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/use-auth"
 import { Mail } from "lucide-react"
+import { FormError } from "@/components/form/form-error"
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -20,6 +19,7 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false)
   const { signup, resendVerification } = useAuth()
   const [sent, setSent] = useState<{ email: string; expiresAt?: string } | null>(null)
+  const [errorText, setErrorText] = useState<string | null>(null)
   const [resendInfo, setResendInfo] = useState<{ message?: string; retryAfterSeconds?: number } | null>(null)
   const navigate = useNavigate()
 
@@ -27,17 +27,20 @@ export default function SignUpPage() {
     e.preventDefault()
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match")
+      setErrorText("Passwords do not match")
       return
     }
 
     setIsLoading(true)
+    setErrorText(null)
 
     try {
       const result = await signup(formData.name, formData.email, formData.password)
       setSent({ email: formData.email, expiresAt: result.expiresAt })
     } catch (error) {
       console.error("Signup failed:", error)
+      const msg = error instanceof Error ? error.message : 'Signup failed'
+      setErrorText(msg)
     } finally {
       setIsLoading(false)
     }
@@ -48,6 +51,7 @@ export default function SignUpPage() {
       ...prev,
       [e.target.name]: e.target.value,
     }))
+  if (errorText) setErrorText(null)
   }
 
   return (
@@ -159,11 +163,20 @@ export default function SignUpPage() {
                   required
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
                 />
+                {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                  <p className="text-sm text-red-400">Passwords do not match</p>
+                )}
               </div>
+              <FormError message={errorText} />
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"
-                disabled={isLoading}
+                disabled={
+                  isLoading ||
+                  (formData.password !== '' &&
+                    formData.confirmPassword !== '' &&
+                    formData.password !== formData.confirmPassword)
+                }
               >
                 {isLoading ? "Creating Account..." : "Create Account"}
               </Button>

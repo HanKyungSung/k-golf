@@ -1,6 +1,3 @@
-// Added client directive for consistency with other pages
-"use client"
-
 // Replace Next.js Link with react-router-dom Link and integrate auth
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
