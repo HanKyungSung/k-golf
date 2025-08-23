@@ -37,6 +37,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     load();
   }, [])
 
+  // Centralized helper: prefer backend-provided message
+  const getErrorMessage = async (res: Response): Promise<string> => {
+    try {
+      const data: any = await res.json()
+      if (typeof data?.message === 'string' && data.message) return data.message
+      if (typeof data?.error === 'string' && data.error) return data.error
+      const flatForm = data?.error?.formErrors
+      if (Array.isArray(flatForm) && flatForm.length) return flatForm.join(' ')
+      const fieldErrors = data?.error?.fieldErrors
+      if (fieldErrors && typeof fieldErrors === 'object') {
+        const messages = Object.values(fieldErrors).flat().filter(Boolean)
+        if (messages.length) return messages.join(' ')
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
+    return res.status === 401 ? 'Unauthorized' : res.statusText || 'Request failed'
+  }
+
   const login = async (email: string, password: string) => {
     const apiBase = process.env.REACT_APP_API_BASE;
     const res = await fetch(`${apiBase}/api/auth/login`, {
@@ -45,16 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
       body: JSON.stringify({ email, password })
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({} as any));
-      const msg =
-        (typeof data?.error === 'string' && data.error) ||
-        (data?.error?.formErrors?.join?.(' ') || '') ||
-        (data?.error?.fieldErrors && Object.values(data.error.fieldErrors).flat().join(' ')) ||
-        data?.message ||
-        (res.status === 401 ? 'Invalid email or password' : 'Login failed');
-      throw new Error(msg);
-    }
+  if (!res.ok) throw new Error(await getErrorMessage(res));
     const data = await res.json();
     setUser(data.user);
   }
@@ -67,17 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
       body: JSON.stringify({ name, email, password })
     });
-    if (!res.ok) {
-      // Try to extract useful error details from backend
-      const data = await res.json().catch(() => ({} as any));
-      const msg =
-        (typeof data?.error === 'string' && data.error) ||
-        (data?.error?.formErrors?.join?.(' ') || '') ||
-        (data?.error?.fieldErrors && Object.values(data.error.fieldErrors).flat().join(' ')) ||
-        data?.message ||
-        (res.status === 409 ? 'Email already in use' : 'Signup failed');
-      throw new Error(msg);
-    }
+  if (!res.ok) throw new Error(await getErrorMessage(res));
     const data = await res.json();
     // No user set yet; waiting for verification
     return data;
