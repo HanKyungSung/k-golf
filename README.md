@@ -3,7 +3,7 @@
 This monorepo contains:
 
 - **frontend**: Customer-facing booking web app (React + TypeScript + Tailwind)
-- **backend**: Express API (TypeScript) – currently in-memory booking logic, planned PostgreSQL + Prisma
+- **backend**: Express API (TypeScript) – PostgreSQL + Prisma
 - **pos**: Point-of-Sale (POS) hub (Electron + Express + SQLite offline + PostgreSQL sync) – newly scaffolded
 
 ## High-Level Architecture
@@ -21,8 +21,9 @@ This monorepo contains:
 
 ### Booking (Existing)
 - Pricing: $50 per player per hour (hours = number of players, 1–4).
-- Planned persistence: PostgreSQL (docker-compose `db` service) with overlap constraints.
-- Auth (planned): Google OAuth + Email magic link / OTP; sessions via httpOnly cookie.
+- ~~Planned persistence: PostgreSQL (docker-compose `db` service) with overlap constraints.~~
+- Persistence: PostgreSQL + Prisma with overlap constraints.
+- Auth: Email verification + password login; sessions via HttpOnly cookie. Google OAuth planned.
 
 ### POS Hub (New)
 A local Electron application that:
@@ -89,36 +90,36 @@ The immediate priority is to COMPLETE the customer booking web application (room
 - ✅ Dockerized PostgreSQL running locally (`db` service)
 - ✅ In‑memory booking endpoints (temporary)
 - ✅ Pricing rule defined ($50 * players * hours, hours = players)
-- 🔜 Persistence layer not yet implemented (Prisma + migrations)
+- ~~🔜 Persistence layer not yet implemented (Prisma + migrations)~~
 
 ### Phase 1 – Persistence Foundation (Database + ORM)
-1. 🔜 Add dependencies to `backend`:
-  - `prisma`, `@prisma/client`, (dev) `ts-node`, `tsx` if needed
-2. Create `backend/prisma/schema.prisma` with models:
-  - `User`, `AuthProvider`, `VerificationToken`, `Session`
-  - `Room` (capacity, active)
-  - `Booking` (roomId, userId, startTime, endTime, players, priceCents, status)
-3. Add PostgreSQL extensions migration (if using EXCLUDE constraint requires `btree_gist`).
-4. Run: `npx prisma migrate dev --name init` (writes migrations folder)
-5. Implement a seed script (`backend/prisma/seed.ts`) to insert initial rooms (e.g., 4 demo simulators).
-6. Add npm scripts:
-  - `db:migrate`, `db:generate`, `db:seed`
-7. Verify DB objects exist (inspect via `psql` or Prisma Studio).
+1. ~~Add dependencies to `backend`:~~
+  - ~~`prisma`, `@prisma/client`, (dev) `ts-node`, `tsx` if needed~~
+2. ~~Create `backend/prisma/schema.prisma` with models:~~
+  - ~~`User`, `AuthProvider`, `VerificationToken`, `Session`~~
+  - ~~`Room` (capacity, active)~~
+  - ~~`Booking` (roomId, userId, startTime, endTime, players, priceCents, status)~~
+3. ~~Add PostgreSQL extensions migration (if using EXCLUDE constraint requires `btree_gist`).~~
+4. ~~Run: `npx prisma migrate dev --name init` (writes migrations folder)~~
+5. ~~Implement a seed script (`backend/prisma/seed.ts`) to insert initial rooms (e.g., 4 demo simulators).~~
+6. ~~Add npm scripts:~~
+  - ~~`db:migrate`, `db:generate`, `db:seed`~~
+7. ~~Verify DB objects exist (inspect via `psql` or Prisma Studio).~~
 
 ### Phase 2 – Booking Domain Implementation (Server)
-1. Replace in‑memory storage with Prisma repository modules:
-  - `repositories/bookingRepo.ts`
-  - `repositories/roomRepo.ts`
-2. Add overlap prevention:
-  - Option A: EXCLUDE constraint on `(room_id WITH =, tstzrange(start_time, end_time) WITH &&)`
-  - Option B: Serializable transaction + manual check (fallback)
+1. ~~Replace in‑memory storage with Prisma repository modules:~~
+  - ~~`repositories/bookingRepo.ts`~~
+  - ~~`repositories/roomRepo.ts`~~
+2. ~~Add overlap prevention:~~
+  - ~~Option A: EXCLUDE constraint on `(room_id WITH =, tstzrange(start_time, end_time) WITH &&)`~~
+  - ~~Option B: Serializable transaction + manual check (fallback)~~
 3. Unified price calculation util (single source of truth) used in POST /bookings.
 4. Endpoints (REST):
   - `GET /api/rooms` (list active rooms)
   - `GET /api/availability?roomId=&date=` (returns 30/60‑min slots with booking status)
-  - `POST /api/bookings` (payload: roomId, startTime, players) → validates capacity & pricing
+  - ~~`POST /api/bookings` (payload: roomId, startTime, players) → validates capacity & pricing~~
   - `GET /api/bookings/:id`
-  - `GET /api/bookings` (current user’s bookings)
+  - ~~`GET /api/bookings` (current user’s bookings)~~
   - `PATCH /api/bookings/:id/cancel` (soft cancel if > threshold time)
 5. Central error handler + zod schemas for request validation.
 
@@ -132,8 +133,8 @@ Registration is implemented FIRST (before full booking UX dependency on auth). T
 - ~~`GET /api/auth/me` returns the current user when session cookie is valid.~~
 - ~~Resend endpoint `POST /api/auth/resend` with 60s cooldown and `retryAfterSeconds` in generic responses.~~
 - ~~Resend UI on Verify and Signup pages to request a new link with inline cooldown message.~~
-- Login requires verified email + password and issues the session cookie. ✅
-- Logout clears cookie and deletes the session row. ✅
+- ~~Login requires verified email + password and issues the session cookie.~~
+- ~~Logout clears cookie and deletes the session row.~~
 - Google OAuth: not implemented yet. ⏭
 
 Env notes
@@ -255,12 +256,10 @@ Initial recommendation: EMAIL ONLY (passwordless link) for MVP; add SMS later on
 - Rate / dynamic pricing rules (holiday, peak hours) abstraction.
 
 ### Immediate Next Action (Recommended Now)
-Implement Phase 1 steps 1–3:
-1. Add Prisma dependencies & init (`npx prisma init`).
-2. Write `schema.prisma` with core models.
-3. Run first migration.
-
-After that, seed rooms and refactor booking endpoints to use Prisma (Phase 2 part 1). Request “add prisma now” when ready and we’ll perform those edits.
+Focus on Phase 2 remaining items:
+1. Implement `GET /api/availability`.
+2. Add `GET /api/bookings/:id` and `PATCH /api/bookings/:id/cancel`.
+3. Extract a unified price calculation util.
 
 ## Getting Started (Current)
 ```
