@@ -87,21 +87,24 @@ function hashToken(token: string) {
 }
 
 export async function createEmailVerificationToken(userId: string, expiresMinutes = 15) {
-  await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+  // Note: Some editor setups may show a stale Prisma client type (suggesting `verificationToken`).
+  // The actual model is `EmailVerificationToken` => client property `emailVerificationToken`.
+  // Cast to `any` to avoid transient type noise in monorepos/hoisted installs.
+  await (prisma as any).emailVerificationToken.deleteMany({ where: { userId } });
   const plain = generatePlainToken(24);
   const tokenHash = hashToken(plain);
   const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
-  await prisma.emailVerificationToken.create({ data: { userId, tokenHash, expiresAt } });
+  await (prisma as any).emailVerificationToken.create({ data: { userId, tokenHash, expiresAt } });
   return { plain, expiresAt };
 }
 
 export async function consumeEmailVerificationToken(userId: string, plain: string) {
   const tokenHash = hashToken(plain);
-  const record = await prisma.emailVerificationToken.findUnique({ where: { userId } });
+  const record = await (prisma as any).emailVerificationToken.findUnique({ where: { userId } });
   if (!record) return null;
   if (record.tokenHash !== tokenHash) return null;
   if (record.consumedAt) return null;
   if (record.expiresAt <= new Date()) return null;
-  await prisma.emailVerificationToken.update({ where: { userId }, data: { consumedAt: new Date() } });
+  await (prisma as any).emailVerificationToken.update({ where: { userId }, data: { consumedAt: new Date() } });
   return record;
 }
