@@ -7,23 +7,28 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/use-auth"
+import { FormError } from "@/components/form/form-error"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [errorText, setErrorText] = useState<string | null>(null)
   const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
+  setIsLoading(true)
+  setErrorText(null)
 
     try {
       await login(email, password)
       navigate('/dashboard')
     } catch (error) {
       console.error("Login failed:", error)
+      const msg = error instanceof Error ? error.message : 'Login failed'
+      setErrorText(msg)
     } finally {
       setIsLoading(false)
     }
@@ -60,7 +65,7 @@ export default function LoginPage() {
                   type="email"
                   placeholder="Enter your email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); if (errorText) setErrorText(null) }}
                   required
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
                 />
@@ -74,11 +79,12 @@ export default function LoginPage() {
                   type="password"
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); if (errorText) setErrorText(null) }}
                   required
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
                 />
               </div>
+              <FormError message={errorText} />
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"

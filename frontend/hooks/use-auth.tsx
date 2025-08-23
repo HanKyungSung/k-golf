@@ -45,7 +45,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
       body: JSON.stringify({ email, password })
     });
-    if (!res.ok) throw new Error('Login failed');
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({} as any));
+      const msg =
+        (typeof data?.error === 'string' && data.error) ||
+        (data?.error?.formErrors?.join?.(' ') || '') ||
+        (data?.error?.fieldErrors && Object.values(data.error.fieldErrors).flat().join(' ')) ||
+        data?.message ||
+        (res.status === 401 ? 'Invalid email or password' : 'Login failed');
+      throw new Error(msg);
+    }
     const data = await res.json();
     setUser(data.user);
   }
