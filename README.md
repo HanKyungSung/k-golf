@@ -125,6 +125,21 @@ The immediate priority is to COMPLETE the customer booking web application (room
 ### Phase 3 – Authentication & Sessions
 Registration is implemented FIRST (before full booking UX dependency on auth). Two parallel methods: email verification (passwordless) and Google OAuth.
 
+#### Auth checklist (MVP implemented)
+- ~~Backend sends verification links to the frontend `/verify` using `FRONTEND_ORIGIN` (fallback http://localhost:5173).~~
+- ~~Frontend has `/verify` page that posts to `${REACT_APP_API_BASE}/api/auth/verify` with `credentials: 'include'`.~~
+- ~~On verify success, backend sets `emailVerifiedAt`, creates a DB-backed session, and sets the HttpOnly `session` cookie.~~
+- ~~`GET /api/auth/me` returns the current user when session cookie is valid.~~
+- ~~Resend endpoint `POST /api/auth/resend` with 60s cooldown and `retryAfterSeconds` in generic responses.~~
+- ~~Resend UI on Verify and Signup pages to request a new link with inline cooldown message.~~
+- Login requires verified email + password and issues the session cookie. ✅
+- Logout clears cookie and deletes the session row. ✅
+- Google OAuth: not implemented yet. ⏭
+
+Env notes
+- Backend: `CORS_ORIGIN` must include the frontend origin; `FRONTEND_ORIGIN` defines where email links go; Gmail creds optional for real email (logs link if missing).
+- Frontend: `REACT_APP_API_BASE` points to backend base URL.
+
 #### 3.1 Email Registration & Verification (Passwordless Start)
 Flow (magic link OR 6-digit code—choose one initial, link recommended):
 1. `POST /auth/register` { email }:
