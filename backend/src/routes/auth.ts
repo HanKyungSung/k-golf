@@ -40,11 +40,18 @@ router.post('/login', async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { email, password } = parsed.data;
-  const user = await findUserByEmail(email.toLowerCase());
-  if (!user || !(user as any).passwordHash) return res.status(401).json({ error: 'Invalid credentials' });
-  if (!user.emailVerifiedAt) return res.status(403).json({ error: 'EMAIL_NOT_VERIFIED' });
+  const normEmail = email.toLowerCase();
+  const user = await findUserByEmail(normEmail);
+  if (!user) return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'No account found for this email' });
+  if (!(user as any).passwordHash) {
+    return res.status(400).json({
+      code: 'PASSWORD_LOGIN_NOT_ENABLED',
+      message: 'Password login is not enabled for this account',
+    });
+  }
+  if (!user.emailVerifiedAt) return res.status(403).json({ code: 'EMAIL_NOT_VERIFIED', message: 'Email not verified' });
   const ok = await verifyPassword(password, (user as any).passwordHash);
-  if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!ok) return res.status(401).json({ code: 'WRONG_PASSWORD', message: 'Wrong password' });
   const { sessionToken } = await createSession(user.id);
   setAuthCookie(res, sessionToken);
   return res.json({ user: { id: user.id, email: user.email, name: user.name } });

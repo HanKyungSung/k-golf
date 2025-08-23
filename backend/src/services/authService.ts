@@ -25,24 +25,31 @@ export async function hashPassword(password: string) {
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   try {
-    if (!stored.startsWith('scrypt:')) return false; // unsupported algo
-    const parts = stored.split(':');
-    if (parts.length !== 3) return false;
-    const paramsPart = parts[1]; // N=...,r=...,p=...
-    const [saltB64, hashB64] = parts.slice(1)[0].includes(',') ? [parts[2], parts[3]] : [parts[1], parts[2]]; // fallback if unexpected
-    // Re-parse robustly
-    const tokens = stored.split(':');
-    // tokens[0] = scrypt (with params), tokens[1]=salt, tokens[2]=hash when using strict format we produced above
-    const salt = Buffer.from(tokens[1], 'base64');
-    const expected = Buffer.from(tokens[2], 'base64');
-    // Extract param numbers
-    const paramString = tokens[0].split('scrypt:')[1];
-    const paramPairs = paramString.split(',').reduce<Record<string,string>>((acc, kv) => { const [k,v] = kv.split('='); if (k&&v) acc[k]=v; return acc; }, {});
-    const N = parseInt(paramPairs.N || `${SCRYPT_N}`, 10);
-    const r = parseInt(paramPairs.r || `${SCRYPT_r}`, 10);
-    const p = parseInt(paramPairs.p || `${SCRYPT_p}`, 10);
+  // Expected format: scrypt:N=16384,r=8,p=1:<saltB64>:<hashB64>
+  if (!stored || !stored.startsWith('scrypt:')) return false;
+  const withoutPrefix = stored.slice('scrypt:'.length);
+  const segments = withoutPrefix.split(':');
+  if (segments.length !== 3) return false;
+
+  const [params, saltB64, hashB64] = segments; // params like N=...,r=...,p=1
+
+    const salt = Buffer.from(saltB64, 'base64');
+    const expected = Buffer.from(hashB64, 'base64');
+
+  const paramPairs = params.split(',').reduce<Record<string, string>>((acc, kv) => {
+      const [k, v] = kv.split('=');
+      if (k && v) acc[k] = v;
+      return acc;
+    }, {});
+    const N = Number.parseInt(paramPairs.N ?? `${SCRYPT_N}`, 10);
+    const r = Number.parseInt(paramPairs.r ?? `${SCRYPT_r}`, 10);
+    const p = Number.parseInt(paramPairs.p ?? `${SCRYPT_p}`, 10);
+
     const derived = await new Promise<Buffer>((resolve, reject) => {
-      crypto.scrypt(password, salt, expected.length, { N, r, p }, (err, buf) => { if (err) reject(err); else resolve(buf); });
+      crypto.scrypt(password, salt, expected.length, { N, r, p }, (err, buf) => {
+        if (err) reject(err);
+        else resolve(buf);
+      });
     });
     if (derived.length !== expected.length) return false;
     return crypto.timingSafeEqual(derived, expected);
