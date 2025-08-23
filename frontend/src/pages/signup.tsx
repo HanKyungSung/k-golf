@@ -47,11 +47,20 @@ export default function SignUpPage() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }))
-  if (errorText) setErrorText(null)
+    const { name, value } = e.target
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value }
+      if (
+        next.password &&
+        next.confirmPassword &&
+        next.password !== next.confirmPassword
+      ) {
+        setErrorText("Passwords do not match")
+      } else {
+        setErrorText(null)
+      }
+      return next
+    })
   }
 
   return (
@@ -163,9 +172,6 @@ export default function SignUpPage() {
                   required
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
                 />
-                {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                  <p className="text-sm text-red-400">Passwords do not match</p>
-                )}
               </div>
               <FormError message={errorText} />
               <Button
