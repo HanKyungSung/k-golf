@@ -127,13 +127,13 @@ export default function HomePage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                     />
                   </svg>
                 </div>
-                <h4 className="text-xl font-semibold text-white mb-3">AI-Powered Analytics</h4>
+                <h4 className="text-xl font-semibold text-white mb-3">4K Ultra HD Display</h4>
                 <p className="text-slate-400">
-                  Advanced swing analysis with real-time feedback and personalized coaching recommendations.
+                  Crystal-clear 4K projection technology with ultra-wide screens for the most immersive golf experience.
                 </p>
               </CardContent>
             </Card>
@@ -146,13 +146,13 @@ export default function HomePage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 00-2 2v2m0 0V9a2 2 0 012-2h14a2 2 0 012 2v2M7 7V6a1 1 0 011-1h8a1 1 0 011 1v1"
                     />
                   </svg>
                 </div>
-                <h4 className="text-xl font-semibold text-white mb-3">Legendary Courses</h4>
+                <h4 className="text-xl font-semibold text-white mb-3">Professional Equipment</h4>
                 <p className="text-slate-400">
-                  Play Augusta National, Pebble Beach, St. Andrews and 200+ championship courses worldwide.
+                  Premium golf clubs, real golf balls, and professional-grade hitting mats for authentic gameplay.
                 </p>
               </CardContent>
             </Card>
@@ -185,25 +185,27 @@ export default function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
               <h3 className="text-4xl font-bold text-white mb-6">
-                Where Innovation Meets
-                <span className="block text-amber-400">Tradition</span>
+                Premium Korean-Style
+                <span className="block text-amber-400">Screen Golf</span>
               </h3>
               <p className="text-slate-300 text-lg mb-6 leading-relaxed">
-                K-Golf represents the evolution of indoor golf entertainment. Our cutting-edge simulators combine
-                precision tracking technology with the timeless elegance of the game we all love.
+                K-Golf brings the authentic Korean screen golf experience to your city. Our state-of-the-art facility
+                features 4 identical premium rooms, each equipped with cutting-edge simulation technology and
+                professional-grade equipment for the ultimate indoor golf experience.
               </p>
               <p className="text-slate-400 mb-8 leading-relaxed">
-                Founded by golf enthusiasts and technology pioneers, we've created an environment where every swing
-                matters, every shot is analyzed, and every round brings you closer to your perfect game.
+                With our simple "1 hour per person" booking model, you can enjoy hassle-free reservations for groups of
+                1-4 players. Each room offers the same premium experience with 4K displays, climate control, and access
+                to hundreds of world-class golf courses.
               </p>
               <div className="grid grid-cols-2 gap-8">
                 <div>
-                  <div className="text-3xl font-bold text-amber-400 mb-2">50K+</div>
-                  <div className="text-slate-400">Rounds Played</div>
+                  <div className="text-3xl font-bold text-amber-400 mb-2">4</div>
+                  <div className="text-slate-400">Premium Rooms</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-amber-400 mb-2">200+</div>
-                  <div className="text-slate-400">World Courses</div>
+                  <div className="text-3xl font-bold text-amber-400 mb-2">$50</div>
+                  <div className="text-slate-400">Per Person/Hour</div>
                 </div>
               </div>
             </div>
