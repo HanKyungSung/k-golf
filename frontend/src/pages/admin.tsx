@@ -147,7 +147,7 @@ export default function AdminPage() {
               </Link>
               <Button
                 variant="outline"
-                onClick={logout}
+                onClick={async () => { await logout(); navigate('/'); }}
                 className="border-red-400/50 text-red-400 hover:bg-red-500/10 bg-transparent"
               >
                 Logout

@@ -1,11 +1,12 @@
 // Replace Next.js Link with react-router-dom Link and integrate auth
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
 
 export default function HomePage() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   return (
     <div className="min-h-screen bg-slate-950">
       {/* Header */}
@@ -45,7 +46,7 @@ export default function HomePage() {
                   </Link>
                   <Button
                     variant="outline"
-                    onClick={logout}
+                    onClick={async () => { await logout(); navigate('/'); }}
                     className="border-red-400/50 text-red-400 hover:bg-red-500/10 bg-transparent"
                   >
                     Logout
