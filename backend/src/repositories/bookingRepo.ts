@@ -7,12 +7,13 @@ export interface CreateBookingInput {
   userId: string; // placeholder until auth implemented
   startTime: Date;
   players: number;
+  hours: number;
   priceCents: number;
 }
 
-// Compute endTime: 1 hour per player
-function computeEnd(startTime: Date, players: number): Date {
-  return new Date(startTime.getTime() + players * 60 * 60 * 1000);
+// Compute endTime: independent hours selection
+function computeEnd(startTime: Date, hours: number): Date {
+  return new Date(startTime.getTime() + hours * 60 * 60 * 1000);
 }
 
 export async function findConflict(roomId: string, startTime: Date) {
@@ -20,7 +21,7 @@ export async function findConflict(roomId: string, startTime: Date) {
 }
 
 export async function createBooking(data: CreateBookingInput): Promise<Booking> {
-  const endTime = computeEnd(data.startTime, data.players);
+  const endTime = computeEnd(data.startTime, data.hours);
   return prisma.booking.create({
     data: {
       roomId: data.roomId,

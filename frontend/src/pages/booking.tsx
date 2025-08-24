@@ -92,6 +92,7 @@ export default function BookingPage() {
   const [selectedRoom, setSelectedRoom] = useState<string>("")
   const [selectedTime, setSelectedTime] = useState<string>("")
   const [numberOfPlayers, setNumberOfPlayers] = useState<string>("1")
+  const [hours, setHours] = useState<string>("1")
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -108,7 +109,7 @@ export default function BookingPage() {
 
     // Mock booking process
     alert(
-      `Booking confirmed!\nRoom: ${rooms.find((r) => r.id === selectedRoom)?.name}\nDate: ${selectedDate.toDateString()}\nTime: ${selectedTime}\nPlayers: ${numberOfPlayers}\nTotal Hours: ${numberOfPlayers}`,
+      `Booking confirmed!\nRoom: ${rooms.find((r) => r.id === selectedRoom)?.name}\nDate: ${selectedDate.toDateString()}\nTime: ${selectedTime}\nPlayers: ${numberOfPlayers}\nHours: ${hours}`,
     )
     navigate('/dashboard')
   }
@@ -118,12 +119,13 @@ export default function BookingPage() {
   const calculatePrice = () => {
     if (!selectedRoomData) return 0
     const players = Number.parseInt(numberOfPlayers)
-    const ratePerPerson = 50 // Fixed rate for all rooms
-    return ratePerPerson * players
+    const hrs = Number.parseInt(hours)
+    const ratePerPersonPerHour = 50 // Fixed rate for all rooms
+    return ratePerPersonPerHour * players * hrs
   }
 
   const totalPrice = calculatePrice()
-  const totalHours = Number.parseInt(numberOfPlayers)
+  const totalHours = Number.parseInt(hours)
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -169,7 +171,10 @@ export default function BookingPage() {
         <div className="mb-8">
           <h2 className="text-4xl font-bold text-white mb-2">Book Your Premium Experience</h2>
           <p className="text-slate-400 text-lg">
-            Choose from our 4 identical premium rooms. Each player gets 1 hour of screen golf time at $50 per person.
+            Choose from our 4 identical premium rooms. Pricing is $50 per person per hour.
+          </p>
+          <p className="text-slate-400 text-sm mt-1">
+            Recommendation: plan roughly 1 hour per player for the best experience.
           </p>
         </div>
 
@@ -288,19 +293,44 @@ export default function BookingPage() {
                         </SelectTrigger>
                         <SelectContent className="bg-slate-800 border-slate-700">
                           <SelectItem value="1" className="text-white hover:bg-slate-700">
-                            1 Player (1 hour total)
+                            1 Player
                           </SelectItem>
                           <SelectItem value="2" className="text-white hover:bg-slate-700">
-                            2 Players (2 hours total)
+                            2 Players
                           </SelectItem>
                           <SelectItem value="3" className="text-white hover:bg-slate-700">
-                            3 Players (3 hours total)
+                            3 Players
                           </SelectItem>
                           <SelectItem value="4" className="text-white hover:bg-slate-700">
-                            4 Players (4 hours total)
+                            4 Players
                           </SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block font-semibold text-white">Hours</label>
+                      <Select value={hours} onValueChange={setHours}>
+                        <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-700">
+                          <SelectItem value="1" className="text-white hover:bg-slate-700">
+                            1 Hour {Number(numberOfPlayers) > 1 ? '(short for group)' : ''}
+                          </SelectItem>
+                          <SelectItem value="2" className="text-white hover:bg-slate-700">
+                            2 Hours {Number(numberOfPlayers) === 2 ? '(recommended)' : ''}
+                          </SelectItem>
+                          <SelectItem value="3" className="text-white hover:bg-slate-700">
+                            3 Hours {Number(numberOfPlayers) === 3 ? '(recommended)' : ''}
+                          </SelectItem>
+                          <SelectItem value="4" className="text-white hover:bg-slate-700">
+                            4 Hours {Number(numberOfPlayers) === 4 ? '(recommended)' : ''}
+                          </SelectItem>
+                          {/* capped at 4 hours per request */}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-400">Tip: 1 hour per player is usually the sweet spot.</p>
                     </div>
 
                     {selectedDate && (
