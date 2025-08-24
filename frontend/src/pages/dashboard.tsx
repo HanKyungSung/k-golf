@@ -1,7 +1,8 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/hooks/use-auth"
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -22,13 +23,11 @@ const mockBookings = [
   { id: 3, roomName: "Room C", date: "2023-10-03", time: "12:00 PM", duration: 3, price: 75, status: "cancelled" },
 ]
 
-const user = { name: "John Doe" }
-
-const logout = () => {
-  // Logout logic here
-}
+// Use real auth context instead of stubbed user/logout
 
 const DashboardPage = () => {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black">
       {/* Header */}
@@ -42,10 +41,10 @@ const DashboardPage = () => {
               <span className="ml-2 text-sm text-slate-400">Premium Screen Golf</span>
             </Link>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-300">Welcome, {user.name}</span>
+              <span className="text-sm text-slate-300">Welcome, {user?.name || user?.email}</span>
               <Button
                 variant="outline"
-                onClick={logout}
+                onClick={async () => { await logout(); navigate('/'); }}
                 className="border-red-400/50 text-red-400 hover:bg-red-500/10 bg-transparent"
               >
                 Logout

@@ -10,7 +10,7 @@ interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<void>
   signup: (name: string, email: string, password: string) => Promise<{ message: string; expiresAt?: string }>
-  logout: () => void
+  logout: () => Promise<void>
   isLoading: boolean
   resendVerification: (email: string) => Promise<{ message: string; expiresAt?: string; retryAfterSeconds?: number }>
 }
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
       body: JSON.stringify({ email, password })
     });
-  if (!res.ok) throw new Error(await getErrorMessage(res));
+    if (!res.ok) throw new Error(await getErrorMessage(res));
     const data = await res.json();
     setUser(data.user);
   }
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
       body: JSON.stringify({ name, email, password })
     });
-  if (!res.ok) throw new Error(await getErrorMessage(res));
+    if (!res.ok) throw new Error(await getErrorMessage(res));
     const data = await res.json();
     // No user set yet; waiting for verification
     return data;
@@ -100,10 +100,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data;
   }
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
     const apiBase = process.env.REACT_APP_API_BASE;
-    fetch(`${apiBase}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(()=>{});
+    try {
+      await fetch(`${apiBase}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch {
+      // ignore network errors; user is cleared locally
+    }
   }
 
   return <AuthContext.Provider value={{ user, login, signup, logout, isLoading, resendVerification }}>{children}</AuthContext.Provider>

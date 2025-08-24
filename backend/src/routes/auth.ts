@@ -144,7 +144,12 @@ function setAuthCookie(res: Response, token: string) {
   });
 }
 function clearAuthCookie(res: Response) {
-  res.clearCookie(COOKIE_NAME, { path: '/' });
+  res.clearCookie(COOKIE_NAME, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+  });
 }
 function readAuthCookie(req: Request) {
   return (req.cookies && req.cookies[COOKIE_NAME]) || null;
