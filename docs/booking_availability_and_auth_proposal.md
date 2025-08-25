@@ -13,18 +13,18 @@ sequenceDiagram
   participant FE as Frontend
   participant BE as Backend
   participant EM as Email
-  U->>FE: Sign up - email and password
-  FE->>BE: POST /auth/register
-  BE-->>FE: 200 OK (user created; session optional)
-  BE->>EM: Send verification email (link to FE /verify?token=...)
-  U->>FE: Click link /verify?token=...
-  FE->>BE: POST /auth/verify with token
-  BE-->>FE: 200 OK (verified)
-  FE-->>U: Show success and redirect
-  U->>FE: Click Resend (cooldown)
-  FE->>BE: POST /auth/resend-verification
-  BE-->>FE: 200 OK
-  FE-->>U: Show countdown (e.g., 60s)
+  U->FE: Sign up (email, password)
+  FE->BE: POST /auth/register
+  BE-->FE: 200 OK user created
+  BE->EM: Send verification email (FE /verify?token=...)
+  U->FE: Click verify link
+  FE->BE: POST /auth/verify (token)
+  BE-->FE: 200 OK verified
+  FE-->U: Show success and redirect
+  U->FE: Click resend (cooldown)
+  FE->BE: POST /auth/resend
+  BE-->FE: 200 OK
+  FE-->U: Show countdown (e.g., 60s)
 ```
 
 Notes
@@ -50,18 +50,18 @@ Notes
 - Inputs the customer chooses:
   - players: 1–4
   - hours: 1–4 (recommended: ~1 hour per player)
-- Price formula: priceCents = players × hours × 5000 (i.e., $50 per person per hour)
+- Price formula: price = players × hours × 50 (USD) with two decimals
 - Server enforces caps for both players and hours.
 
 ```mermaid
 flowchart TD
   A[Start Booking] --> B[Select room/date/time]
-  B --> C[Choose players (1-4)]
-  C --> D[Choose hours (1-4)]
-  D --> E[Show price = players * hours * $50]
+  B --> C[Choose players 1-4]
+  C --> D[Choose hours 1-4]
+  D --> E[Show price = players*hours*50 USD]
   E --> F{Available?}
-  F --|No|--> B
-  F --|Yes|--> G[Confirm and Create Booking]
+  F --> B
+  F --> G[Confirm and Create Booking]
   G --> H[Success]
 ```
 
@@ -77,7 +77,7 @@ flowchart TD
 
 - POST /api/bookings
   - Body: { roomId: string, startTimeIso: string, players: 1-4, hours: 1-4 }
-  - Server computes: endTime = startTime + hours, priceCents = players × hours × 5000
+  - Server computes: endTime = startTime + hours, price = players × hours × 50
   - Rejects if overlapping or outside operating hours
 
 ### Data integrity (Postgres)
@@ -134,7 +134,7 @@ erDiagram
     datetime startTime
     datetime endTime
     int players
-    int priceCents
+    "decimal price(10,2)"
     string status
     datetime createdAt
     datetime updatedAt
