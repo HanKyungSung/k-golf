@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,15 +8,13 @@ import { useAuth } from "@/hooks/use-auth"
 import { Clock, Users, Star } from "lucide-react"
 
 interface Room {
+  // Unique UI id per card to control selection/highlight
   id: string
   name: string
   capacity: number
-  standardRate: number
-  premiumRate: number
-  vipRate: number
-  features: string[]
   image: string
-  premium: boolean
+  // Real backend Room.id to use for API calls
+  backendId?: string
 }
 
 interface TimeSlot {
@@ -24,67 +22,16 @@ interface TimeSlot {
   available: boolean
 }
 
-const rooms: Room[] = [
-  {
-    id: "1",
-    name: "Room 1",
-    capacity: 4,
-    standardRate: 50,
-    premiumRate: 50,
-    vipRate: 50,
-    features: ["4K Ultra HD", "200+ Golf Courses", "Advanced Analytics", "Premium Suite"],
-    image: "/golf-simulator-room.png",
-    premium: false,
-  },
-  {
-    id: "2",
-    name: "Room 2",
-    capacity: 4,
-    standardRate: 50,
-    premiumRate: 50,
-    vipRate: 50,
-    features: ["4K Ultra HD", "200+ Golf Courses", "Advanced Analytics", "Premium Suite"],
-    image: "/luxury-golf-simulator-room.png",
-    premium: false,
-  },
-  {
-    id: "3",
-    name: "Room 3",
-    capacity: 4,
-    standardRate: 50,
-    premiumRate: 50,
-    vipRate: 50,
-    features: ["4K Ultra HD", "200+ Golf Courses", "Advanced Analytics", "Premium Suite"],
-    image: "/large-golf-simulator-suite.png",
-    premium: false,
-  },
-  {
-    id: "4",
-    name: "Room 4",
-    capacity: 4,
-    standardRate: 50,
-    premiumRate: 50,
-    vipRate: 50,
-    features: ["4K Ultra HD", "200+ Golf Courses", "Advanced Analytics", "Premium Suite"],
-    image: "/golf-simulator-room.png",
-    premium: false,
-  },
-]
+// Backend room shape (minimal)
+type BackendRoom = { id: string; name: string; capacity: number }
+type ApiSlot = { startIso: string; endIso: string; available: boolean }
 
-const timeSlots: TimeSlot[] = [
-  { time: "09:00", available: true },
-  { time: "10:00", available: true },
-  { time: "11:00", available: false },
-  { time: "12:00", available: true },
-  { time: "13:00", available: true },
-  { time: "14:00", available: true },
-  { time: "15:00", available: false },
-  { time: "16:00", available: true },
-  { time: "17:00", available: true },
-  { time: "18:00", available: true },
-  { time: "19:00", available: false },
-  { time: "20:00", available: true },
-  { time: "21:00", available: true },
+// Static room templates to preserve UI names/images
+const DISPLAY_ROOM_TEMPLATES: Array<{ name: string; image: string }> = [
+  { name: "Room 1", image: "/golf-simulator-room.png" },
+  { name: "Room 2", image: "/luxury-golf-simulator-room.png" },
+  { name: "Room 3", image: "/large-golf-simulator-suite.png" },
+  { name: "Room 4", image: "/golf-simulator-room.png" },
 ]
 
 export default function BookingPage() {
@@ -96,7 +43,82 @@ export default function BookingPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const handleBooking = () => {
+  // Backend rooms and availability
+  const [backendRooms, setBackendRooms] = useState<BackendRoom[]>([])
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [loadingRooms, setLoadingRooms] = useState(false)
+  const [apiSlots, setApiSlots] = useState<ApiSlot[]>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
+
+  // Load rooms and build 4 display rooms with backend IDs
+  useEffect(() => {
+    const loadRooms = async () => {
+      setLoadingRooms(true)
+      try {
+        const apiBase = process.env.REACT_APP_API_BASE || "http://localhost:8080"
+        const res = await fetch(`${apiBase}/api/bookings/rooms`, { credentials: "include" })
+        if (!res.ok) return
+        const data = await res.json()
+        const br: BackendRoom[] = Array.isArray(data.rooms) ? data.rooms : []
+        setBackendRooms(br)
+        if (br.length > 0) {
+          const display: Room[] = DISPLAY_ROOM_TEMPLATES.map((tpl, idx) => {
+            const backing = br[idx % br.length]
+            return {
+              id: `display-${idx + 1}`,
+              name: tpl.name,
+              capacity: backing?.capacity ?? 4,
+              image: tpl.image,
+              backendId: backing?.id,
+            }
+          })
+          setRooms(display)
+        }
+      } finally {
+        setLoadingRooms(false)
+      }
+    }
+    loadRooms()
+  }, [])
+
+  // Helper: local date + HH:mm to UTC ISO
+  const toStartIso = (date: Date, timeHHmm: string) => {
+    const [hh, mm] = timeHHmm.split(":").map((x) => parseInt(x, 10))
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hh, mm, 0, 0)
+    return d.toISOString()
+  }
+
+  // Fetch availability when room/date/hours change
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      const backendId = rooms.find(r => r.id === selectedRoom)?.backendId
+      if (!backendId || !selectedDate) { setApiSlots([]); return }
+      setLoadingSlots(true)
+      try {
+        const apiBase = process.env.REACT_APP_API_BASE || "http://localhost:8080"
+        const dateStr = selectedDate.toISOString().slice(0, 10)
+        const params = new URLSearchParams({
+          roomId: backendId,
+          date: dateStr,
+          hours,
+          slotMinutes: "60",
+          openStart: "09:00",
+          openEnd: "23:00",
+        })
+        const res = await fetch(`${apiBase}/api/bookings/availability?${params.toString()}`, { credentials: "include" })
+        if (!res.ok) { setApiSlots([]); return }
+        const data = await res.json()
+        setApiSlots(Array.isArray(data.slots) ? data.slots : [])
+      } catch {
+        setApiSlots([])
+      } finally {
+        setLoadingSlots(false)
+      }
+    }
+    fetchAvailability()
+  }, [selectedRoom, selectedDate, hours])
+
+  const handleBooking = async () => {
     if (!user) {
       navigate('/login')
       return
@@ -107,11 +129,34 @@ export default function BookingPage() {
       return
     }
 
-    // Mock booking process
-    alert(
-      `Booking confirmed!\nRoom: ${rooms.find((r) => r.id === selectedRoom)?.name}\nDate: ${selectedDate.toDateString()}\nTime: ${selectedTime}\nPlayers: ${numberOfPlayers}\nHours: ${hours}`,
-    )
-    navigate('/dashboard')
+    try {
+      const apiBase = process.env.REACT_APP_API_BASE || "http://localhost:8080"
+      const startTimeIso = toStartIso(selectedDate, selectedTime)
+      const backendId = rooms.find(r => r.id === selectedRoom)?.backendId
+      if (!backendId) {
+        alert('No backend room available for this selection')
+        return
+      }
+      const res = await fetch(`${apiBase}/api/bookings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          roomId: backendId,
+          startTimeIso,
+          players: parseInt(numberOfPlayers, 10),
+          hours: parseInt(hours, 10),
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert(err?.message || err?.error || "Failed to create booking")
+        return
+      }
+      navigate('/dashboard')
+    } catch {
+      alert("Network error while creating booking")
+    }
   }
 
   const selectedRoomData = rooms.find((r) => r.id === selectedRoom)
@@ -244,23 +289,34 @@ export default function BookingPage() {
                     Available Time Slots
                   </h3>
                   <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto bg-slate-800/30 p-4 rounded-lg border border-slate-700">
-                    {timeSlots.map((slot) => (
-                      <Button
-                        key={slot.time}
-                        variant={selectedTime === slot.time ? "default" : "outline"}
-                        className={`h-12 ${
-                          selectedTime === slot.time
-                            ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold"
-                            : slot.available
-                              ? "border-slate-600 text-slate-300 hover:border-amber-500/50 hover:bg-slate-700/50 bg-slate-800/50"
-                              : "opacity-30 cursor-not-allowed bg-slate-900/50 border-slate-800"
-                        }`}
-                        disabled={!slot.available}
-                        onClick={() => setSelectedTime(slot.time)}
-                      >
-                        {slot.time}
-                      </Button>
-                    ))}
+                    {loadingSlots && <div className="col-span-2 text-slate-400">Loading slots…</div>}
+                    {!loadingSlots && apiSlots.length === 0 && (
+                      <div className="col-span-2 text-slate-500">No slots found for this day.</div>
+                    )}
+                    {!loadingSlots && apiSlots.map((s) => {
+                      const local = new Date(s.startIso)
+                      const hh = String(local.getHours()).padStart(2, '0')
+                      const mm = String(local.getMinutes()).padStart(2, '0')
+                      const time = `${hh}:${mm}`
+                      const available = !!s.available
+                      return (
+                        <Button
+                          key={time}
+                          variant={selectedTime === time ? "default" : "outline"}
+                          className={`h-12 ${
+                            selectedTime === time
+                              ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold"
+                              : available
+                                ? "border-slate-600 text-slate-300 hover:border-amber-500/50 hover:bg-slate-700/50 bg-slate-800/50"
+                                : "opacity-30 cursor-not-allowed bg-slate-900/50 border-slate-800"
+                          }`}
+                          disabled={!available}
+                          onClick={() => setSelectedTime(time)}
+                        >
+                          {time}
+                        </Button>
+                      )
+                    })}
                   </div>
                 </div>
               </div>

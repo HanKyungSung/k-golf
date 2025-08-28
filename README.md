@@ -20,10 +20,32 @@ This monorepo contains:
 ```
 
 ### Booking (Existing)
-- Pricing: $50 per player per hour (hours = number of players, 1–4).
+- Pricing: $50 per player per hour (players 1–4, hours 1–4 independently).
 - ~~Planned persistence: PostgreSQL (docker-compose `db` service) with overlap constraints.~~
 - Persistence: PostgreSQL + Prisma with overlap constraints.
 - Auth: Email verification + password login; sessions via HttpOnly cookie. Google OAuth planned.
+
+## What’s New (Aug 2025)
+
+Auth and UX
+- Frontend verification flow: email links now land on the frontend `/verify` page before calling the backend.
+- Resend verification with cooldown: UI shows remaining seconds; backend enforces a retry window.
+- Structured login errors: backend returns specific codes/messages; frontend surfaces them consistently.
+
+Bookings and Availability
+- Availability API: `GET /api/bookings/availability?roomId&date&hours&slotMinutes&openStart&openEnd` computes valid continuous windows (no extra table).
+- Overlap prevention: server checks for conflicting bookings; optional DB constraint planned.
+- Price stored as decimal: Booking.price is `Decimal(10,2)` (replaced older cents field).
+- Rooms API: `GET /api/bookings/rooms` returns active rooms only.
+- Frontend booking page now calls the backend for availability and booking creation; errors shown inline.
+
+Rooms and Seeding
+- Seed script ensures exactly four active rooms: Room 1–4 (capacity 4). All other rooms are deactivated.
+- Frontend keeps the original 4-card design (Room 1–4, static images) and maps each card to a real backend UUID.
+
+Quality
+- Centralized error parsing on frontend auth; symmetric cookie handling on logout.
+- Diagrams and docs updated (availability and ER), including Mermaid fixes.
 
 ### POS Hub (New)
 A local Electron application that:
@@ -98,7 +120,7 @@ The immediate priority is to COMPLETE the customer booking web application (room
 2. ~~Create `backend/prisma/schema.prisma` with models:~~
   - ~~`User`, `AuthProvider`, `VerificationToken`, `Session`~~
   - ~~`Room` (capacity, active)~~
-  - ~~`Booking` (roomId, userId, startTime, endTime, players, priceCents, status)~~
+  - ~~`Booking` (roomId, userId, startTime, endTime, players, price, status)~~
 3. ~~Add PostgreSQL extensions migration (if using EXCLUDE constraint requires `btree_gist`).~~
 4. ~~Run: `npx prisma migrate dev --name init` (writes migrations folder)~~
 5. ~~Implement a seed script (`backend/prisma/seed.ts`) to insert initial rooms (e.g., 4 demo simulators).~~
@@ -263,12 +285,30 @@ Focus on Phase 2 remaining items:
 
 ## Getting Started (Current)
 ```
-# Start DB
+# 1) Start the database (from repo root)
 npm run db:up
 
-# Dev (frontend + backend concurrently)
+# 2) Apply Prisma migrations and generate client (from backend/)
+cd backend
+npm install
+npm run prisma:migrate
+npm run prisma:generate
+
+# 3) Seed rooms (creates Room 1–4 active, deactivates others)
+npm run db:seed
+
+# 4) Run backend API
+npm run dev
+
+# 5) In a new terminal, run the frontend
+cd ../frontend
+npm install
 npm run dev
 ```
+
+Env
+- Backend: set `CORS_ORIGIN` (frontend origin) and optionally `FRONTEND_ORIGIN` for email links; `DATABASE_URL` for Postgres.
+- Frontend: set `REACT_APP_API_BASE` to the backend base URL (e.g., `http://localhost:8080`).
 POS hub dev scripts will be added as implementation progresses.
 
 ## Quick Concepts

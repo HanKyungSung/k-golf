@@ -3,20 +3,28 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-	const rooms = [
-		{ name: 'Suite A', capacity: 4 },
-		{ name: 'Suite B', capacity: 4 },
-		{ name: 'VIP Lounge', capacity: 6 },
+	const desiredRooms = [
+		{ name: 'Room 1', capacity: 4, active: true },
+		{ name: 'Room 2', capacity: 4, active: true },
+		{ name: 'Room 3', capacity: 4, active: true },
+		{ name: 'Room 4', capacity: 4, active: true },
 	];
 
-	for (const r of rooms) {
+	for (const r of desiredRooms) {
 		await prisma.room.upsert({
 			where: { name: r.name },
-			update: { capacity: r.capacity },
-			create: { name: r.name, capacity: r.capacity },
+			update: { capacity: r.capacity, active: true },
+			create: { name: r.name, capacity: r.capacity, active: true },
 		});
 	}
-	console.log('Seed complete: rooms ensured');
+
+	// Deactivate any rooms not in the desired list, so frontend only sees these 4
+	await prisma.room.updateMany({
+		where: { name: { notIn: desiredRooms.map((r) => r.name) } },
+		data: { active: false },
+	});
+
+	console.log('Seed complete: 4 rooms active (Room 1-4); others deactivated');
 }
 
 main()
