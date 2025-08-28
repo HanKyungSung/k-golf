@@ -7,6 +7,7 @@ import LoginPage from './pages/login'
 import SignUpPage from './pages/signup'
 import VerifyPage from './pages/verify'
 import { AuthProvider } from '../hooks/use-auth'
+import { Toaster } from '@/components/ui/toaster'
 import { ThemeProvider } from '../components/theme-provider'
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/verify" element={<VerifyPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <Toaster />
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
+import { toast } from "@/hooks/use-toast"
 
 interface User {
   id: string
@@ -21,24 +22,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const apiBase = process.env.REACT_APP_API_BASE;
-        const res = await fetch(`${apiBase}/api/auth/me`, { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
+  // Revalidate session from server; clear user on 401 or non-OK
+  const revalidate = useCallback(async () => {
+    try {
+      const apiBase = process.env.REACT_APP_API_BASE;
+      const res = await fetch(`${apiBase}/api/auth/me`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+      } else {
+        // 401 or any non-OK → treat as signed out
+        if (user) {
+          toast({ title: 'Session expired', description: 'Please log in again.' })
         }
-      } finally {
-        setIsLoading(false);
+        setUser(null);
       }
-    };
-    load();
+    } catch {
+      // Network issues: do not flip user eagerly, but avoid claiming logged-in if never loaded
+      if (user === null) setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user])
+
+  // Initial load
+  useEffect(() => {
+    revalidate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Revalidate on focus/visibility/online and periodically
+  useEffect(() => {
+    const onFocus = () => revalidate();
+    const onVis = () => { if (!document.hidden) revalidate(); };
+    const onOnline = () => revalidate();
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('online', onOnline);
+    const intervalId = window.setInterval(revalidate, 5 * 60 * 1000); // every 5 minutes
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('online', onOnline);
+      window.clearInterval(intervalId);
+    };
+  }, [revalidate])
 
   // Centralized helper: prefer backend-provided message
   const getErrorMessage = async (res: Response): Promise<string> => {
+    if (res.status === 401) {
+      if (user) toast({ title: 'Session expired', description: 'Please log in again.' })
+      setUser(null)
+    }
     try {
       const data: any = await res.json()
       if (typeof data?.message === 'string' && data.message) return data.message

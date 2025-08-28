@@ -1,36 +1,31 @@
 // @ts-nocheck
 "use client"
-
-import { useToast } from "@/hooks/use-toast"
 import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
+  Toast as UiToast,
+  ToastClose as UiToastClose,
+  ToastDescription as UiToastDescription,
+  ToastProvider as UiToastProvider,
+  ToastTitle as UiToastTitle,
+  ToastViewport as UiToastViewport,
 } from "@/components/ui/toast"
+import { useToast } from "@/hooks/use-toast"
 
 export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
+    <UiToastProvider>
+      {toasts.map(({ id, title, description, action, open, onOpenChange, duration, variant }) => (
+        <UiToast key={id} open={open} onOpenChange={onOpenChange} duration={duration} variant={variant as any}>
+          <div className="grid gap-1">
+            {title && <UiToastTitle>{title}</UiToastTitle>}
+            {description && <UiToastDescription>{description}</UiToastDescription>}
+          </div>
+          {action}
+          <UiToastClose />
+        </UiToast>
+      ))}
+      <UiToastViewport />
+    </UiToastProvider>
   )
 }
