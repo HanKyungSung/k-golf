@@ -31,6 +31,7 @@ Auth and UX
 - Frontend verification flow: email links now land on the frontend `/verify` page before calling the backend.
 - Resend verification with cooldown: UI shows remaining seconds; backend enforces a retry window.
 - Structured login errors: backend returns specific codes/messages; frontend surfaces them consistently.
+- Auto-logout on expiry: frontend revalidates the session on mount, window focus/visibility, online events, and every 5 minutes; a 401 clears local user and shows a toast “Session expired, please log in again.”
 
 Bookings and Availability
 - Availability API: `GET /api/bookings/availability?roomId&date&hours&slotMinutes&openStart&openEnd` computes valid continuous windows (no extra table).
@@ -123,27 +124,28 @@ The immediate priority is to COMPLETE the customer booking web application (room
   - ~~`Booking` (roomId, userId, startTime, endTime, players, price, status)~~
 3. ~~Add PostgreSQL extensions migration (if using EXCLUDE constraint requires `btree_gist`).~~
 4. ~~Run: `npx prisma migrate dev --name init` (writes migrations folder)~~
-5. ~~Implement a seed script (`backend/prisma/seed.ts`) to insert initial rooms (e.g., 4 demo simulators).~~
+5. ~~Implement a seed script (`backend/prisma/seed.ts`) to insert initial rooms (now ensures exactly 4 active rooms: Room 1–4).~~
 6. ~~Add npm scripts:~~
   - ~~`db:migrate`, `db:generate`, `db:seed`~~
 7. ~~Verify DB objects exist (inspect via `psql` or Prisma Studio).~~
 
 ### Phase 2 – Booking Domain Implementation (Server)
-1. ~~Replace in‑memory storage with Prisma repository modules:~~
-  - ~~`repositories/bookingRepo.ts`~~
-  - ~~`repositories/roomRepo.ts`~~
-2. ~~Add overlap prevention:~~
-  - ~~Option A: EXCLUDE constraint on `(room_id WITH =, tstzrange(start_time, end_time) WITH &&)`~~
-  - ~~Option B: Serializable transaction + manual check (fallback)~~
-3. Unified price calculation util (single source of truth) used in POST /bookings.
+1. Replace in‑memory storage with Prisma repository modules:
+  - ✅ `repositories/bookingRepo.ts`
+  - ⏭ `repositories/roomRepo.ts` (rooms are fetched directly in route for now)
+2. Overlap prevention:
+  - ⏭ Option A: EXCLUDE constraint `(room_id WITH =, tstzrange(start_time, end_time) WITH &&)`
+  - ✅ Option B: manual overlap check (no canceled) before creating bookings
+3. Unified price calculation util (single source of truth) used in POST /bookings: ⏭ (currently inline constant $50)
 4. Endpoints (REST):
-  - `GET /api/rooms` (list active rooms)
-  - `GET /api/availability?roomId=&date=` (returns 30/60‑min slots with booking status)
-  - ~~`POST /api/bookings` (payload: roomId, startTime, players) → validates capacity & pricing~~
-  - `GET /api/bookings/:id`
-  - ~~`GET /api/bookings` (current user’s bookings)~~
-  - `PATCH /api/bookings/:id/cancel` (soft cancel if > threshold time)
-5. Central error handler + zod schemas for request validation.
+  - ✅ `GET /api/bookings/rooms` (list active rooms)
+  - ✅ `GET /api/bookings/availability?roomId=&date=&hours=&slotMinutes=&openStart=&openEnd=`
+  - ✅ `POST /api/bookings` (payload: roomId, startTimeIso, players, hours)
+  - ✅ `GET /api/bookings` (all) and `GET /api/bookings/mine` (current user)
+  - ⏭ `GET /api/bookings/:id`
+  - ⏭ `PATCH /api/bookings/:id/cancel` (soft cancel if > threshold time)
+5. ✅ Zod schemas on inputs; basic error shaping in handlers.
+6. ✅ Booking price stored as Decimal(10,2) (migration applied; code updated).
 
 ### Phase 3 – Authentication & Sessions
 Registration is implemented FIRST (before full booking UX dependency on auth). Two parallel methods: email verification (passwordless) and Google OAuth.
@@ -221,18 +223,21 @@ Security notes:
 Initial recommendation: EMAIL ONLY (passwordless link) for MVP; add SMS later only if conversion or security metrics justify cost.
 
 #### 3.7 Future Enhancements (Deferred)
+Additional done
+- ✅ Auto revalidation + auto-logout on 401 with toast “Session expired, please log in again.”
 - Add refresh token rotation & device management.
 - Add optional password set (convert to hybrid auth) if needed.
 - Integrate rate limiter & IP allow/deny lists.
 - Add audit log (user sign-ins, verification attempts).
 
 ### Phase 4 – Frontend Integration (Bookings + Auth)
-1. Update `useAuth` hook to call backend (`/auth/me`, login flows) instead of localStorage mock.
-2. Build authentication screens (login, signup / request code, verify code).
-3. Replace booking form submit: POST to `/api/bookings` + show success + redirect to dashboard.
-4. Availability view: call `/api/availability` to disable already booked or invalid slots.
-5. Dashboard page: fetch real bookings, render status, allow cancellation.
-6. Global error + toast handling for API failures (network, validation, auth expiry).
+1. ✅ Update `useAuth` hook to call backend (`/api/auth/me`, login/verify/logout flows).
+2. ✅ Build authentication screens (login, signup, verify).
+3. ✅ Replace booking form submit: POST to `/api/bookings` + success redirect to dashboard.
+4. ✅ Availability view: call `/api/bookings/availability` to disable booked/invalid slots.
+5. 🔜 Dashboard page: fetch real bookings from backend and allow cancellation (currently mock data).
+6. ✅ Global error + toast handling baseline (shows session-expired on 401; surfaces API errors).
+7. ✅ Room cards keep static design (Room 1–4) while mapping to backend UUIDs; images have fallbacks.
 
 ### Phase 5 – Validation, Pricing & Edge Cases
 1. Server rejects: overlapping booking, players > room capacity, startTime in past, endTime beyond hours of operation.
@@ -309,6 +314,12 @@ npm run dev
 Env
 - Backend: set `CORS_ORIGIN` (frontend origin) and optionally `FRONTEND_ORIGIN` for email links; `DATABASE_URL` for Postgres.
 - Frontend: set `REACT_APP_API_BASE` to the backend base URL (e.g., `http://localhost:8080`).
+
+## Notes: Room IDs vs UI Labels
+
+- Database Room IDs are UUIDs (Prisma `@default(uuid())`). The UI continues to display four cards labeled “Room 1–4”.
+- The frontend fetches active rooms (`GET /api/bookings/rooms`), then maps those UUIDs onto the four display cards. API calls (availability, create booking) always send the real UUID, not the UI label.
+- The seed ensures exactly four active rooms (names: Room 1–4) so mapping is deterministic in development.
 POS hub dev scripts will be added as implementation progresses.
 
 ## Quick Concepts
