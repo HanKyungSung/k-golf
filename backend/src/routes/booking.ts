@@ -76,6 +76,12 @@ router.post('/', requireAuth, async (req, res) => {
   // Compute endTime for conflict detection
   const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
 
+  // Rule: cannot book a past time slot
+  const now = new Date();
+  if (start.getTime() <= now.getTime()) {
+    return res.status(400).json({ error: 'Cannot book a past time slot' });
+  }
+
   // Conflict: overlap with any existing non-canceled booking in the same room
   const conflict = await findConflict(roomId, start, end);
   if (conflict) {
@@ -143,11 +149,13 @@ router.get('/availability', async (req, res) => {
   const lastStartAllowed = new Date(dayClose.getTime() - desiredMs);
 
   const slots: { startIso: string; endIso: string; available: boolean }[] = [];
+  const now = new Date();
   for (let t = dayOpen.getTime(); t <= lastStartAllowed.getTime(); t += stepMs) {
     const s = new Date(t);
     const e = new Date(t + desiredMs);
     const overlaps = existing.some((b) => b.startTime < e && b.endTime > s);
-    slots.push({ startIso: s.toISOString(), endIso: e.toISOString(), available: !overlaps });
+    const futureStart = s.getTime() > now.getTime();
+    slots.push({ startIso: s.toISOString(), endIso: e.toISOString(), available: futureStart && !overlaps });
   }
 
   res.json({
