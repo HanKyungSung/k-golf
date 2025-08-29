@@ -1,33 +1,85 @@
 import { Link, useNavigate } from "react-router-dom"
+import React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "confirmed":
-      return "bg-green-500 text-white"
-    case "pending":
-      return "bg-yellow-500 text-white"
-    case "cancelled":
-      return "bg-red-500 text-white"
-    default:
-      return "bg-slate-500 text-white"
+const getStatusBadge = (statusRaw: string, endTimeIso: string) => {
+  // Backend stores status as strings like 'CONFIRMED' or 'CANCELED'.
+  const isCompleted = new Date(endTimeIso).getTime() < Date.now();
+  let label = "";
+  let classes = "bg-slate-500 text-white";
+  if (statusRaw === "CANCELED") {
+    label = "canceled";
+    classes = "bg-red-500 text-white";
+  } else if (isCompleted) {
+    label = "completed";
+    classes = "bg-slate-600 text-white";
+  } else {
+    label = "booked";
+    classes = "bg-green-500 text-white";
   }
-}
+  return { label, classes };
+};
 
-const mockBookings = [
-  { id: 1, roomName: "Room A", date: "2023-10-01", time: "10:00 AM", duration: 2, price: 50, status: "confirmed" },
-  { id: 2, roomName: "Room B", date: "2023-10-02", time: "11:00 AM", duration: 1, price: 30, status: "pending" },
-  { id: 3, roomName: "Room C", date: "2023-10-03", time: "12:00 PM", duration: 3, price: 75, status: "cancelled" },
-]
+type ApiBooking = {
+  id: string;
+  roomId: string;
+  startTime: string; // ISO
+  endTime: string;   // ISO
+  players: number;
+  price: string | number;
+  status: string; // 'CONFIRMED' | 'CANCELED'
+};
 
-// Use real auth context instead of stubbed user/logout
+type ApiRoom = { id: string; name: string; capacity: number };
 
 const DashboardPage = () => {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [bookings, setBookings] = React.useState<ApiBooking[]>([])
+  const [roomsById, setRoomsById] = React.useState<Record<string, ApiRoom>>({})
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    const load = async () => {
+      try {
+        const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080'
+        const [mineRes, roomsRes] = await Promise.all([
+          fetch(`${apiBase}/api/bookings/mine`, { credentials: 'include' }),
+          fetch(`${apiBase}/api/bookings/rooms`, { credentials: 'include' }),
+        ])
+        if (mineRes.ok) {
+          const data = await mineRes.json()
+          setBookings(Array.isArray(data.bookings) ? data.bookings : [])
+        } else {
+          setBookings([])
+        }
+        if (roomsRes.ok) {
+          const data = await roomsRes.json()
+          const rooms: ApiRoom[] = Array.isArray(data.rooms) ? data.rooms : []
+          setRoomsById(Object.fromEntries(rooms.map(r => [r.id, r])))
+        } else {
+          setRoomsById({})
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  const totalBookings = bookings.length
+  // Sum only non-canceled bookings in the current month
+  const now = new Date()
+  const currentMonthSpent = bookings
+    .filter(b => b.status !== 'CANCELED')
+    .filter(b => {
+      const dt = new Date(b.startTime)
+      return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth()
+    })
+    .reduce((sum, b) => sum + Number(b.price || 0), 0)
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black">
       {/* Header */}
@@ -82,7 +134,7 @@ const DashboardPage = () => {
               <CardDescription className="text-slate-400">Your booking history</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-amber-400">{mockBookings.length}</div>
+              <div className="text-3xl font-bold text-amber-400">{totalBookings}</div>
             </CardContent>
           </Card>
 
@@ -93,7 +145,7 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-amber-400">
-                ${mockBookings.reduce((sum, booking) => sum + booking.price, 0)}
+                ${currentMonthSpent}
               </div>
             </CardContent>
           </Card>
@@ -107,27 +159,28 @@ const DashboardPage = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockBookings.map((booking) => (
+              {bookings.map((booking) => (
                 <div
                   key={booking.id}
                   className="flex items-center justify-between p-4 border border-slate-700 rounded-lg hover:bg-slate-700/30 bg-slate-800/30"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-medium text-white">{booking.roomName}</h3>
-                      <Badge className={getStatusColor(booking.status)}>{booking.status}</Badge>
+                      <h3 className="font-medium text-white">{roomsById[booking.roomId]?.name || 'Room'}</h3>
+                      {(() => { const b = getStatusBadge(booking.status, booking.endTime); return <Badge className={b.classes}>{b.label}</Badge> })()}
                     </div>
                     <div className="text-sm text-slate-400">
-                      {new Date(booking.date).toLocaleDateString()} at {booking.time} • {booking.duration} hour(s)
+                      {new Date(booking.startTime).toLocaleDateString()} at {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {Math.round((new Date(booking.endTime).getTime() - new Date(booking.startTime).getTime()) / (60*60*1000))} hour(s)
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium text-white">${booking.price}</div>
-                    {booking.status === "confirmed" && (
+                    <div className="font-medium text-white">${Number(booking.price)}</div>
+                    {booking.status !== 'CANCELED' && new Date(booking.endTime).getTime() > Date.now() && (
                       <Button
                         variant="outline"
                         size="sm"
                         className="mt-2 border-red-400/50 text-red-400 hover:bg-red-500/10 bg-transparent"
+                        onClick={() => {/* TODO: wire cancel endpoint */}}
                       >
                         Cancel
                       </Button>
