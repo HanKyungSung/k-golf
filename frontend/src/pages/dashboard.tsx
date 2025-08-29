@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
+import { toast } from "@/hooks/use-toast"
 
 const getStatusBadge = (status: 'booked'|'completed'|'canceled') => {
   switch (status) {
@@ -34,6 +35,7 @@ const DashboardPage = () => {
   const [bookings, setBookings] = React.useState<ApiBooking[]>([])
   const [roomsById, setRoomsById] = React.useState<Record<string, ApiRoom>>({})
   const [loading, setLoading] = React.useState(true)
+  const [busyIds, setBusyIds] = React.useState<Record<string, boolean>>({})
 
   React.useEffect(() => {
     const load = async () => {
@@ -62,6 +64,25 @@ const DashboardPage = () => {
     }
     load()
   }, [])
+
+  const cancelBookingById = async (id: string) => {
+    try {
+      setBusyIds((m) => ({ ...m, [id]: true }))
+      const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080'
+      const res = await fetch(`${apiBase}/api/bookings/${id}/cancel`, { method: 'PATCH', credentials: 'include' })
+      if (!res.ok) {
+        const msg = (await res.json().catch(() => ({}))).error || 'Failed to cancel booking'
+        toast({ title: 'Cancel failed', description: msg })
+        return
+      }
+      const data = await res.json()
+      const updated = data.booking as ApiBooking
+      setBookings((prev) => prev.map(b => b.id === id ? { ...b, status: updated.status } : b))
+      toast({ title: 'Booking canceled', description: 'Your booking has been canceled.' })
+    } finally {
+      setBusyIds((m) => ({ ...m, [id]: false }))
+    }
+  }
 
   const totalBookings = bookings.length
   // Sum only non-canceled bookings in the current month
@@ -168,12 +189,13 @@ const DashboardPage = () => {
                   </div>
                   <div className="text-right">
                     <div className="font-medium text-white">${Number(booking.price)}</div>
-                    {booking.status === 'booked' && (
+          {booking.status === 'booked' && (
                       <Button
                         variant="outline"
                         size="sm"
                         className="mt-2 border-red-400/50 text-red-400 hover:bg-red-500/10 bg-transparent"
-                        onClick={() => {/* TODO: wire cancel endpoint */}}
+            disabled={busyIds[booking.id]}
+            onClick={() => cancelBookingById(booking.id)}
                       >
                         Cancel
                       </Button>

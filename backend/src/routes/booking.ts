@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { createBooking, findConflict, listBookings, listUserBookings, listRoomBookingsBetween } from '../repositories/bookingRepo';
+import { getBooking, cancelBooking } from '../repositories/bookingRepo';
 import { requireAuth } from '../middleware/requireAuth';
 
 const router = Router();
@@ -56,6 +57,25 @@ router.get('/rooms', async (_req, res) => {
 router.get('/mine', requireAuth, async (req, res) => {
   const bookings = await listUserBookings(req.user!.id);
   res.json({ bookings: bookings.map(presentBooking) });
+});
+
+// Cancel a booking (own bookings only for now)
+router.patch('/:id/cancel', requireAuth, async (req, res) => {
+  const { id } = req.params as { id: string };
+  try {
+    const booking = await getBooking(id);
+    if (!booking) return res.status(404).json({ error: 'Not found' });
+    if (booking.userId !== req.user!.id) return res.status(403).json({ error: 'Forbidden' });
+    // Rule: cannot cancel past or already canceled
+    if (booking.status === 'CANCELED') return res.status(400).json({ error: 'Already canceled' });
+    if (booking.startTime <= new Date()) return res.status(400).json({ error: 'Cannot cancel past bookings' });
+
+    const updated = await cancelBooking(id);
+    return res.json({ booking: presentBooking(updated) });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 router.post('/', requireAuth, async (req, res) => {
