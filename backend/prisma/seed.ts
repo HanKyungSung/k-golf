@@ -37,10 +37,23 @@ async function main() {
 		const existing = await prisma.user.findUnique({ where: { email: testEmail } });
 		if (!existing) {
 			const passwordHash = await hashPassword(testPassword);
-			await prisma.user.create({ data: { email: testEmail, name: testName, passwordHash, passwordUpdatedAt: new Date() } as any });
+			await prisma.user.create({
+				data: {
+					email: testEmail,
+					name: testName,
+					passwordHash,
+					passwordUpdatedAt: new Date(),
+					emailVerifiedAt: new Date(),
+				} as any,
+			});
 			console.log(`Seeded test user: ${testEmail} / ${testPassword}`);
 		} else {
-			console.log(`Test user already exists: ${testEmail}`);
+			if (!(existing as any).emailVerifiedAt) {
+				await prisma.user.update({ where: { email: testEmail }, data: { emailVerifiedAt: new Date() } });
+				console.log(`Marked test user as verified: ${testEmail}`);
+			} else {
+				console.log(`Test user already exists: ${testEmail}`);
+			}
 		}
 	} else {
 		console.log('Skipping test user seeding (production and SEED_ENABLE_TEST_USER not set).');
