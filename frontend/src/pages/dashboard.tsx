@@ -5,23 +5,16 @@ import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
 
-const getStatusBadge = (statusRaw: string, endTimeIso: string) => {
-  // Backend stores status as strings like 'CONFIRMED' or 'CANCELED'.
-  const isCompleted = new Date(endTimeIso).getTime() < Date.now();
-  let label = "";
-  let classes = "bg-slate-500 text-white";
-  if (statusRaw === "CANCELED") {
-    label = "canceled";
-    classes = "bg-red-500 text-white";
-  } else if (isCompleted) {
-    label = "completed";
-    classes = "bg-slate-600 text-white";
-  } else {
-    label = "booked";
-    classes = "bg-green-500 text-white";
+const getStatusBadge = (status: 'booked'|'completed'|'canceled') => {
+  switch (status) {
+    case 'canceled':
+      return { label: 'canceled', classes: 'bg-red-500 text-white' }
+    case 'completed':
+      return { label: 'completed', classes: 'bg-slate-600 text-white' }
+    default:
+      return { label: 'booked', classes: 'bg-green-500 text-white' }
   }
-  return { label, classes };
-};
+}
 
 type ApiBooking = {
   id: string;
@@ -30,7 +23,7 @@ type ApiBooking = {
   endTime: string;   // ISO
   players: number;
   price: string | number;
-  status: string; // 'CONFIRMED' | 'CANCELED'
+  status: 'booked' | 'completed' | 'canceled';
 };
 
 type ApiRoom = { id: string; name: string; capacity: number };
@@ -74,7 +67,7 @@ const DashboardPage = () => {
   // Sum only non-canceled bookings in the current month
   const now = new Date()
   const currentMonthSpent = bookings
-    .filter(b => b.status !== 'CANCELED')
+    .filter(b => b.status !== 'canceled')
     .filter(b => {
       const dt = new Date(b.startTime)
       return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth()
@@ -167,7 +160,7 @@ const DashboardPage = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-medium text-white">{roomsById[booking.roomId]?.name || 'Room'}</h3>
-                      {(() => { const b = getStatusBadge(booking.status, booking.endTime); return <Badge className={b.classes}>{b.label}</Badge> })()}
+                      {(() => { const b = getStatusBadge(booking.status); return <Badge className={b.classes}>{b.label}</Badge> })()}
                     </div>
                     <div className="text-sm text-slate-400">
                       {new Date(booking.startTime).toLocaleDateString()} at {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {Math.round((new Date(booking.endTime).getTime() - new Date(booking.startTime).getTime()) / (60*60*1000))} hour(s)
@@ -175,7 +168,7 @@ const DashboardPage = () => {
                   </div>
                   <div className="text-right">
                     <div className="font-medium text-white">${Number(booking.price)}</div>
-                    {booking.status !== 'CANCELED' && new Date(booking.endTime).getTime() > Date.now() && (
+                    {booking.status === 'booked' && (
                       <Button
                         variant="outline"
                         size="sm"

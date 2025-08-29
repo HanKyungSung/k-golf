@@ -5,6 +5,26 @@ import { requireAuth } from '../middleware/requireAuth';
 
 const router = Router();
 
+function presentStatus(rawStatus: string, endTime: Date): 'booked' | 'completed' | 'canceled' {
+  if (rawStatus === 'CANCELED') return 'canceled';
+  return endTime.getTime() < Date.now() ? 'completed' : 'booked';
+}
+
+function presentBooking(b: any) {
+  return {
+    id: b.id,
+    roomId: b.roomId,
+    userId: b.userId,
+    startTime: b.startTime,
+    endTime: b.endTime,
+    players: b.players,
+    price: b.price,
+    status: presentStatus(b.status, new Date(b.endTime)),
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt,
+  };
+}
+
 // Auth enforced for mutating and user-specific endpoints.
 
 const createBookingSchema = z.object({
@@ -16,7 +36,7 @@ const createBookingSchema = z.object({
 
 router.get('/', async (_req, res) => {
   const bookings = await listBookings();
-  res.json({ bookings });
+  res.json({ bookings: bookings.map(presentBooking) });
 });
 
 // Optional helper to fetch rooms (basic list)
@@ -35,7 +55,7 @@ router.get('/rooms', async (_req, res) => {
 
 router.get('/mine', requireAuth, async (req, res) => {
   const bookings = await listUserBookings(req.user!.id);
-  res.json({ bookings });
+  res.json({ bookings: bookings.map(presentBooking) });
 });
 
 router.post('/', requireAuth, async (req, res) => {
@@ -66,7 +86,7 @@ router.post('/', requireAuth, async (req, res) => {
   const price = players * hours * HOURLY_RATE; // decimal dollars
 
   try {
-    const booking = await createBooking({
+  const booking = await createBooking({
       roomId,
       userId: req.user!.id,
       startTime: start,
@@ -74,7 +94,7 @@ router.post('/', requireAuth, async (req, res) => {
       hours,
       price,
     });
-    res.status(201).json({ booking });
+  res.status(201).json({ booking: presentBooking(booking) });
   } catch (e: any) {
     if (e.code === 'P2002') { // unique constraint
       return res.status(409).json({ error: 'Time slot already booked' });
