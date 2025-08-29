@@ -27,13 +27,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const apiBase = process.env.REACT_APP_API_BASE;
       const res = await fetch(`${apiBase}/api/auth/me`, { credentials: 'include' });
-      if (res.ok) {
+    if (res.ok) {
         const data = await res.json();
         setUser(data.user);
       } else {
         // 401 or any non-OK → treat as signed out
         if (user) {
           toast({ title: 'Session expired', description: 'Please log in again.' })
+      try { window.dispatchEvent(new CustomEvent('auth-expired')) } catch {}
         }
         setUser(null);
       }
@@ -71,7 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Centralized helper: prefer backend-provided message
   const getErrorMessage = async (res: Response): Promise<string> => {
     if (res.status === 401) {
-      if (user) toast({ title: 'Session expired', description: 'Please log in again.' })
+      if (user) {
+        toast({ title: 'Session expired', description: 'Please log in again.' })
+        try { window.dispatchEvent(new CustomEvent('auth-expired')) } catch {}
+      }
       setUser(null)
     }
     try {
