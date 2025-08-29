@@ -40,6 +40,10 @@ Bookings and Availability
 - Rooms API: `GET /api/bookings/rooms` returns active rooms only.
 - Frontend booking page now calls the backend for availability and booking creation; errors shown inline.
 
+Database changes
+- Booking status column switched from a Postgres ENUM to TEXT for flexibility. The Prisma model is now `status String @default("CONFIRMED")` and the migration `20250828080000_status_to_string` alters the column type safely and drops the old enum if unused.
+- "completed" remains a derived UI state (when `endTime < now`); there is no DB enum value for it.
+
 Rooms and Seeding
 - Seed script ensures exactly four active rooms: Room 1–4 (capacity 4). All other rooms are deactivated.
 - Frontend keeps the original 4-card design (Room 1–4, static images) and maps each card to a real backend UUID.
@@ -61,192 +65,24 @@ A local Electron application that:
 - `order_items(id, order_id, product_id, qty, price_cents, version, updated_at, deleted_at)`
 - `products(id, name, sku, price_cents, active, version, updated_at, deleted_at)`
 - `operations(id, entity, entity_id, op_type, payload, version, device_id, status, created_at, last_error)`
-- `printers(id, name, system_name, capabilities, is_default, updated_at)`
-- `sync_state(id, last_pull_cursor, last_push_time)`
+## Roadmap & Status (Consolidated)
+- Done
+  - Frontend SPA with routing, auth screens, booking flow, and availability UI wired to backend.
+  - Backend API with Prisma/PostgreSQL persistence, overlap checks (excluding canceled bookings), and price stored as Decimal(10,2).
+  - Rooms API and seed: ensures exactly four active rooms (Room 1–4) for deterministic mapping in the UI.
+  - Session handling with HttpOnly cookie, email verification/password login, resend cooldown, structured errors, and auto-logout on expiry.
+  - Availability endpoint: `GET /api/bookings/availability` computes valid slots by date/room/hours.
+  - Booking endpoints: `POST /api/bookings`, `GET /api/bookings`, `GET /api/bookings/mine`.
+  - Database: Booking.status switched to TEXT with default `CONFIRMED`; "completed" is derived by `endTime < now` in UI.
 
-`version` supports conflict detection; soft deletes via `deleted_at`.
-
-#### Sync Strategy
-1. Mutations write to SQLite + enqueue an operation (status `pending`).
-2. Background job checks remote reachability.
-3. Push phase: send pending operations → remote validates & applies → acknowledges or returns conflicts.
-4. Pull phase: fetch changed rows since cursor (`updated_at` watermark or sequence) → upsert locally (no new operations generated).
-5. Conflicts: server authoritative; local outdated ops are resolved by overwriting with server state (optionally logging conflict).
-
-#### Printer Abstraction
-A `printerService` lists printers, sends formatted jobs (e.g., ESC/POS) and test prints. Implementation detail pluggable per OS.
-
-## Repository Layout
-```
-frontend/        # Booking web app
-backend/         # API server (to be wired to Postgres via Prisma)
-pos/
-  apps/
-    electron/
-      main.ts    # Electron main process (to be implemented)
-      preload.ts # Secure context bridge (to be implemented)
-      renderer/
-        index.html
-        index.tsx
-  packages/
-    server/
-      src/
-        api/     # Express route handlers (orders, printers, sync...)
-        services/# DB, sync engine, printer, auth services
-        domain/  # Schema & types (shared between local/remote DBs)
-```
-
-## docker-compose
-PostgreSQL service defined (see `docker-compose.yml`). Useful scripts in root `package.json`:
-- `npm run db:up` / `db:down` / `db:logs` / `db:ps` / `db:exec`.
-
-## Planned Next Steps
-The immediate priority is to COMPLETE the customer booking web application (rooms, bookings, authentication, pricing) before investing further in the POS hub. Below is a phased, granular roadmap with clear DONE / NEXT indicators.
-
-### Legend
-- ✅ Done
-- 🔜 In progress / next action
-- ⏭ Scheduled (later phase)
-
-### Phase 0 – Current State (Baseline)
-- ✅ Frontend React SPA (routing migrated off Next.js)
-- ✅ Dockerized PostgreSQL running locally (`db` service)
-- ✅ In‑memory booking endpoints (temporary)
-- ✅ Pricing rule defined ($50 * players * hours, hours = players)
-- ~~🔜 Persistence layer not yet implemented (Prisma + migrations)~~
-
-### Phase 1 – Persistence Foundation (Database + ORM)
-1. ~~Add dependencies to `backend`:~~
-  - ~~`prisma`, `@prisma/client`, (dev) `ts-node`, `tsx` if needed~~
-2. ~~Create `backend/prisma/schema.prisma` with models:~~
-  - ~~`User`, `AuthProvider`, `VerificationToken`, `Session`~~
-  - ~~`Room` (capacity, active)~~
-  - ~~`Booking` (roomId, userId, startTime, endTime, players, price, status)~~
-3. ~~Add PostgreSQL extensions migration (if using EXCLUDE constraint requires `btree_gist`).~~
-4. ~~Run: `npx prisma migrate dev --name init` (writes migrations folder)~~
-5. ~~Implement a seed script (`backend/prisma/seed.ts`) to insert initial rooms (now ensures exactly 4 active rooms: Room 1–4).~~
-6. ~~Add npm scripts:~~
-  - ~~`db:migrate`, `db:generate`, `db:seed`~~
-7. ~~Verify DB objects exist (inspect via `psql` or Prisma Studio).~~
-
-### Phase 2 – Booking Domain Implementation (Server)
-1. Replace in‑memory storage with Prisma repository modules:
-  - ✅ `repositories/bookingRepo.ts`
-  - ⏭ `repositories/roomRepo.ts` (rooms are fetched directly in route for now)
-2. Overlap prevention:
-  - ⏭ Option A: EXCLUDE constraint `(room_id WITH =, tstzrange(start_time, end_time) WITH &&)`
-  - ✅ Option B: manual overlap check (no canceled) before creating bookings
-3. Unified price calculation util (single source of truth) used in POST /bookings: ⏭ (currently inline constant $50)
-4. Endpoints (REST):
-  - ✅ `GET /api/bookings/rooms` (list active rooms)
-  - ✅ `GET /api/bookings/availability?roomId=&date=&hours=&slotMinutes=&openStart=&openEnd=`
-  - ✅ `POST /api/bookings` (payload: roomId, startTimeIso, players, hours)
-  - ✅ `GET /api/bookings` (all) and `GET /api/bookings/mine` (current user)
-  - ⏭ `GET /api/bookings/:id`
-  - ⏭ `PATCH /api/bookings/:id/cancel` (soft cancel if > threshold time)
-5. ✅ Zod schemas on inputs; basic error shaping in handlers.
-6. ✅ Booking price stored as Decimal(10,2) (migration applied; code updated).
-
-### Phase 3 – Authentication & Sessions
-Registration is implemented FIRST (before full booking UX dependency on auth). Two parallel methods: email verification (passwordless) and Google OAuth.
-
-#### Auth checklist (MVP implemented)
-- ~~Backend sends verification links to the frontend `/verify` using `FRONTEND_ORIGIN` (fallback http://localhost:5173).~~
-- ~~Frontend has `/verify` page that posts to `${REACT_APP_API_BASE}/api/auth/verify` with `credentials: 'include'`.~~
-- ~~On verify success, backend sets `emailVerifiedAt`, creates a DB-backed session, and sets the HttpOnly `session` cookie.~~
-- ~~`GET /api/auth/me` returns the current user when session cookie is valid.~~
-- ~~Resend endpoint `POST /api/auth/resend` with 60s cooldown and `retryAfterSeconds` in generic responses.~~
-- ~~Resend UI on Verify and Signup pages to request a new link with inline cooldown message.~~
-- ~~Login requires verified email + password and issues the session cookie.~~
-- ~~Logout clears cookie and deletes the session row.~~
-- Google OAuth: not implemented yet. ⏭
-
-Env notes
-- Backend: `CORS_ORIGIN` must include the frontend origin; `FRONTEND_ORIGIN` defines where email links go; Gmail creds optional for real email (logs link if missing).
-- Frontend: `REACT_APP_API_BASE` points to backend base URL.
-
-#### 3.1 Email Registration & Verification (Passwordless Start)
-Flow (magic link OR 6-digit code—choose one initial, link recommended):
-1. `POST /auth/register` { email }:
-  - Normalize email (lowercase/trim).
-  - If existing verified user: respond 200 with generic message (avoid user enumeration).
-  - Create user row if not exists (role=CUSTOMER, unverified flag implicit until token consumed).
-  - Insert `VerificationToken` (identifier=email, tokenHash=hashedRandom, type='magic_link', expiresAt=+15m).
-  - Send email with link: `https://app.example.com/verify?token=plainToken&email=...` (plain token only in email, NOT stored in DB except hashed).
-2. `POST /auth/verify` { email, token }:
-  - Look up token by email (identifier) & unconsumed & not expired.
-  - Hash incoming token & compare.
-  - Mark consumedAt, create session (Session row or sign JWT w/ sessionId), set httpOnly cookie.
-  - Return user profile.
-3. Subsequent requests include session cookie → `GET /auth/me` returns user data.
-
-Optional variant (OTP code): store 6-digit numeric code instead of random token; limit attempts; same expiration.
-
-Security notes:
-- Always respond 200 on register/verify with generic messages to prevent enumeration.
-- Hash tokens (e.g., SHA256) before storage.
-- Rate limit register + verify endpoints per IP + per email.
-
-#### 3.2 Google OAuth (gmail first)
-1. Frontend loads Google Identity Services and obtains ID token.
-2. `POST /auth/google` { idToken }:
-  - Backend verifies signature (Google certs) & audience, extracts sub, email.
-  - Upsert user (verified implicitly if Google says email_verified=true).
-  - Upsert `AuthProvider` (provider='google', providerUserId=sub).
-  - Create session (cookie) and return profile.
-
-#### 3.3 Endpoints Summary (Initial Set)
-- `POST /auth/register` (idempotent, begins email flow)
-- `POST /auth/verify` (completes email flow, issues session)
-- `POST /auth/google` (Google sign-in)
-- `GET /auth/me` (current session user)
-- (Later) `POST /auth/logout` (invalidate session)
-
-#### 3.4 Session Strategy
-- Start with DB-backed Session table (simpler revocation) storing: id, userId, sessionToken (random), expiresAt.
-- Set cookie: `session=<token>; HttpOnly; Secure (prod); SameSite=Lax`.
-- Rolling refresh: each request optionally extends expiry (guard with max age cap).
-
-#### 3.5 Middleware
-- `requireAuth` loads session by cookie token → attaches `req.user` (selected user fields) → 401 if missing/expired.
-
-#### 3.6 Email vs SMS Verification Decision
-| Aspect | Email | SMS |
-|--------|-------|-----|
-| Direct cost | ~$0.0001–$0.001 per msg (often free in starter tiers) | ~$0.007–$0.02 US per SMS (Twilio-like pricing) |
-| Setup | Simple (transactional email provider + DKIM/SPF) | Requires phone number purchasing, compliance (opt-in, regional rules) |
-| Speed | Fast enough (< a few seconds) | Usually very fast (<5s) |
-| Reliability | Can land in spam if misconfigured | Delivery sometimes blocked or delayed; carrier filtering |
-| UX friction | User needs inbox access | User must reveal phone number |
-| Abuse surface | Disposable email risk | SIM swap / cost abuse risk |
-
-Initial recommendation: EMAIL ONLY (passwordless link) for MVP; add SMS later only if conversion or security metrics justify cost.
-
-#### 3.7 Future Enhancements (Deferred)
-Additional done
-- ✅ Auto revalidation + auto-logout on 401 with toast “Session expired, please log in again.”
-- Add refresh token rotation & device management.
-- Add optional password set (convert to hybrid auth) if needed.
-- Integrate rate limiter & IP allow/deny lists.
-- Add audit log (user sign-ins, verification attempts).
-
-### Phase 4 – Frontend Integration (Bookings + Auth)
-1. ✅ Update `useAuth` hook to call backend (`/api/auth/me`, login/verify/logout flows).
-2. ✅ Build authentication screens (login, signup, verify).
-3. ✅ Replace booking form submit: POST to `/api/bookings` + success redirect to dashboard.
-4. ✅ Availability view: call `/api/bookings/availability` to disable booked/invalid slots.
-5. 🔜 Dashboard page: fetch real bookings from backend and allow cancellation (currently mock data).
-6. ✅ Global error + toast handling baseline (shows session-expired on 401; surfaces API errors).
-7. ✅ Room cards keep static design (Room 1–4) while mapping to backend UUIDs; images have fallbacks.
-
-### Phase 5 – Validation, Pricing & Edge Cases
-1. Server rejects: overlapping booking, players > room capacity, startTime in past, endTime beyond hours of operation.
-2. Add hours-of-operation config (e.g., 08:00–22:00) and enforce.
-3. Round start times to slot size (e.g., 60 min) server-side.
-4. Price recalculation on every GET of booking (avoid stale storing other than canonical `price_cents`).
-5. Cancellation window rule (e.g., cannot cancel within 1 hour of start) enforced in endpoint.
-
-### Phase 6 – Observability & Quality
+- Next
+  - Endpoints: `GET /api/bookings/:id`, `PATCH /api/bookings/:id/cancel` (with rules, e.g., cannot cancel within a threshold).
+  - Validation & rules: hours-of-operation config; reject past starts; slot rounding server-side.
+  - Pricing: extract unified calculator used by server and (optionally) client.
+  - Observability: logging with request IDs; health/readiness checks; basic metrics stub.
+  - Security: tighten CORS, add rate limiting, refine headers, and ensure secure cookie settings in prod.
+  - Deployment: Dockerfile for backend, Nginx proxy, env matrices, and `prisma migrate deploy` in release flow.
+  - POS Hub: continue scaffolding Electron app (local SQLite, printer control, sync engine) once web app is stable.
 1. Logging: pino logger with request ID middleware.
 2. Metrics stub (expose `/metrics` for future Prometheus) – optional.
 3. Health endpoints: `/healthz` (basic), `/readyz` (DB connectivity check).
@@ -310,6 +146,14 @@ cd ../frontend
 npm install
 npm run dev
 ```
+
+Notes on migrations
+- In development, always add new migrations; do not delete or rewrite migrations that were already applied to your local DB. If your database has migrations applied that are no longer present in the repository, Prisma will detect a divergence and may prompt to reset (drop and recreate) the schema during `prisma migrate dev`.
+- If you see: "The migrations recorded in the database diverge from the local migrations directory… We need to reset the schema", this is due to history divergence, not because every change resets data. In dev, you can accept the reset and then run `npm run db:seed` to restore sample data.
+- In production, never reset and never use `prisma migrate dev`. Use `prisma migrate deploy`, keep a linear, append‑only migration history, and avoid deleting past migrations.
+
+Why status is TEXT now
+- The booking status needs to evolve (e.g., adding new states) without brittle enum churn. Using TEXT avoids destructive enum alterations and complex migrations. Validation is enforced in application code, and the current allowed values are `CONFIRMED` and `CANCELED` (with `CONFIRMED` as default). Canceled bookings are ignored in availability/overlap checks.
 
 Env
 - Backend: set `CORS_ORIGIN` (frontend origin) and optionally `FRONTEND_ORIGIN` for email links; `DATABASE_URL` for Postgres.
