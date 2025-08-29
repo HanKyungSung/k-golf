@@ -16,11 +16,7 @@ enum UserRole {
   ADMIN
 }
 
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELED
-}
+// Booking status moved to String for flexibility; enforce allowed values in app code
 
 model User {
   id                 String              @id @default(uuid())
@@ -58,7 +54,7 @@ model Booking {
   endTime    DateTime
   players    Int
   price      Decimal       @db.Decimal(10, 2)
-  status     BookingStatus @default(CONFIRMED)
+  status     String        @default("CONFIRMED")
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
