@@ -84,11 +84,12 @@ const DashboardPage = () => {
     }
   }
 
-  const totalBookings = bookings.length
-  // Sum only non-canceled bookings in the current month
+  // Count only completed bookings (all-time)
+  const totalBookings = bookings.filter(b => b.status === 'completed').length
+  // Sum only completed bookings in the current month
   const now = new Date()
   const currentMonthSpent = bookings
-    .filter(b => b.status !== 'canceled')
+    .filter(b => b.status === 'completed')
     .filter(b => {
       const dt = new Date(b.startTime)
       return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth()
