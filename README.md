@@ -43,6 +43,7 @@ Bookings and Availability
 Database changes
 - Booking status column switched from a Postgres ENUM to TEXT for flexibility. The Prisma model is now `status String @default("CONFIRMED")` and the migration `20250828080000_status_to_string` alters the column type safely and drops the old enum if unused.
 - "completed" remains a derived UI state (when `endTime < now`); there is no DB enum value for it.
+- All DateTimes are stored as UTC (timestamptz). Migration `20250828090000_use_timestamptz` converts all timestamp columns to `timestamptz` using `AT TIME ZONE 'UTC'` so existing values keep the same absolute instant. API responses return ISO-8601 UTC strings.
 
 Rooms and Seeding
 - Seed script ensures exactly four active rooms: Room 1–4 (capacity 4). All other rooms are deactivated.
@@ -151,6 +152,15 @@ Notes on migrations
 - In development, always add new migrations; do not delete or rewrite migrations that were already applied to your local DB. If your database has migrations applied that are no longer present in the repository, Prisma will detect a divergence and may prompt to reset (drop and recreate) the schema during `prisma migrate dev`.
 - If you see: "The migrations recorded in the database diverge from the local migrations directory… We need to reset the schema", this is due to history divergence, not because every change resets data. In dev, you can accept the reset and then run `npm run db:seed` to restore sample data.
 - In production, never reset and never use `prisma migrate dev`. Use `prisma migrate deploy`, keep a linear, append‑only migration history, and avoid deleting past migrations.
+
+### Timestamps & Timezones (UTC)
+
+- Storage: All Prisma `DateTime` fields are mapped to Postgres `timestamptz` and persisted as UTC instants.
+- Migration: `20250828090000_use_timestamptz` casts existing columns to `timestamptz` with `AT TIME ZONE 'UTC'` to preserve the exact moment in time.
+- Input: Booking creation expects an ISO string (`startTimeIso`) that should be UTC. Server parses via `new Date(startTimeIso)`.
+- Output: API returns ISO-8601 strings in UTC for all timestamps.
+- Availability: The `/api/bookings/availability` endpoint builds the requested day window using the server's local timezone, but it doesn't persist those intermediary times; emitted slot times are ISO UTC strings.
+- Future: If the venue timezone should be fixed regardless of server location, introduce a `VENUE_TIMEZONE` env and compute availability in that IANA zone.
 
 Why status is TEXT now
 - The booking status needs to evolve (e.g., adding new states) without brittle enum churn. Using TEXT avoids destructive enum alterations and complex migrations. Validation is enforced in application code, and the current allowed values are `CONFIRMED` and `CANCELED` (with `CONFIRMED` as default). Canceled bookings are ignored in availability/overlap checks.
