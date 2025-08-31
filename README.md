@@ -39,6 +39,9 @@ Bookings and Availability
 - Price stored as decimal: Booking.price is `Decimal(10,2)` (replaced older cents field).
 - Rooms API: `GET /api/bookings/rooms` returns active rooms only.
 - Frontend booking page now calls the backend for availability and booking creation; errors shown inline.
+ - No past bookings: server rejects booking requests with a start time in the past; availability marks past starts unavailable.
+ - Cancellation: `PATCH /api/bookings/:id/cancel` lets users cancel their own upcoming bookings.
+ - Dashboard metrics: counts and monthly spend now consider only completed bookings.
 
 Database changes
 - Booking status column switched from a Postgres ENUM to TEXT for flexibility. The Prisma model is now `status String @default("CONFIRMED")` and the migration `20250828080000_status_to_string` alters the column type safely and drops the old enum if unused.
@@ -73,12 +76,13 @@ A local Electron application that:
   - Rooms API and seed: ensures exactly four active rooms (Room 1–4) for deterministic mapping in the UI.
   - Session handling with HttpOnly cookie, email verification/password login, resend cooldown, structured errors, and auto-logout on expiry.
   - Availability endpoint: `GET /api/bookings/availability` computes valid slots by date/room/hours.
-  - Booking endpoints: `POST /api/bookings`, `GET /api/bookings`, `GET /api/bookings/mine`.
-  - Database: Booking.status switched to TEXT with default `CONFIRMED`; "completed" is derived by `endTime < now` in UI.
+  - Booking endpoints: `POST /api/bookings`, `GET /api/bookings`, `GET /api/bookings/mine`, `PATCH /api/bookings/:id/cancel`.
+  - Database: Booking.status switched to TEXT with default `CONFIRMED`; "completed" is derived by `endTime < now` in API responses/UI.
+  - Time rules: reject past bookings; availability hides past starts. Dashboard totals only include completed bookings.
 
 - Next
-  - Endpoints: `GET /api/bookings/:id`, `PATCH /api/bookings/:id/cancel` (with rules, e.g., cannot cancel within a threshold).
-  - Validation & rules: hours-of-operation config; reject past starts; slot rounding server-side.
+  - Endpoint: `GET /api/bookings/:id` (single booking detail).
+  - Validation & rules: hours-of-operation config; slot rounding server-side; optional cancel cutoff window (e.g., cannot cancel within N minutes).
   - Pricing: extract unified calculator used by server and (optionally) client.
   - Observability: logging with request IDs; health/readiness checks; basic metrics stub.
   - Security: tighten CORS, add rate limiting, refine headers, and ensure secure cookie settings in prod.
@@ -120,9 +124,9 @@ A local Electron application that:
 - Rate / dynamic pricing rules (holiday, peak hours) abstraction.
 
 ### Immediate Next Action (Recommended Now)
-Focus on Phase 2 remaining items:
-1. Implement `GET /api/availability`.
-2. Add `GET /api/bookings/:id` and `PATCH /api/bookings/:id/cancel`.
+Focus on:
+1. Add `GET /api/bookings/:id`.
+2. Introduce an optional cancellation cutoff window and UX confirm dialog.
 3. Extract a unified price calculation util.
 
 ## Getting Started (Current)
@@ -168,6 +172,15 @@ Why status is TEXT now
 Env
 - Backend: set `CORS_ORIGIN` (frontend origin) and optionally `FRONTEND_ORIGIN` for email links; `DATABASE_URL` for Postgres.
 - Frontend: set `REACT_APP_API_BASE` to the backend base URL (e.g., `http://localhost:8080`).
+
+## API quick reference
+
+- GET `/api/bookings/rooms` → list active rooms
+- GET `/api/bookings/availability?roomId&date=YYYY-MM-DD&hours=1..4&slotMinutes=30&openStart=09:00&openEnd=23:00` → available slots (ISO UTC)
+- GET `/api/bookings` → list all bookings (admin/dev)
+- GET `/api/bookings/mine` → current user's bookings (status normalized: `booked` | `completed` | `canceled`)
+- POST `/api/bookings` { roomId, startTimeIso, players, hours } → create booking (rejects past-start)
+- PATCH `/api/bookings/:id/cancel` → cancel own upcoming booking
 
 ## Notes: Room IDs vs UI Labels
 
