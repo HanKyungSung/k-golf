@@ -88,6 +88,7 @@ A local Electron application that:
   - Security: tighten CORS, add rate limiting, refine headers, and ensure secure cookie settings in prod.
   - Deployment: Dockerfile for backend, Nginx proxy, env matrices, and `prisma migrate deploy` in release flow.
   - POS Hub: continue scaffolding Electron app (local SQLite, printer control, sync engine) once web app is stable.
+  - Linting: re‑introduce enterprise lint stack (ESLint + TypeScript strict rules + import/order + promise + security + prettier) with phased enforcement.
 1. Logging: pino logger with request ID middleware.
 2. Metrics stub (expose `/metrics` for future Prometheus) – optional.
 3. Health endpoints: `/healthz` (basic), `/readyz` (DB connectivity check).
@@ -96,38 +97,42 @@ A local Electron application that:
   - Integration: booking creation + overlap rejection.
 5. Add Prisma seed test data for local dev convenience.
 
-### Phase 7 – Security Hardening
-1. CORS: restrict allowed origins (env list).
-2. Rate limiting: lightweight in-memory or Redis (later) on auth + booking creation.
-3. Helmet middleware (selected headers) – adjust for SPA.
-4. Secure cookies (SameSite=Lax, Secure in prod, HttpOnly) + CSRF token for non-GET if required.
-5. Input sanitization / output escaping where needed.
+### Flat TODO Backlog (No Phases)
+Core API / Booking
+- `GET /api/bookings/:id` endpoint.
+- Optional cancellation cutoff window + confirm dialog.
+- Unified price calculation utility shared (server + potential client reuse).
+- Hours-of-operation config & slot rounding on server.
 
-### Phase 8 – Deployment & Environments
-1. Backend Dockerfile (multi-stage: build + runtime slim).
-2. Compose override for production (expose only necessary ports, persistent volume for Postgres).
-3. Nginx reverse proxy (TLS termination, compress, cache static frontend build).
-4. Environment variable matrix (dev, staging, prod) documented.
-5. Automated migration step on container start (`prisma migrate deploy`).
+Quality / Observability / Security
+- Logging: request ID middleware (pino child logger).
+- Health endpoints: `/healthz` (basic), `/readyz` (DB check).
+- Metrics stub (expose `/metrics`).
+- Rate limiting on auth & booking create.
+- CORS allowlist via env.
+- Helmet (curated headers) & secure cookie flags.
 
-### Phase 9 – Documentation & Cleanup
-1. Update README with actual API contract examples.
-2. Remove unused legacy packages (e.g., `next-themes` if abandoned).
-3. Consolidate shared utility functions (pricing, time) into a module.
-4. Add architectural decision records (ADR) for: ORM choice, auth strategy, booking overlap enforcement.
-5. Prepare POS integration prerequisites (shared types package) – ⏭ after web app stable.
+Deployment / Infra
+- Backend Dockerfile (multi-stage) & production docker-compose override.
+- Nginx reverse proxy (TLS, gzip, static caching for frontend build).
+- Automated `prisma migrate deploy` in release.
+- Document environment matrices (dev/staging/prod).
 
-### Phase 10 – (Optional) Enhancements
-- WebSocket push for booking updates (optimistic UI improvement).
-- Admin reporting endpoints (revenue by day, utilization %).
-- Email notifications (booking confirmation, reminders, cancellations).
-- Rate / dynamic pricing rules (holiday, peak hours) abstraction.
+Codebase & Docs
+- API contract examples in README.
+- Remove unused legacy packages.
+- Shared utilities module (pricing, time helpers).
+- Architectural Decision Records (ORM, auth, overlap strategy).
+- Shared types package groundwork for POS.
 
-### Immediate Next Action (Recommended Now)
-Focus on:
-1. Add `GET /api/bookings/:id`.
-2. Introduce an optional cancellation cutoff window and UX confirm dialog.
-3. Extract a unified price calculation util.
+Enhancements (Later / Nice-to-have)
+- WebSocket push for booking updates.
+- Admin reporting (revenue, utilization).
+- Email notifications (confirmation, reminder, cancel).
+- Dynamic / peak pricing rules abstraction.
+
+POS Hub
+- Continue Electron app scaffolding (SQLite sync, printer integration, sync engine).
 
 ## Getting Started (Current)
 ```
@@ -196,3 +201,12 @@ POS hub dev scripts will be added as implementation progresses.
 
 ---
 This README will expand as the POS hub and persistence layers are implemented.
+
+### TODO – Lint & Code Quality (Deferred)
+When re‑enabling linting:
+- Add deps: eslint, @typescript-eslint/parser + plugin, eslint-plugin-import, eslint-plugin-promise, eslint-config-prettier (plus prettier), eslint-plugin-security (optional).
+- Create root `.eslintrc.cjs` with per-workspace `parserOptions.project`.
+- Start with: recommended, import/order (warn), promise rules (warn), prettier (warn), eqeqeq, curly, no-console (warn).
+- Then add: no-floating-promises, no-misused-promises.
+- Gradually enable type-safety rules (`no-unsafe-*`, `no-explicit-any`) from warn → error.
+- Add CI gate once noise is low.

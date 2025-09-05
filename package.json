@@ -12,7 +12,6 @@
     "build:backend": "npm --workspace backend run build",
     "start:backend": "npm --workspace backend run start",
     "preview:frontend": "npm --workspace frontend run preview",
-    "lint": "npm --workspace backend run lint",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f db",

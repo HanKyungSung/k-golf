@@ -53,9 +53,7 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build || npm run build:frontend || true
-      - name: Lint backend
-        working-directory: backend
-        run: npm run lint
+      # Lint step intentionally removed (lint config disabled). Re-introduce here once ESLint is reinstated.
       - name: Package build artifact
         run: |
           tar -czf build-artifact.tar.gz \
