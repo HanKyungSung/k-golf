@@ -61,7 +61,7 @@ jobs:
             frontend/dist frontend/package.json frontend/tsconfig.json \
             package.json package-lock.json || true
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: kgolf-build
           path: build-artifact.tar.gz

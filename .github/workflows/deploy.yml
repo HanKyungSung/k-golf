@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download build artifact from CI
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: kgolf-build
       # Artifact contains built backend/frontend and metadata only (no lint config; lint currently disabled)
