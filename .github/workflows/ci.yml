@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kgolf
+          POSTGRES_PASSWORD: kgolf_password
+          POSTGRES_DB: kgolf_app
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U kgolf -d kgolf_app" \
+          --health-interval=10s \
+          --health-timeout=5s \
+          --health-retries=5
+    env:
+      DATABASE_URL: postgresql://kgolf:kgolf_password@localhost:5432/kgolf_app
+      CORS_ORIGIN: http://localhost:5173
+      FRONTEND_ORIGIN: http://localhost:5173
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install root deps
+        run: npm install
+      - name: Install backend deps
+        working-directory: backend
+        run: npm install
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm install
+      - name: Prisma migrate (dev)
+        working-directory: backend
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy || npx prisma migrate dev --name ci_init
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build || npm run build:frontend || true
+      - name: Lint backend
+        working-directory: backend
+        run: npm run lint
+      - name: Smoke test backend start
+        run: node backend/dist/server.js & sleep 3 && curl -f http://localhost:8080/health
+

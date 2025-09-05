@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Package source (exclude node_modules)
+        run: |
+          tar -czf source.tar.gz \
+            backend/src backend/prisma backend/package.json backend/tsconfig.json \
+            frontend/src frontend/package.json frontend/tsconfig.json frontend/postcss.config.mjs frontend/tailwind.config.* frontend/webpack.config.js frontend/styles frontend/index.html frontend/components.json \
+            package.json package-lock.json || true
+      - name: Copy source to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: source.tar.gz
+          target: /root/kgolf
+      # - name: Remote build & deploy (no Docker)
+      #   uses: appleboy/ssh-action@v1.0.3
+      #   with:
+      #     host: ${{ secrets.DROPLET_HOST }}
+      #     username: ${{ secrets.DROPLET_USER }}
+      #     key: ${{ secrets.DROPLET_SSH_KEY }}
+      #     script: |
+      #       set -euo pipefail
+      #       cd ~/apps/kgolf
+      #       tar -xzf source.tar.gz
+      #       # Ensure Node & pm2 installed
+      #       if ! command -v node >/dev/null; then echo 'Install Node (>=20) first'; exit 1; fi
+      #       if ! command -v pm2 >/dev/null; then npm install -g pm2; fi
+      #       # Backend env must exist
+      #       if [ ! -f backend/.env ]; then echo 'Create backend/.env with DATABASE_URL etc.'; exit 1; fi
+      #       # Install workspaces
+      #       npm install --workspaces=false || true
+      #       (cd backend && npm install)
+      #       (cd frontend && npm install)
+      #       # Prisma migrate & generate
+      #       (cd backend && npx prisma generate && npx prisma migrate deploy)
+      #       # Build
+      #       (cd backend && npm run build)
+      #       (cd frontend && npm run build || npm run build:frontend || true)
+      #       # Restart processes
+      #       pm2 delete kgolf-backend || true
+      #       pm2 start backend/dist/server.js --name kgolf-backend
+      #       # Static serving placeholder (replace with nginx for production)
+      #       if ! command -v serve >/dev/null; then npm install -g serve || true; fi
+      #       pm2 delete kgolf-frontend || true
+      #       pm2 start "serve -s frontend/dist -l 4173" --name kgolf-frontend
+      #       pm2 save || true
+      #       echo 'Deployment complete.'
