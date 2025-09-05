@@ -56,6 +56,17 @@ jobs:
       - name: Lint backend
         working-directory: backend
         run: npm run lint
+      - name: Package build artifact
+        run: |
+          tar -czf build-artifact.tar.gz \
+            backend/dist backend/prisma/migrations backend/package.json backend/tsconfig.json \
+            frontend/dist frontend/package.json frontend/tsconfig.json \
+            package.json package-lock.json || true
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kgolf-build
+          path: build-artifact.tar.gz
       - name: Smoke test backend start
         run: node backend/dist/server.js & sleep 3 && curl -f http://localhost:8080/health
 

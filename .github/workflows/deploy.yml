@@ -15,21 +15,18 @@ jobs:
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Package source (exclude node_modules)
-        run: |
-          tar -czf source.tar.gz \
-            backend/src backend/prisma backend/package.json backend/tsconfig.json \
-            frontend/src frontend/package.json frontend/tsconfig.json frontend/postcss.config.mjs frontend/tailwind.config.* frontend/webpack.config.js frontend/styles frontend/index.html frontend/components.json \
-            package.json package-lock.json || true
-      - name: Copy source to server
+      - name: Download build artifact from CI
+        uses: actions/download-artifact@v4
+        with:
+          name: kgolf-build
+          path: ./artifact
+      - name: Copy artifact to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          source: source.tar.gz
+          source: artifact/build-artifact.tar.gz
           target: /root/kgolf
       # - name: Remote build & deploy (no Docker)
       #   uses: appleboy/ssh-action@v1.0.3
