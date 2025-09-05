@@ -16,9 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download build artifact from CI
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: kgolf-build
+          path: artifact
       # Artifact contains built backend/frontend and metadata only (no lint config; lint currently disabled)
       - name: Copy artifact to server
         uses: appleboy/scp-action@v0.1.7
