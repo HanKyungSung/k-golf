@@ -19,13 +19,6 @@ jobs:
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     steps:
-      - name: Debug list artifacts for triggering run
-        if: github.event_name == 'workflow_run'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Listing artifacts for run ${{ github.event.workflow_run.id }}";
-          gh api repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/artifacts --jq '.artifacts[].name' || echo 'No artifacts found'
       - name: Download build artifact (triggered CI run)
         if: github.event_name == 'workflow_run'
         uses: actions/download-artifact@v4
