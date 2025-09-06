@@ -15,27 +15,21 @@ jobs:
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     steps:
-      - name: List available artifacts (debug)
+      - name: Download build artifact (triggered CI run)
         if: github.event_name == 'workflow_run'
-        run: |
-          echo "Fetching artifact list for run ${{ github.event.workflow_run.id }}"
-          gh run view ${{ github.event.workflow_run.id }} --json artifacts -q '.artifacts'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Download build artifact from triggering CI run
-        if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name: kgolf-build
           path: artifact
           run-id: ${{ github.event.workflow_run.id }}
-      - name: Download latest successful main artifact (manual dispatch fallback)
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download latest successful main artifact (manual dispatch)
         if: github.event_name == 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RUN_ID=$(gh run list --workflow=CI --branch=main --status=success --limit=1 --json databaseId -q '.[0].databaseId')
-          if [ -z "$RUN_ID" ]; then echo "No successful CI run found"; exit 1; fi
+          if [ -z "$RUN_ID" ]; then echo "No successful CI run found on main"; exit 1; fi
           echo "Downloading artifact from run $RUN_ID";
           gh run download "$RUN_ID" -n kgolf-build -D artifact
       # Artifact contains built backend/frontend and metadata only (no lint config; lint currently disabled)
