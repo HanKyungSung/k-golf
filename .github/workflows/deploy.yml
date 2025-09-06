@@ -57,17 +57,13 @@ jobs:
             set -euo pipefail
             ARTIFACT_DIR=/root/k-golf
             cd "$ARTIFACT_DIR"
-            echo 'Unpacking artifact...'
+            echo 'Unpacking artifact directly into /root/k-golf (no release rotation)...'
             if [ ! -f artifact/build-artifact.tar.gz ]; then echo 'artifact/build-artifact.tar.gz not found'; ls -R .; exit 1; fi
-            rm -rf release_tmp && mkdir release_tmp
-            tar -xzf artifact/build-artifact.tar.gz -C release_tmp
-            # Promote previous release for rollback
-            if [ -d current ]; then mv current previous_$(date +%Y%m%d%H%M%S); fi
-            mv release_tmp current
-            cd current
-            # Ensure Node & pm2 installed
+            # Remove old built output directories to avoid stale assets
+            rm -rf backend/dist frontend/dist || true
+            tar -xzf artifact/build-artifact.tar.gz
+            # Ensure Node installed
             if ! command -v node >/dev/null; then echo 'Install Node (>=20) first'; exit 1; fi
-            if ! command -v pm2 >/dev/null; then npm install -g pm2; fi
             # Backend env must exist
             if [ ! -f backend/.env ]; then echo 'Create backend/.env with DATABASE_URL etc.'; exit 1; fi
             # Install minimal dependencies (production) for backend & frontend if package.json present
@@ -76,14 +72,5 @@ jobs:
             # Generate Prisma client (migrations already deployed in CI; use migrate deploy for safety)
             (cd backend && npx prisma generate && npx prisma migrate deploy)
             # (Build already done in CI artifact) — skip rebuild
-            # Restart backend
-            pm2 delete kgolf-backend || true
-            pm2 start backend/dist/server.js --name kgolf-backend
-            # Simple static serving (placeholder)
-            if ! command -v serve >/dev/null; then npm install -g serve || true; fi
-            pm2 delete kgolf-frontend || true
-            pm2 start "serve -s frontend/dist -l 4173" --name kgolf-frontend
-            pm2 save || true
-            # Cleanup old unpacked artifacts keeping last 3 previous_*
-            ls -dt previous_* 2>/dev/null | tail -n +4 | xargs -r rm -rf
-            echo 'Deployment complete.'
+            echo 'Skipping process manager (pm2) steps as requested.'
+            echo 'Deployment complete (artifact unpacked, dependencies installed, migrations applied).'
