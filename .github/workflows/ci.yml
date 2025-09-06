@@ -52,10 +52,12 @@ jobs:
         run: npm run build
       - name: Build frontend
         working-directory: frontend
-        run: npm run build || npm run build:frontend || true
+        run: |
+          npm run build
       # Lint step intentionally removed (lint config disabled). Re-introduce here once ESLint is reinstated.
       - name: Package build artifact
         run: |
+          if [ ! -d frontend/dist ]; then echo 'Cannot package: frontend/dist missing'; exit 1; fi
           tar -czf build-artifact.tar.gz \
             backend/dist backend/prisma/migrations backend/package.json backend/tsconfig.json \
             frontend/dist frontend/package.json frontend/tsconfig.json \
