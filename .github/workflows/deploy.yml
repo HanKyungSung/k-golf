@@ -36,6 +36,10 @@ jobs:
           if [ -z "$RUN_ID" ]; then echo "No successful CI run found on main"; exit 1; fi
           echo "Downloading artifact from run $RUN_ID";
           gh run download "$RUN_ID" -n kgolf-build -D artifact
+      - name: Verify artifact file present
+        run: |
+          ls -l artifact || true
+          if [ ! -f artifact/build-artifact.tar.gz ]; then echo "Artifact file missing"; exit 1; fi
       # Artifact contains built backend/frontend and metadata only (no lint config; lint currently disabled)
       - name: Copy artifact to server
         uses: appleboy/scp-action@v0.1.7
@@ -43,6 +47,7 @@ jobs:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
           source: artifact/build-artifact.tar.gz
           target: /root/kgolf
       # - name: Remote build & deploy (no Docker)
