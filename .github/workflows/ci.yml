@@ -50,12 +50,13 @@ jobs:
       - name: Build backend
         working-directory: backend
         run: npm run build
+      - name: Ensure lightningcss linux binary
+        run: |
+          npm install lightningcss-linux-x64-gnu@1.30.1 --no-save || echo 'Optional lightningcss linux binary failed to install'
       - name: Build frontend
         working-directory: frontend
-        env:
-          CSS_TRANSFORMER_WASM: '1'
         run: |
-          # Use WASM fallback for lightningcss to avoid native binary issues on GitHub runners
+          # Build frontend (lightningcss should now resolve native linux binary)
           npm run build
       # Lint step intentionally removed (lint config disabled). Re-introduce here once ESLint is reinstated.
       - name: Package build artifact
