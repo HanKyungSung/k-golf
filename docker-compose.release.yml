@@ -1,0 +1,85 @@
+version: '3.9'
+
+# Production release compose using pre-built images from CI (no local builds on server)
+services:
+  db:
+    image: postgres:16
+    container_name: kgolf-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kgolf
+      POSTGRES_PASSWORD: kgolf_password
+      POSTGRES_DB: kgolf_app
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - kgolf_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kgolf -d kgolf_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: ghcr.io/hankyungsung/kgolf-backend:${IMAGE_TAG:-latest}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://kgolf:kgolf_password@db:5432/kgolf_app?schema=public
+    command: ["npx", "prisma", "migrate", "deploy"]
+    restart: "no"
+    networks:
+      - kgolf_net
+
+  backend:
+    image: ghcr.io/hankyungsung/kgolf-backend:${IMAGE_TAG:-latest}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_URL: postgres://kgolf:kgolf_password@db:5432/kgolf_app?schema=public
+      CORS_ORIGIN: https://your-production-domain
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      EMAIL_FROM: ${EMAIL_FROM}
+    expose:
+      - "8080"
+    networks:
+      - kgolf_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/hankyungsung/kgolf-frontend:${IMAGE_TAG:-latest}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8081:80"
+    networks:
+      - kgolf_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  kgolf_net:
+    driver: bridge
+
+volumes:
+  pg_data:
+    driver: local
