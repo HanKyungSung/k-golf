@@ -100,17 +100,17 @@ jobs:
 
       - name: Add server host key
         run: |
-          if [ -z "${{ secrets.DEPLOY_HOST }}" ]; then echo 'DEPLOY_HOST secret missing' >&2; exit 1; fi
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          if [ -z "${{ secrets.DROPLET_HOST }}" ]; then echo 'DROPLET_HOST secret missing' >&2; exit 1; fi
+          ssh-keyscan -H ${{ secrets.DROPLET_HOST }} >> ~/.ssh/known_hosts
 
       - name: Copy compose file
-        run: scp docker-compose.release.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:~/kgolf/docker-compose.release.yml
+        run: scp docker-compose.release.yml ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:~/kgolf/docker-compose.release.yml
 
       - name: Deploy (pull & up)
         run: |
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} \
             IMAGE_TAG=${GITHUB_SHA} \
             'cd ~/kgolf && docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && docker compose -f docker-compose.release.yml pull && docker compose -f docker-compose.release.yml up -d'
 
       - name: Prune old images (optional)
-        run: ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} 'docker image prune -f'
+        run: ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} 'docker image prune -f'
