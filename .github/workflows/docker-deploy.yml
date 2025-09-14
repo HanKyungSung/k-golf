@@ -103,6 +103,10 @@ jobs:
           if [ -z "${{ secrets.DROPLET_HOST }}" ]; then echo 'DROPLET_HOST secret missing' >&2; exit 1; fi
           ssh-keyscan -H ${{ secrets.DROPLET_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Ensure remote deploy directory
+        run: |
+          ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} 'mkdir -p ~/kgolf'
+
       - name: Copy compose file
         run: scp docker-compose.release.yml ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:~/kgolf/docker-compose.release.yml
 
