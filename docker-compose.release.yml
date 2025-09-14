@@ -25,8 +25,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env.production
     environment:
-      DATABASE_URL: postgres://kgolf:kgolf_password@db:5432/kgolf_app?schema=public
+      # Allow override or ensure DATABASE_URL present; env_file provides primary value
+      DATABASE_URL: ${DATABASE_URL}
     command: ["npx", "prisma", "migrate", "deploy"]
     restart: "no"
     networks:
@@ -39,16 +42,12 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    env_file:
+      - .env.production
     environment:
+      # Explicit non-secret overrides (secrets come from env_file)
       NODE_ENV: production
       PORT: 8080
-      DATABASE_URL: postgres://kgolf:kgolf_password@db:5432/kgolf_app?schema=public
-      CORS_ORIGIN: https://your-production-domain
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      EMAIL_FROM: ${EMAIL_FROM}
     expose:
       - "8080"
     networks:
