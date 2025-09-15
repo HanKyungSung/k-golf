@@ -45,9 +45,8 @@ services:
     env_file:
       - .env.production
     environment:
-      # Explicit non-secret overrides (secrets come from env_file)
-      NODE_ENV: production
-      PORT: 8080
+    NODE_ENV: production
+    PORT: 8080
     expose:
       - "8080"
     networks:

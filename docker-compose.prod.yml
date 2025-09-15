@@ -46,12 +46,16 @@ services:
       NODE_ENV: production
       PORT: 8080
       DATABASE_URL: postgres://kgolf:kgolf_password@db:5432/kgolf_app?schema=public
+      # Comma-separated list for CORS (dev frontend + prod domain)
       CORS_ORIGIN: http://localhost:8081,https://your-production-domain
-      SMTP_HOST: smtp.example.com
-      SMTP_PORT: 587
-      SMTP_USER: your_user
-      SMTP_PASS: your_password
-      EMAIL_FROM: no-reply@example.com
+      # Origin used in verification links (frontend public URL)
+      FRONTEND_ORIGIN: http://localhost:8081
+      # Optional email settings (uncomment & set if sending real emails in local/prod build on server)
+      # SMTP_HOST: smtp.example.com
+      # SMTP_PORT: 587
+      # SMTP_USER: your_user
+      # SMTP_PASS: your_password
+      # EMAIL_FROM: no-reply@example.com
     expose:
       - "8080"
     networks:

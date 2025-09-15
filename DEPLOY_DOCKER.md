@@ -179,9 +179,10 @@ docker compose -f docker-compose.prod.yml exec backend wget -qO- http://localhos
 
 ## Environment variables to finalize
 Replace placeholders in `docker-compose.prod.yml`:
-- `CORS_ORIGIN`
-- SMTP_* + `EMAIL_FROM`
-- Any auth-related secrets (if you add later, prefer `JWT_SECRET`, etc.)
+- `CORS_ORIGIN` (comma-separated for multi-origins)
+- `FRONTEND_ORIGIN` (used for links in emails)
+- (Optional) SMTP_* + `EMAIL_FROM` only if you enable real email locally
+- Any auth-related secrets (future: `JWT_SECRET`, etc.)
 Add them via an `.env` file and reference:
 ```
 services:
@@ -301,3 +302,122 @@ Legend: (O) optional, (A) choose one path.
 
 ---
 Tip: Never run `docker compose ... down -v` in production unless you intentionally want to destroy persistent DB data. Use `down` (without `-v`) or prefer `up -d` with new images for zero data loss redeploys.
+
+## Local CI Pipeline Simulation (Exact Steps)
+
+Run these from the repository root to mimic what the GitHub Actions "Docker Deploy" workflow does. This helps you catch build or migration failures before pushing.
+
+### 1. (Optional) Clean Workspace
+```bash
+docker system prune -f  # removes dangling images/containers/networks
+```
+
+### 2. Choose a Tag
+Use the real commit SHA (preferred) or a temporary `local` tag:
+```bash
+export IMAGE_TAG=$(git rev-parse HEAD)  # or: export IMAGE_TAG=local
+echo "Using IMAGE_TAG=$IMAGE_TAG"
+```
+
+### 3. Build Backend Image (matches CI backend build)
+```bash
+docker build --progress=plain -t ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG ./backend
+```
+If it fails, fix errors (often dependency or TypeScript build) before proceeding.
+
+### 4. Build Frontend Image
+```bash
+docker build --progress=plain -t ghcr.io/hankyungsung/kgolf-frontend:$IMAGE_TAG ./frontend
+```
+
+### 5. (Optional) Add Build Cache Tags
+CI uses a build cache ref; locally you can skip. (If you want parity: also tag a `buildcache` ref.)
+
+### 6. (Optional) Test Pushing (Requires Personal PAT with `write:packages`)
+Skip unless you explicitly want to push your local test images.
+```bash
+# docker login ghcr.io -u <gh-user>
+# docker push ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG
+# docker push ghcr.io/hankyungsung/kgolf-frontend:$IMAGE_TAG
+```
+
+### 7. Start Stack Using Release Compose
+`docker-compose.release.yml` expects images already built/pulled; we provide `IMAGE_TAG`.
+```bash
+IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.release.yml up -d
+```
+If images are missing you mistyped the tag.
+
+### 8. Check Container Status
+```bash
+docker compose -f docker-compose.release.yml ps
+```
+Look for `healthy` (backend) and `exit 0` (migrate) once it finishes.
+
+### 9. Inspect Migration Logs
+```bash
+docker compose -f docker-compose.release.yml logs --since=10m migrate
+```
+Expect successful Prisma output and container exit.
+
+### 10. Backend Health
+```bash
+docker compose -f docker-compose.release.yml exec backend wget -qO- http://localhost:8080/health
+```
+Should return JSON with ok / uptime.
+
+### 11. Frontend Health
+```bash
+curl http://localhost:8081/health
+```
+Expect `{"ok":true}`.
+
+### 12. Tail Backend Logs (Live)
+```bash
+docker compose -f docker-compose.release.yml logs -f --tail=100 backend
+```
+Cancel with Ctrl+C.
+
+### 13. Common Failure Spots
+- Build fails: missing deps / TypeScript error → fix code then rebuild.
+- Migrate fails: schema mismatch / existing constraint → adjust migration or DB state.
+- Backend unhealthy: env variables missing (SMTP_* / DATABASE_URL) or DB not ready.
+- Frontend 404 root: dist not generated; ensure `npm run build` works inside Docker context.
+
+### 14. Rebuild After Code Change (Fast Loop)
+If you edited backend only:
+```bash
+docker build -t ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG ./backend
+IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.release.yml up -d backend
+```
+For frontend only swap names accordingly.
+
+### 15. Tear Down (Keep Volume)
+```bash
+docker compose -f docker-compose.release.yml down
+```
+Postgres data persists in `pg_data` volume.
+
+### 16. Full Cleanup (Removes DB Data — DANGEROUS)
+Only for local throwaway tests, never in production:
+```bash
+docker compose -f docker-compose.release.yml down -v
+docker volume ls | grep pg_data || true
+```
+
+### 17. Simulate Rollback Locally
+Build a second tag, then switch tags:
+```bash
+export PREV_TAG=$IMAGE_TAG
+export IMAGE_TAG=testrollback
+docker build -t ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG ./backend
+IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.release.yml up -d backend
+# Roll back
+IMAGE_TAG=$PREV_TAG docker compose -f docker-compose.release.yml up -d backend
+```
+
+### 18. Compare With CI
+CI additionally: sets labels, uses buildx cache, pushes to GHCR, then SSH deploys and runs `pull` + `up -d`. Functional app behavior should match your local simulation results if the tag is identical.
+
+---
+Use this section whenever a CI run fails; locate the failing phase locally, fix, then push again.
