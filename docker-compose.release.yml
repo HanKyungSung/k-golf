@@ -27,9 +27,7 @@ services:
         condition: service_healthy
     env_file:
       - .env.production
-    environment:
-      # Allow override or ensure DATABASE_URL present; env_file provides primary value
-      DATABASE_URL: ${DATABASE_URL}
+  # DATABASE_URL comes from .env.production; no explicit environment block needed
     command: ["npx", "prisma", "migrate", "deploy"]
     restart: "no"
     networks:
@@ -45,8 +43,8 @@ services:
     env_file:
       - .env.production
     environment:
-    NODE_ENV: production
-    PORT: 8080
+      NODE_ENV: production
+      PORT: 8080
     expose:
       - "8080"
     networks:
