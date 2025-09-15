@@ -221,7 +221,7 @@ Legend: (O) optional, (A) choose one path.
 - [ ] 8. Decide secrets strategy (A):
    - Path A1 (current workflow injects SMTP_ vars): Keep existing `docker-compose.release.yml` as-is; ensure GitHub secrets set: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`.
    - Path A2 (env file on server): Create `.env.production` and add `env_file:` to services (`backend`, optionally `migrate`) then remove those vars from `environment:` and from SSH deploy command in workflow (edit workflow before deploying).
-- [ ] 9. If Path A2: create file `/home/<deploy-user>/kgolf/.env.production`:
+- [ ] 9. If Path A2: create file `/home/<deploy-user>/k-golf/.env.production`:
    ```dotenv
    NODE_ENV=production
    CORS_ORIGIN=https://your-domain
@@ -235,7 +235,7 @@ Legend: (O) optional, (A) choose one path.
 - [ ] 10. (O) Add future secrets placeholders (e.g. `JWT_SECRET=`) even if app not using yet
 
 ### First Pull & Run (Release Compose)
-- [ ] 11. Ensure deploy directory exists: `mkdir -p ~/kgolf && cd ~/kgolf`
+- [ ] 11. Ensure deploy directory exists: `mkdir -p ~/k-golf && cd ~/k-golf`
 - [ ] 12. Confirm `docker-compose.release.yml` present (copied by workflow or manual scp)
 - [ ] 13. Pull images explicitly (manual or during automated deploy):
    ```bash

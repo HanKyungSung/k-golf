@@ -105,16 +105,16 @@ jobs:
 
       - name: Ensure remote deploy directory
         run: |
-          ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} 'mkdir -p ~/kgolf'
+          ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} 'mkdir -p ~/k-golf'
 
       - name: Copy compose file
-        run: scp docker-compose.release.yml ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:~/kgolf/docker-compose.release.yml
+  run: scp docker-compose.release.yml ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:~/k-golf/docker-compose.release.yml
 
       - name: Deploy (pull & up)
         run: |
           ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} \
             IMAGE_TAG=${GITHUB_SHA} \
-            'cd ~/kgolf && docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && docker compose -f docker-compose.release.yml pull && docker compose -f docker-compose.release.yml up -d'
+            'cd ~/k-golf && docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && docker compose -f docker-compose.release.yml pull && docker compose -f docker-compose.release.yml up -d'
 
       - name: Prune old images (optional)
         run: ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} 'docker image prune -f'

@@ -105,7 +105,7 @@ jobs:
 
       - name: Copy compose file to server
         run: |
-          scp docker-compose.release.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:~/kgolf/docker-compose.release.yml
+          scp docker-compose.release.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:~/k-golf/docker-compose.release.yml
 
       - name: Deploy (pull & up)
         run: |
@@ -116,7 +116,7 @@ jobs:
             SMTP_USER='${{ secrets.SMTP_USER }}' \
             SMTP_PASS='${{ secrets.SMTP_PASS }}' \
             EMAIL_FROM='${{ secrets.EMAIL_FROM }}' \
-            'mkdir -p ~/kgolf && cd ~/kgolf && docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && docker compose -f docker-compose.release.yml pull && docker compose -f docker-compose.release.yml up -d'
+            'mkdir -p ~/k-golf && cd ~/k-golf && docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && docker compose -f docker-compose.release.yml pull && docker compose -f docker-compose.release.yml up -d'
 
       - name: Prune old images (optional cleanup)
         run: |
