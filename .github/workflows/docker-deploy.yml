@@ -108,7 +108,7 @@ jobs:
           ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} 'mkdir -p ~/k-golf'
 
       - name: Copy compose file
-  run: scp docker-compose.release.yml ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:~/k-golf/docker-compose.release.yml
+        run: scp docker-compose.release.yml ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:~/k-golf/docker-compose.release.yml
 
       - name: Deploy (pull & up)
         run: |

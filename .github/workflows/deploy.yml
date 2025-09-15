@@ -2,10 +2,11 @@
 ## This section uses Docker & GHCR (recommended path).
 name: CI Build & Deploy
 
-on:
-  push:
-    branches: [ main ]          # Trigger automatically on pushes to main
-  workflow_dispatch: {}          # Allow manual run from GitHub UI
+# Disabled: superseded by docker-deploy.yml
+# on:
+#   push:
+#     branches: [ main ]
+#   workflow_dispatch: {}
 
 env:
   REGISTRY: ghcr.io                               # Container registry host

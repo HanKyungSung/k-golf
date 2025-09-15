@@ -1,11 +1,12 @@
 ## Legacy non-Docker deployment workflow (kept only if you still need artifact unpack method)
 name: Legacy Deploy (Artifact)
 
-on:
-  workflow_dispatch:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+# Disabled legacy workflow (replaced by docker-deploy.yml)
+# on:
+#   workflow_dispatch:
+#   workflow_run:
+#     workflows: ["CI"]
+#     types: [completed]
 
 permissions:
   contents: read
