@@ -178,6 +178,90 @@ Env
 - Backend: set `CORS_ORIGIN` (frontend origin) and optionally `FRONTEND_ORIGIN` for email links; `DATABASE_URL` for Postgres.
 - Frontend: set `REACT_APP_API_BASE` to the backend base URL (e.g., `http://localhost:8080`).
 
+## Production Deployment (Docker + Nginx Summary)
+Compact reference of the current live setup:
+
+Docker (release compose):
+- backend container listens on 8080 (Express API)
+- frontend container listens on 8081 (Nginx serving built SPA)
+- Postgres service internal only
+- `prisma migrate deploy` run via a one‑shot migrate service
+- Environment loaded from `.env.production` via `env_file`
+
+Nginx (host) terminates TLS and reverse‑proxies:
+1. `inviteyou.ca` (legacy build on disk)
+2. `k-golf.inviteyou.ca` (proxies to containers)
+3. Wildcard `*.inviteyou.ca` (dynamic subdomains → containers, excluding the explicit k-golf)
+
+Key HTTPS server block for k-golf (Option 2: hard-coded Connection header):
+
+```
+server {
+  listen 443 ssl http2;
+  server_name k-golf.inviteyou.ca;
+
+  ssl_certificate /etc/letsencrypt/live/inviteyou.ca-0002/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/inviteyou.ca-0002/privkey.pem;
+  include /etc/letsencrypt/options-ssl-nginx.conf;
+  ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+  # Security headers
+  add_header X-Frame-Options SAMEORIGIN;
+  add_header X-Content-Type-Options nosniff;
+  add_header Referrer-Policy strict-origin-when-cross-origin;
+  add_header X-XSS-Protection "1; mode=block";
+  add_header Cross-Origin-Opener-Policy same-origin always;
+  add_header Cross-Origin-Resource-Policy same-origin always;
+  add_header Cross-Origin-Embedder-Policy require-corp always;
+
+  # API → backend container
+  location /api/ {
+    proxy_pass http://127.0.0.1:8080/api/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade"; # Option 2 (no map)
+    proxy_cache_bypass $http_upgrade;
+  }
+
+  # SPA → frontend container
+  location / {
+    proxy_pass http://127.0.0.1:8081/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+  }
+}
+
+server { listen 80; server_name k-golf.inviteyou.ca; return 301 https://$host$request_uri; }
+```
+
+Wildcard pattern (concept):
+```
+server {
+  listen 443 ssl http2;
+  server_name ~^(?!(k-golf))(?<sub>[a-z0-9-]+)\.inviteyou\.ca$;
+  # proxy /api to 8080, everything else to 8081 (same blocks as above)
+}
+```
+
+If WebSockets are later required, switch to Option 1:
+```
+map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+proxy_set_header Connection $connection_upgrade;
+```
+
+Operational commands:
+```
+sudo nginx -t && sudo systemctl reload nginx
+curl -I https://k-golf.inviteyou.ca/ ; curl -I https://k-golf.inviteyou.ca/api/health
+```
+
+Update `.env.production` after domain/origin changes (redeploy backend):
+`CORS_ORIGIN=https://k-golf.inviteyou.ca`
+
+Future improvements (not yet automated): gzip/static caching at proxy, rate limiting, unified cert (SAN or wildcard).
+
 ## API quick reference
 
 - GET `/api/bookings/rooms` → list active rooms
