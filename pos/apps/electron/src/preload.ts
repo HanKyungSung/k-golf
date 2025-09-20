@@ -1,2 +1,7 @@
-// Secure bridge placeholder
-// Expose minimal APIs to renderer via contextBridge later.
+import { contextBridge } from 'electron';
+
+contextBridge.exposeInMainWorld('kgolf', {
+	ping: () => 'pong'
+});
+
+console.log('[PRELOAD] injected');

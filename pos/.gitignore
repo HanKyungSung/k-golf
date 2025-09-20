@@ -1,0 +1,67 @@
+# POS workspace specific ignores
+
+# Dependencies
+node_modules/
+
+# Build outputs
+/dist/
+/release/
+/out/
+
+# SQLite local data (regenerated / disposable)
+/data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Logs
+logs/
+*.log
+
+# Environment files (provide sample separately if needed)
+.env
+.env.local
+.env.development.local
+.env.production.local
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Electron packaging artifacts
+*.asar
+*.deb
+*.dmg
+*.exe
+*.AppImage
+*.msi
+*.zip
+*.tar.gz
+
+# Crash dumps
+*.dmp
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Test coverage
+coverage/
+
+# NPM / Yarn / PNPM debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Optional: lockfile if using root-only lock strategy (commented out)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Temporary scratch files
+.tmp/
+.swp/

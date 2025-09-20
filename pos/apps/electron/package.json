@@ -1,18 +1,28 @@
 {
   "name": "pos-electron",
   "private": true,
+  "version": "0.1.0",
   "main": "dist/main.js",
-  "type": "module",
   "scripts": {
-    "dev": "ts-node-esm src/main.ts",
+  "dev": "ELECTRON_DEV=1 concurrently -k \"tsc -w\" \"npm:watch:renderer\" \"wait-on dist/main.js dist/renderer/index.html && electron dist/main.js\"",
+  "watch:renderer": "chokidar 'src/renderer/index.html' --initial -c 'mkdir -p dist/renderer && cp src/renderer/index.html dist/renderer/index.html'",
     "build": "tsc -p tsconfig.build.json",
+  "postbuild": "mkdir -p dist/renderer && cp src/renderer/index.html dist/renderer/index.html",
     "start": "node dist/main.js"
   },
   "dependencies": {
-    "electron": "^30.0.0"
+    "axios": "^1.7.0",
+    "better-sqlite3": "^9.4.0",
+    "electron": "^30.0.0",
+    "electron-log": "^5.1.0",
+    "keytar": "^7.9.0",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+  "@types/node": "^20.11.0",
+  "wait-on": "^7.2.0",
+  "chokidar-cli": "^3.0.0"
   }
 }

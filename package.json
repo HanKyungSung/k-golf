@@ -1,6 +1,11 @@
 {
   "private": true,
-  "workspaces": ["frontend", "backend", "pos"],
+  "workspaces": [
+    "frontend",
+    "backend",
+    "pos/apps/electron",
+    "pos/packages/server"
+  ],
   "scripts": {
     "dev": "concurrently \"npm:dev:frontend\" \"npm:dev:backend\"",
     "dev:frontend": "npm --workspace frontend run dev",
