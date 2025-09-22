@@ -19,9 +19,9 @@ Legend: [ ] pending  [~] in progress  [x] done
 [x] Verify `npm run dev:pos:electron` (or local script) launches Electron window  
 
 ### 0.3 Database Init
-[ ] Implement `initDb()` in db.ts: open `data/pos.sqlite`, enable WAL, create tables (meta, bookings, outbox)  
-[ ] Call `initDb()` early in `main.ts` before window creation  
-[ ] Acceptance: file `data/pos.sqlite` exists after startup
+[x] Implement `initDb()` in db.ts: open `data/pos.sqlite`, enable WAL, create tables (meta, bookings, outbox)  
+[x] Call `initDb()` early in `main.ts` before window creation  
+[x] Acceptance: file `data/pos.sqlite` exists after startup (verified via dev run + verify:db script)
 
 ### 0.4 Enqueue (Local Create Only)
 [ ] Implement `enqueueBooking()` (inserts into bookings + outbox)  
@@ -145,3 +145,5 @@ Login, restart app -> stays authenticated (refresh token)
 
 ---
 (Keep this file pruned: remove completed sections or archive to CHANGELOG when stable.)
+\n+Footnotes:
+ - verify:db: (manual) check existence of `pos/apps/electron/data/pos.sqlite` after `npm run dev:pos:electron` start.
