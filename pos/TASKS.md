@@ -14,7 +14,7 @@ Legend: [ ] pending  [~] in progress  [x] done
 [x] Add / verify deps in `pos/apps/electron/package.json`: electron, better-sqlite3, uuid, axios, electron-log, keytar, typescript, ts-node  
 
 ### 0.2 Core Structure
-[ ] Create `src/core/` folder (db.ts, outbox.ts, sync.ts, auth.ts stubs)  
+[x] Create `src/core/` folder (db.ts, outbox.ts, sync.ts, auth.ts stubs)  
 [x] Add `tsconfig.build.json` (output to `dist/`)  
 [x] Verify `npm run dev:pos:electron` (or local script) launches Electron window  
 
@@ -47,8 +47,12 @@ Legend: [ ] pending  [~] in progress  [x] done
 ### 0.8 Auth (Login + Persist Refresh)
 [ ] Implement `login(email,password)` → POST `/api/auth/login` capture access/refresh tokens  
 [ ] Save refresh token via keytar; store access in memory  
-[ ] Load refresh on startup (`auth/refresh` if backend supports)  
+[ ] Silent startup session check (`/auth/me`) before showing UI  
+[ ] If session valid → skip login modal and start sync timer  
+[ ] If unauthenticated → show Login modal (booking actions disabled)  
+[ ] After successful login start sync timer; emit auth state event  
 [ ] Include Authorization header in push if access token present  
+[ ] (Optional) Log lifecycle events: `launch:start`, `launch:session_valid`, `launch:show_login`, `launch:login_success`  
 
 ### 0.9 Scheduled Push Loop
 [ ] Interval (15s) triggers `processSyncCycle()` if `online && outbox not empty && not already syncing`  
@@ -106,6 +110,7 @@ Legend: [ ] pending  [~] in progress  [x] done
 8. 0.10 last_sync_ts  
 9. Phase 1 Pull  
 
+
 ---
 ## Acceptance Smoke Script
 ```
@@ -132,6 +137,11 @@ Login, restart app -> stays authenticated (refresh token)
 - Batch push: send multiple mutations in one request.
 - WebSocket subscribe for live booking updates.
 - Local overlap validation before enqueue.
+
+### Auth / Security (Future Enhancements)
+- Admin long-lived session TTL (ENV: ADMIN_SESSION_TTL_HOURS) — implement role-based cookie/session expiry (reverted for now).
+- Rolling session refresh (extend on active use vs fixed expiry).
+- Session revocation list / admin dashboard to force logout.
 
 ---
 (Keep this file pruned: remove completed sections or archive to CHANGELOG when stable.)

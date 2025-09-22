@@ -1,6 +1,20 @@
+/**
+ * main.ts (Electron Main Process Entry)
+ * -----------------------------------------
+ * Responsibilities:
+ *  - Initialize local SQLite DB before any renderer loads
+ *  - Create BrowserWindow & load compiled renderer assets from dist
+ *  - Maintain single-instance style re-creation on macOS activate
+ *  - (Future) Register IPC handlers for auth, bookings, queue status, sync
+ *
+ * Implementation Notes:
+ *  - Uses CommonJS require for Electron import to avoid ESM loader complexity.
+ *  - Dist HTML is used (copied by watch script) so relative script src works.
+ */
 // Using require here because ts-node/register with Electron main prefers CJS resolution.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { app, BrowserWindow } = require('electron');
+import { initDb } from './core/db';
 import path from 'path';
 import fs from 'fs';
 
@@ -26,6 +40,8 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
+  const { path: dbPath, newlyCreated } = initDb();
+  console.log('[MAIN] DB initialized at', dbPath, 'new?', newlyCreated);
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

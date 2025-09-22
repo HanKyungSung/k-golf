@@ -6,9 +6,10 @@
   "scripts": {
   "dev": "ELECTRON_DEV=1 concurrently -k \"tsc -w\" \"npm:watch:renderer\" \"wait-on dist/main.js dist/renderer/index.html && electron dist/main.js\"",
   "watch:renderer": "chokidar 'src/renderer/index.html' --initial -c 'mkdir -p dist/renderer && cp src/renderer/index.html dist/renderer/index.html'",
-    "build": "tsc -p tsconfig.build.json",
+  "build": "tsc -p tsconfig.build.json",
   "postbuild": "mkdir -p dist/renderer && cp src/renderer/index.html dist/renderer/index.html",
-    "start": "node dist/main.js"
+  "start": "node dist/main.js",
+  "rebuild:native": "electron-rebuild -f --only better-sqlite3,keytar"
   },
   "dependencies": {
     "axios": "^1.7.0",
@@ -22,6 +23,8 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.4.0",
   "@types/node": "^20.11.0",
+  "@types/better-sqlite3": "^7.6.9",
+  "electron-rebuild": "^3.2.9",
   "wait-on": "^7.2.0",
   "chokidar-cli": "^3.0.0"
   }
