@@ -173,6 +173,52 @@ sqlite3 pos/apps/electron/data/pos.sqlite '.tables'
 sqlite3 pos/apps/electron/data/pos.sqlite 'select * from outbox;'
 ```
 
+#### Detailed SQLite Cheat Sheet (Developer Reference)
+
+From repo root:
+```
+sqlite3 pos/apps/electron/data/pos.sqlite
+```
+Inside the prompt:
+```
+.tables                             -- list tables
+.schema bookings                    -- show bookings schema
+.schema outbox                      -- show outbox schema
+SELECT COUNT(*) FROM bookings;      -- count bookings
+SELECT COUNT(*) FROM outbox;        -- count queued mutations
+SELECT id,type,attempt_count FROM outbox ORDER BY created_at DESC LIMIT 5;  -- recent queue
+SELECT id, json_extract(payload_json,'$.customerName') AS customer FROM outbox LIMIT 3; -- JSON extraction
+.exit
+```
+
+One‑off commands (no interactive shell):
+```
+sqlite3 pos/apps/electron/data/pos.sqlite "SELECT COUNT(*) AS outbox_count FROM outbox;"
+sqlite3 pos/apps/electron/data/pos.sqlite "SELECT id,type FROM outbox ORDER BY created_at DESC LIMIT 1;"
+```
+
+If already inside the data folder (`pos/apps/electron/data`):
+```
+sqlite3 pos.sqlite
+```
+
+GUI Option (optional): install "DB Browser for SQLite" and open the file.
+
+Temporary Node script approach:
+```
+node - <<'NODE'
+const Database = require('better-sqlite3');
+const db = new Database('pos/apps/electron/data/pos.sqlite');
+console.log('Outbox count:', db.prepare('SELECT COUNT(*) c FROM outbox').get().c);
+console.log('Sample rows:', db.prepare('SELECT id,type,attempt_count FROM outbox LIMIT 5').all());
+NODE
+```
+
+Common mistakes:
+```
+Error: unable to open database ... -> path typo (use apps plural) or file not created yet (run dev script first)
+```
+
 ### Resetting Local State
 To completely reset (development only):
 ```

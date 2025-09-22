@@ -18,8 +18,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
  */
 // Using require here because ts-node/register with Electron main prefers CJS resolution.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const db_1 = require("./core/db");
+const bookings_1 = require("./core/bookings");
+const outbox_1 = require("./core/outbox");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 async function createWindow() {
@@ -47,6 +49,27 @@ app.whenReady().then(() => {
     const { path: dbPath, newlyCreated } = (0, db_1.initDb)();
     console.log('[MAIN] DB initialized at', dbPath, 'new?', newlyCreated);
     createWindow();
+    // IPC handlers (Phase 0.4 temporary minimal wiring)
+    ipcMain.handle('booking:create', (_evt, payload) => {
+        try {
+            // Basic validation (minimal)
+            if (!payload || !payload.customerName || !payload.startsAt || !payload.endsAt) {
+                throw new Error('Missing fields');
+            }
+            const result = (0, bookings_1.enqueueBooking)({
+                customerName: String(payload.customerName),
+                startsAt: String(payload.startsAt),
+                endsAt: String(payload.endsAt)
+            });
+            emitToAll('queue:update', { queueSize: result.queueSize });
+            emitToAll('booking:created', { id: result.bookingId, ...payload });
+            return { ok: true, ...result };
+        }
+        catch (e) {
+            return { ok: false, error: e.message };
+        }
+    });
+    ipcMain.handle('queue:getSize', () => ({ queueSize: (0, outbox_1.getQueueSize)() }));
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0)
             createWindow();
@@ -60,3 +83,11 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin')
         app.quit();
 });
+function emitToAll(channel, payload) {
+    for (const w of BrowserWindow.getAllWindows()) {
+        try {
+            w.webContents.send(channel, payload);
+        }
+        catch { /* ignore */ }
+    }
+}

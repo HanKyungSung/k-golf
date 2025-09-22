@@ -24,10 +24,10 @@ Legend: [ ] pending  [~] in progress  [x] done
 [x] Acceptance: file `data/pos.sqlite` exists after startup (verified via dev run + verify:db script)
 
 ### 0.4 Enqueue (Local Create Only)
-[ ] Implement `enqueueBooking()` (inserts into bookings + outbox)  
-[ ] IPC handler `booking:create` → calls enqueue  
-[ ] Renderer temporary button triggers IPC  
-[ ] Acceptance: clicking button increases count in `outbox` table
+[x] Implement `enqueueBooking()` (inserts into bookings + outbox)  
+[x] IPC handler `booking:create` → calls enqueue  
+[x] Renderer temporary button triggers IPC  
+[x] Acceptance: clicking button increases count in `outbox` table (verified via sqlite3)
 
 ### 0.5 Manual Push (No Pull Yet)
 [ ] Implement `processSyncCycle()` (take first outbox row, POST `/api/booking`)  

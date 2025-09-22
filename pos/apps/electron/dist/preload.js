@@ -13,6 +13,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
  */
 const electron_1 = require("electron");
 electron_1.contextBridge.exposeInMainWorld('kgolf', {
-    ping: () => 'pong'
+    ping: () => 'pong',
+    createBooking: (data) => electron_1.ipcRenderer.invoke('booking:create', data),
+    getQueueSize: () => electron_1.ipcRenderer.invoke('queue:getSize'),
+    onQueueUpdate: (cb) => {
+        electron_1.ipcRenderer.removeAllListeners('queue:update');
+        electron_1.ipcRenderer.on('queue:update', (_e, payload) => cb(payload));
+    }
 });
 console.log('[PRELOAD] injected');

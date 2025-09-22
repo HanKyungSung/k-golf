@@ -13,8 +13,10 @@
  */
 // Using require here because ts-node/register with Electron main prefers CJS resolution.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 import { initDb } from './core/db';
+import { enqueueBooking } from './core/bookings';
+import { getQueueSize } from './core/outbox';
 import path from 'path';
 import fs from 'fs';
 
@@ -43,6 +45,26 @@ app.whenReady().then(() => {
   const { path: dbPath, newlyCreated } = initDb();
   console.log('[MAIN] DB initialized at', dbPath, 'new?', newlyCreated);
   createWindow();
+  // IPC handlers (Phase 0.4 temporary minimal wiring)
+  ipcMain.handle('booking:create', (_evt: any, payload: any) => {
+    try {
+      // Basic validation (minimal)
+      if (!payload || !payload.customerName || !payload.startsAt || !payload.endsAt) {
+        throw new Error('Missing fields');
+      }
+      const result = enqueueBooking({
+        customerName: String(payload.customerName),
+        startsAt: String(payload.startsAt),
+        endsAt: String(payload.endsAt)
+      });
+      emitToAll('queue:update', { queueSize: result.queueSize });
+      emitToAll('booking:created', { id: result.bookingId, ...payload });
+      return { ok: true, ...result };
+    } catch (e: any) {
+      return { ok: false, error: e.message };
+    }
+  });
+  ipcMain.handle('queue:getSize', () => ({ queueSize: getQueueSize() }));
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -55,3 +77,9 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+
+function emitToAll(channel: string, payload: unknown) {
+  for (const w of BrowserWindow.getAllWindows()) {
+    try { w.webContents.send(channel, payload); } catch {/* ignore */}
+  }
+}
