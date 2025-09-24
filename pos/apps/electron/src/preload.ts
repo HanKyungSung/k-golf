@@ -15,10 +15,22 @@ contextBridge.exposeInMainWorld('kgolf', {
 	ping: () => 'pong',
 	createBooking: (data: { customerName: string; startsAt: string; endsAt: string }) => ipcRenderer.invoke('booking:create', data),
 	getQueueSize: () => ipcRenderer.invoke('queue:getSize'),
+	forceSync: () => ipcRenderer.invoke('sync:force'),
+	login: (email: string, password: string) => ipcRenderer.invoke('auth:login', { email, password }),
+	getAuthStatus: () => ipcRenderer.invoke('auth:getStatus'),
+	onAuthState: (cb: (s: any) => void) => {
+		ipcRenderer.removeAllListeners('auth:state');
+		ipcRenderer.on('auth:state', (_e, payload) => cb(payload));
+	},
+	onSync: (cb: (p: any) => void) => {
+		ipcRenderer.removeAllListeners('queue:update'); // queue:update covers sync results too
+		ipcRenderer.on('queue:update', (_e, payload) => cb(payload));
+	},
 	onQueueUpdate: (cb: (p: { queueSize: number }) => void) => {
 		ipcRenderer.removeAllListeners('queue:update');
 		ipcRenderer.on('queue:update', (_e, payload) => cb(payload));
-	}
+	},
+	listRooms: () => ipcRenderer.invoke('rooms:list')
 });
 
 console.log('[PRELOAD] injected');

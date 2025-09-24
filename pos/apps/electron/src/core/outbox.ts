@@ -20,9 +20,9 @@ import { v4 as uuid } from 'uuid';
 export interface OutboxItem {
   id: string;
   type: string;
-  payload_json: string;
-  created_at: number;
-  attempt_count: number;
+  payloadJson: string;
+  createdAt: number;
+  attemptCount: number;
 }
 
 /**
@@ -31,8 +31,8 @@ export interface OutboxItem {
 export function enqueue(type: string, payload: Record<string, unknown>) {
   const db = getDb();
   const id = uuid();
-  const stmt = db.prepare(`INSERT INTO outbox (id, type, payload_json, created_at) VALUES (@id, @type, @payload_json, @created_at)`);
-  stmt.run({ id, type, payload_json: JSON.stringify(payload), created_at: Date.now() });
+  const stmt = db.prepare(`INSERT INTO Outbox (id, type, payloadJson, createdAt) VALUES (@id, @type, @payloadJson, @createdAt)`);
+  stmt.run({ id, type, payloadJson: JSON.stringify(payload), createdAt: Date.now() });
   return id;
 }
 
@@ -41,7 +41,7 @@ export function enqueue(type: string, payload: Record<string, unknown>) {
  */
 export function getQueueSize(): number {
   const db = getDb();
-  const row = db.prepare('SELECT COUNT(*) as c FROM outbox').get() as any;
+  const row = db.prepare('SELECT COUNT(*) as c FROM Outbox').get() as any;
   return row.c as number;
 }
 
@@ -50,7 +50,7 @@ export function getQueueSize(): number {
  */
 export function peekOldest(): OutboxItem | null {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM outbox ORDER BY created_at ASC LIMIT 1').get();
+  const row = db.prepare('SELECT * FROM Outbox ORDER BY createdAt ASC LIMIT 1').get();
   return (row as OutboxItem) || null;
 }
 
@@ -59,7 +59,7 @@ export function peekOldest(): OutboxItem | null {
  */
 export function deleteItem(id: string) {
   const db = getDb();
-  db.prepare('DELETE FROM outbox WHERE id = ?').run(id);
+  db.prepare('DELETE FROM Outbox WHERE id = ?').run(id);
 }
 
 /**
@@ -67,5 +67,5 @@ export function deleteItem(id: string) {
  */
 export function incrementAttempt(id: string) {
   const db = getDb();
-  db.prepare('UPDATE outbox SET attempt_count = attempt_count + 1 WHERE id = ?').run(id);
+  db.prepare('UPDATE Outbox SET attemptCount = attemptCount + 1 WHERE id = ?').run(id);
 }

@@ -5,6 +5,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.setAccessToken = setAccessToken;
 exports.getAccessToken = getAccessToken;
+exports.setAuthenticatedUser = setAuthenticatedUser;
+exports.getAuthenticatedUser = getAuthenticatedUser;
+exports.setSessionCookies = setSessionCookies;
+exports.getSessionCookieHeader = getSessionCookieHeader;
 exports.saveRefreshToken = saveRefreshToken;
 exports.loadRefreshToken = loadRefreshToken;
 exports.clearRefreshToken = clearRefreshToken;
@@ -23,6 +27,8 @@ const keytar_1 = __importDefault(require("keytar"));
 const SERVICE = 'kgolf-pos';
 const ACCOUNT = 'refresh-token';
 let accessToken = null;
+let authenticatedUser = null;
+let sessionCookies = [];
 /** Set (or clear) the in-memory access token. */
 function setAccessToken(token) {
     accessToken = token;
@@ -30,6 +36,23 @@ function setAccessToken(token) {
 /** Retrieve current in-memory access token (null if absent/expired). */
 function getAccessToken() {
     return accessToken;
+}
+function setAuthenticatedUser(u) {
+    authenticatedUser = u;
+}
+function getAuthenticatedUser() {
+    return authenticatedUser;
+}
+function setSessionCookies(raw) {
+    if (!raw)
+        return;
+    // Keep only name=value parts
+    sessionCookies = raw.map(c => c.split(';')[0]);
+}
+function getSessionCookieHeader() {
+    if (!sessionCookies.length)
+        return null;
+    return sessionCookies.join('; ');
 }
 /** Persist refresh token securely in OS keychain. */
 async function saveRefreshToken(token) {

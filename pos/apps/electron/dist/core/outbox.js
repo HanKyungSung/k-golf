@@ -29,8 +29,8 @@ const uuid_1 = require("uuid");
 function enqueue(type, payload) {
     const db = (0, db_1.getDb)();
     const id = (0, uuid_1.v4)();
-    const stmt = db.prepare(`INSERT INTO outbox (id, type, payload_json, created_at) VALUES (@id, @type, @payload_json, @created_at)`);
-    stmt.run({ id, type, payload_json: JSON.stringify(payload), created_at: Date.now() });
+    const stmt = db.prepare(`INSERT INTO Outbox (id, type, payloadJson, createdAt) VALUES (@id, @type, @payloadJson, @createdAt)`);
+    stmt.run({ id, type, payloadJson: JSON.stringify(payload), createdAt: Date.now() });
     return id;
 }
 /**
@@ -38,7 +38,7 @@ function enqueue(type, payload) {
  */
 function getQueueSize() {
     const db = (0, db_1.getDb)();
-    const row = db.prepare('SELECT COUNT(*) as c FROM outbox').get();
+    const row = db.prepare('SELECT COUNT(*) as c FROM Outbox').get();
     return row.c;
 }
 /**
@@ -46,7 +46,7 @@ function getQueueSize() {
  */
 function peekOldest() {
     const db = (0, db_1.getDb)();
-    const row = db.prepare('SELECT * FROM outbox ORDER BY created_at ASC LIMIT 1').get();
+    const row = db.prepare('SELECT * FROM Outbox ORDER BY createdAt ASC LIMIT 1').get();
     return row || null;
 }
 /**
@@ -54,12 +54,12 @@ function peekOldest() {
  */
 function deleteItem(id) {
     const db = (0, db_1.getDb)();
-    db.prepare('DELETE FROM outbox WHERE id = ?').run(id);
+    db.prepare('DELETE FROM Outbox WHERE id = ?').run(id);
 }
 /**
  * Increment attempt counter (used for diagnostics/backoff heuristics).
  */
 function incrementAttempt(id) {
     const db = (0, db_1.getDb)();
-    db.prepare('UPDATE outbox SET attempt_count = attempt_count + 1 WHERE id = ?').run(id);
+    db.prepare('UPDATE Outbox SET attemptCount = attemptCount + 1 WHERE id = ?').run(id);
 }

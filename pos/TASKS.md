@@ -29,38 +29,51 @@ Legend: [ ] pending  [~] in progress  [x] done
 [x] Renderer temporary button triggers IPC  
 [x] Acceptance: clicking button increases count in `outbox` table (verified via sqlite3)
 
-### 0.5 Manual Push (No Pull Yet)
-[ ] Implement `processSyncCycle()` (take first outbox row, POST `/api/booking`)  
-[ ] On success: delete row, mark matching booking `dirty=0`  
-[ ] IPC `forceSync` triggers cycle  
-[ ] Acceptance: forceSync drains queue when backend reachable; logs warn on failure
+### 0.5 Auth (Moved Earlier – Minimal Required for Protected Endpoints)
+[ ] Implement `login(email,password)` → POST `/api/auth/login`; capture access & refresh tokens (if refresh provided)  
+[ ] Store refresh token (keytar) & access token (memory)  
+[ ] IPC: `auth:login`, `auth:getStatus`  
+[ ] Preload: expose `login()` and auth status events  
+[ ] Startup silent session check (`/api/auth/me`) sets authenticated state if valid  
+[ ] Disable booking creation & sync buttons until authenticated  
+[ ] Emit auth state changes to renderer  
 
-### 0.6 Queue Size Indicator
-[ ] IPC `getQueueSize` returns count(*) from outbox  
-[ ] Renderer displays `Queue: <n>`; updates after create + after sync  
+### 0.6 Manual Push (Authenticated)
+[x] Core `processSyncCycle()` implemented  
+[x] Endpoint adjusted to `/api/bookings` with payload adapter  
+[ ] Acceptance: After successful login, `forceSync` drains queue (booking dirty=0, outbox empty)  
+[ ] Failure: 401 triggers auth-needed UI (no infinite retry loop)  
 
-### 0.7 Online / Offline Probe
-[ ] Interval (30s) HEAD/GET `/api/health` sets `online` flag  
-[ ] IPC `getStatus` returns `{ online, queueSize }`  
-[ ] Renderer updates status indicator  
+### 0.6a Room Hours Admin UI (Earlier Integration)
+[x] Renderer Admin panel (temporary) lists rooms (id, name, openMinutes, closeMinutes, status)
+[ ] IPC `rooms:list` → GET `/api/bookings/rooms`
+[ ] IPC `rooms:update` → PATCH `/api/bookings/rooms/:id` { openMinutes?, closeMinutes?, status? }
+[ ] Form with HH:MM inputs → convert to minutes, validate (close > open)
+[ ] Status select (ACTIVE, MAINTENANCE, CLOSED)
+[ ] After update, refetch availability using new stored hours (no openStart/openEnd params)
+[ ] Guard visibility: only show if auth.role === ADMIN
+[ ] Acceptance: Change hours → availability updates; set MAINTENANCE → availability empty; restore ACTIVE → slots return
 
-### 0.8 Auth (Login + Persist Refresh)
-[ ] Implement `login(email,password)` → POST `/api/auth/login` capture access/refresh tokens  
-[ ] Save refresh token via keytar; store access in memory  
-[ ] Silent startup session check (`/auth/me`) before showing UI  
-[ ] If session valid → skip login modal and start sync timer  
-[ ] If unauthenticated → show Login modal (booking actions disabled)  
-[ ] After successful login start sync timer; emit auth state event  
-[ ] Include Authorization header in push if access token present  
-[ ] (Optional) Log lifecycle events: `launch:start`, `launch:session_valid`, `launch:show_login`, `launch:login_success`  
+### 0.7 Queue Size Indicator
+[ ] IPC `getQueueSize` returns COUNT(*) from Outbox  
+[ ] Renderer displays `Queue: <n>`; updates on enqueue & after sync  
+[ ] Acceptance: enqueue increments immediately; push decrements without restart  
+
+### 0.8 Online / Offline Probe
+[ ] Interval (30s) GET `/health` sets `online` flag  
+[ ] IPC `getStatus` returns `{ online, queueSize, auth }`  
+[ ] Renderer status indicator reflects connectivity  
 
 ### 0.9 Scheduled Push Loop
-[ ] Interval (15s) triggers `processSyncCycle()` if `online && outbox not empty && not already syncing`  
-[ ] Acceptance: create offline, reconnect, queue clears automatically
+[ ] Interval (15s) triggers `processSyncCycle()` if `online && auth==authenticated && queue>0 && !isSyncing`  
+[ ] Acceptance: create offline, reconnect (and login if needed) -> queue auto drains  
 
 ### 0.10 last_sync_ts Meta (Pre-Pull)
-[ ] After *successful* push cycle (any row sent) set `meta.last_sync_ts` to current ISO  
-[ ] Renderer displays `Last Sync: <time or –>`  
+[ ] After any successful push cycle sending >=1 mutation set `Meta.last_sync_ts` (ISO)  
+[ ] Renderer shows `Last Sync: <time or –>`  
+### 0.11 Backend Cleanup & Tests (Room Hours)
+[ ] Run prisma generate; remove temporary `any` casts in booking route & seed script
+[ ] Add tests: (a) booking outside hours rejected (b) MAINTENANCE availability empty (c) shrinking hours conflict returns 409
 
 ---
 ## Phase 1 – Introduce Pull (Requires Backend Endpoint)
@@ -99,16 +112,17 @@ Legend: [ ] pending  [~] in progress  [x] done
 [ ] Build artifact under `release/`  
 
 ---
-## Minimal Implementation Order (Fast Path)
+## Minimal Implementation Order (Updated Fast Path)
 1. 0.2 Core Structure  
 2. 0.3 DB Init  
 3. 0.4 Enqueue  
-4. 0.6 Queue Size Indicator (simple)  
-5. 0.5 Manual Push  
-6. 0.9 Scheduled Push Loop  
-7. 0.8 Auth  
-8. 0.10 last_sync_ts  
-9. Phase 1 Pull  
+4. 0.5 Auth (minimal)  
+5. 0.6 Manual Push Acceptance  
+6. 0.7 Queue Indicator  
+7. 0.8 Online Probe  
+8. 0.9 Scheduled Push Loop  
+9. 0.10 last_sync_ts  
+10. Phase 1 Pull  
 
 
 ---
@@ -144,6 +158,9 @@ Login, restart app -> stays authenticated (refresh token)
 - Session revocation list / admin dashboard to force logout.
 
 ---
+
+ - verify:db: (manual) check existence of `pos/apps/electron/data/pos.sqlite` after `npm run dev:pos:electron` start.
+ - schema-migration: Replaced by clean slate PascalCase tables (Meta, Booking, Outbox). Use `POS_DB_RESET=1` env to forcibly recreate during dev.
+ - auth-order: Auth moved earlier to test protected booking endpoint realistically.
 (Keep this file pruned: remove completed sections or archive to CHANGELOG when stable.)
-\n+Footnotes:
  - verify:db: (manual) check existence of `pos/apps/electron/data/pos.sqlite` after `npm run dev:pos:electron` start.

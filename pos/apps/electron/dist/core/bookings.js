@@ -16,15 +16,15 @@ function enqueueBooking(input) {
     const now = Date.now();
     const { customerName, startsAt, endsAt } = input;
     // Insert local optimistic booking
-    const stmt = db.prepare(`INSERT INTO bookings
-    (id, server_id, customer_name, starts_at, ends_at, status, updated_at, dirty)
-    VALUES (@id, NULL, @customer_name, @starts_at, @ends_at, 'PENDING', @updated_at, 1)`);
+    const stmt = db.prepare(`INSERT INTO Booking
+    (id, serverId, customerName, startTime, endTime, status, updatedAt, dirty)
+    VALUES (@id, NULL, @customerName, @startTime, @endTime, 'PENDING', @updatedAt, 1)`);
     stmt.run({
         id: bookingId,
-        customer_name: customerName,
-        starts_at: startsAt,
-        ends_at: endsAt,
-        updated_at: now
+        customerName,
+        startTime: startsAt,
+        endTime: endsAt,
+        updatedAt: now
     });
     // Enqueue mutation (payload carries minimal fields; server assigns canonical id later)
     const outboxId = (0, outbox_1.enqueue)('booking:create', {

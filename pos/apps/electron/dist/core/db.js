@@ -39,25 +39,30 @@ function initDb(baseDir = path_1.default.join(process.cwd(), 'data')) {
     const newlyCreated = !fs_1.default.existsSync(dbPath);
     db = new better_sqlite3_1.default(dbPath);
     db.pragma('journal_mode = WAL');
-    db.exec(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
-           CREATE TABLE IF NOT EXISTS bookings (
+    // NOTE: Automatic destructive resets removed. To reset locally now:
+    //  - Quit the app
+    //  - Delete the SQLite file (pos/apps/electron/data/pos.sqlite*) OR
+    //    run manual DROP TABLE statements via sqlite3
+    //  - Relaunch (tables will be recreated idempotently)
+    // Capitalized tables to mirror Prisma model naming style
+    db.exec(`CREATE TABLE IF NOT EXISTS Meta (key TEXT PRIMARY KEY, value TEXT);
+           CREATE TABLE IF NOT EXISTS Booking (
              id TEXT PRIMARY KEY,
-             server_id TEXT,
-             customer_name TEXT,
-             starts_at TEXT,
-             ends_at TEXT,
+             serverId TEXT,
+             customerName TEXT,
+             startTime TEXT,
+             endTime TEXT,
              status TEXT DEFAULT 'PENDING',
-             updated_at INTEGER,
+             updatedAt INTEGER,
              dirty INTEGER DEFAULT 1
            );
-           CREATE TABLE IF NOT EXISTS outbox (
+           CREATE TABLE IF NOT EXISTS Outbox (
              id TEXT PRIMARY KEY,
              type TEXT NOT NULL,
-             payload_json TEXT NOT NULL,
-             created_at INTEGER NOT NULL,
-             attempt_count INTEGER DEFAULT 0
+             payloadJson TEXT NOT NULL,
+             createdAt INTEGER NOT NULL,
+             attemptCount INTEGER DEFAULT 0
            );
-           CREATE INDEX IF NOT EXISTS idx_outbox_created_at ON outbox(created_at);
-  `);
+           CREATE INDEX IF NOT EXISTS idx_Outbox_createdAt ON Outbox(createdAt);`);
     return { path: dbPath, newlyCreated };
 }

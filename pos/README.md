@@ -164,6 +164,10 @@ API_BASE_URL=https://k-golf.inviteyou.ca  # hit prod/staging directly (be cautio
 
 ### Inspecting the Local Database
 SQLite file lives at:
+Naming Convention (Current Schema):
+- Tables use PascalCase to mirror backend models: `Meta`, `Booking`, `Outbox`.
+- Columns camelCase (`customerName`, `startTime`, `endTime`, `updatedAt`, `serverId`, etc.).
+- No automatic reset flag; to force a clean slate just delete the SQLite file or manually DROP tables (see reset section below).
 ```
 pos/apps/electron/data/pos.sqlite
 ```
@@ -227,6 +231,12 @@ rm -rf pos/apps/electron/data/pos.sqlite-wal
 ```
 Next startup recreates schema. Any unsent mutations are lost if you delete the DB.
 
+Alternative (keep file permissions, only drop tables):
+```
+sqlite3 pos/apps/electron/data/pos.sqlite "DROP TABLE IF EXISTS Meta; DROP TABLE IF EXISTS Booking; DROP TABLE IF EXISTS Outbox;"
+```
+Then relaunch the app (tables will be recreated).
+
 ### Logs
 `electron-log` default file locations:
 - macOS: `~/Library/Logs/<app name>/log.log`
@@ -262,10 +272,12 @@ npm run dev:pos:electron
 API_BASE_URL=https://k-golf.inviteyou.ca
 LOG_LEVEL=info
 SYNC_INTERVAL_MS=15000
+POS_ROOM_ID=<uuid-of-default-room>  # required for Phase 0 booking push adapter
 ```
 Future:
 - `DEVICE_ID` override (else auto-gen UUID stored in meta)
 - `PRINTER_PROFILE=thermal58|thermal80`
+- `POS_ROOM_ID` may be removed once UI provides room selection & payload matches backend directly
 
 ---
 ## 10. Error Handling & Edge Cases
@@ -297,8 +309,8 @@ Future:
 ---
 ## 13. Minimal Backend Requirements (Delta)
 Add endpoints (or adjust naming to existing):
-- `GET /api/booking/changed?since=ISO` → [{ id, customerName, startsAt, endsAt, status, updatedAt }]
-- (Optional) `POST /api/booking` idempotent (client-sent UUID or natural uniqueness)
+- `GET /api/bookings/changed?since=ISO` → list of changed bookings (future)
+- `POST /api/bookings` (already present; requires auth) – current push target
 - Future: `/api/orders/changed`, `/api/products/changed`
 
 Return format should include `updatedAt` ISO string used for ordering.

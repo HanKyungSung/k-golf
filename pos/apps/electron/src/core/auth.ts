@@ -15,6 +15,8 @@ const SERVICE = 'kgolf-pos';
 const ACCOUNT = 'refresh-token';
 
 let accessToken: string | null = null;
+let authenticatedUser: { id: string; email: string; name?: string | null; role?: string } | null = null;
+let sessionCookies: string[] = [];
 
 /** Set (or clear) the in-memory access token. */
 export function setAccessToken(token: string | null) {
@@ -23,6 +25,25 @@ export function setAccessToken(token: string | null) {
 /** Retrieve current in-memory access token (null if absent/expired). */
 export function getAccessToken() {
   return accessToken;
+}
+
+export function setAuthenticatedUser(u: { id: string; email: string; name?: string | null; role?: string } | null) {
+  authenticatedUser = u;
+}
+
+export function getAuthenticatedUser() {
+  return authenticatedUser;
+}
+
+export function setSessionCookies(raw: string[] | undefined) {
+  if (!raw) return;
+  // Keep only name=value parts
+  sessionCookies = raw.map(c => c.split(';')[0]);
+}
+
+export function getSessionCookieHeader(): string | null {
+  if (!sessionCookies.length) return null;
+  return sessionCookies.join('; ');
 }
 
 /** Persist refresh token securely in OS keychain. */
