@@ -6,10 +6,10 @@
  * will mount React components (StatusBar, BookingList, etc.).
  */
 console.log('[RENDERER] POS Hub renderer loaded');
-const el = document.getElementById('status');
-if (el) {
+const statusEl = document.getElementById('status');
+if (statusEl) {
 	const pong = (window as any).kgolf?.ping?.() || 'no-bridge';
-	el.textContent = 'Renderer script executed. preload ping => ' + pong;
+	statusEl.textContent = 'Renderer loaded. Bridge=' + pong;
 }
 
 function refreshQueue() {
@@ -52,7 +52,7 @@ if (btnLogin) {
 		const email = (document.getElementById('loginEmail') as HTMLInputElement).value.trim();
 		const password = (document.getElementById('loginPassword') as HTMLInputElement).value;
 		const msg = document.getElementById('loginMsg');
-		if (msg) msg.textContent = '...';
+		if (msg) msg.textContent = 'Signing in...';
 		(window as any).kgolf?.login?.(email, password).then((res: any) => {
 			if (!res?.ok) {
 				if (msg) msg.textContent = res.error || 'Login failed';
@@ -66,21 +66,19 @@ if (btnLogin) {
 
 function refreshAuthStatus() {
 	(window as any).kgolf?.getAuthStatus?.().then((s: any) => {
-		const authStatus = document.getElementById('authStatus');
-		const loginForm = document.getElementById('loginForm');
-		const authUser = document.getElementById('authUser');
+		const loginScreen = document.getElementById('loginScreen');
+		const appShell = document.getElementById('appShell');
 		const authUserEmail = document.getElementById('authUserEmail');
-		if (!authStatus) return;
 		if (s?.authenticated) {
-			authStatus.textContent = 'Auth: authenticated';
-			if (loginForm) loginForm.style.display = 'none';
-			if (authUser) authUser.style.display = 'block';
+			if (loginScreen) loginScreen.style.display = 'none';
+			if (appShell) appShell.classList.remove('hidden');
 			if (authUserEmail) authUserEmail.textContent = (s.user?.email || '') + (s.user?.role ? ` (${s.user.role})` : '');
 		} else {
-			authStatus.textContent = 'Auth: not authenticated';
-			if (loginForm) loginForm.style.display = 'block';
-			if (authUser) authUser.style.display = 'none';
+			if (loginScreen) loginScreen.style.display = 'flex';
+			if (appShell) appShell.classList.add('hidden');
+			if (authUserEmail) authUserEmail.textContent = '';
 		}
+		updateAdminVisibility();
 	}).catch(()=>{});
 }
 

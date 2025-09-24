@@ -27,5 +27,46 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# dist
+# Generic dist outputs
 /dist
+dist/
+
+# Electron (POS) build & packaging outputs (do not commit generated artifacts)
+pos/apps/electron/dist/
+pos/apps/electron/out/
+pos/apps/electron/release/
+*.asar
+*.dmg
+*.exe
+*.msi
+*.AppImage
+*.deb
+*.zip
+*.tar.gz
+
+# SQLite local data & WAL files (POS)
+pos/apps/electron/data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Logs / crash dumps
+logs/
+*.log
+*.dmp
+
+# Coverage
+coverage/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Temporary scratch
+.tmp/
+tmp/
+*.tsbuildinfo
