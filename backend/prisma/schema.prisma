@@ -38,10 +38,19 @@ model Room {
   id        String    @id @default(uuid())
   name      String    @unique
   capacity  Int       @default(4)
-  active    Boolean   @default(true)
+  active    Boolean   @default(true) // legacy; prefer status
+  openMinutes  Int    @default(540)   // 09:00 local
+  closeMinutes Int    @default(1140)  // 19:00 local
+  status    RoomStatus @default(ACTIVE)
   createdAt DateTime  @default(now()) @db.Timestamptz
   updatedAt DateTime  @updatedAt @db.Timestamptz
   bookings  Booking[]
+}
+
+enum RoomStatus {
+  ACTIVE
+  MAINTENANCE
+  CLOSED
 }
 
 model Booking {

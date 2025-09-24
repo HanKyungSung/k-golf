@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
   if (!ok) return res.status(401).json({ code: 'WRONG_PASSWORD', message: 'Wrong password' });
   const { sessionToken } = await createSession(user.id);
   setAuthCookie(res, sessionToken);
-  return res.json({ user: { id: user.id, email: user.email, name: user.name } });
+  return res.json({ user: { id: user.id, email: user.email, name: user.name, role: (user as any).role } });
 });
 
 // POST /auth/verify (email + token) => sets emailVerifiedAt and issues session
@@ -83,7 +83,7 @@ router.get('/me', async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Unauthenticated' });
   const session = await getSession(token);
   if (!session) return res.status(401).json({ error: 'Unauthenticated' });
-  return res.json({ user: { id: session.user.id, email: session.user.email, name: (session.user as any).name } });
+  return res.json({ user: { id: session.user.id, email: session.user.email, name: (session.user as any).name, role: (session.user as any).role } });
 });
 
 // POST /auth/logout

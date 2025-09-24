@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { createBooking, findConflict, listBookings, listUserBookings, listRoomBookingsBetween } from '../repositories/bookingRepo';
 import { getBooking, cancelBooking } from '../repositories/bookingRepo';
 import { requireAuth } from '../middleware/requireAuth';
+import { PrismaClient, UserRole } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const router = Router();
 
@@ -85,6 +88,13 @@ router.post('/', requireAuth, async (req, res) => {
   }
   const { roomId, startTimeIso, players, hours } = parsed.data;
 
+  // Fetch room for status/hours validation
+  const room: any = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!room) return res.status(404).json({ error: 'Room not found' });
+  if (room.status && room.status !== 'ACTIVE') {
+    return res.status(409).json({ error: 'Room not bookable (status)', status: room.status });
+  }
+
   let start: Date;
   try {
     start = new Date(startTimeIso);
@@ -95,6 +105,21 @@ router.post('/', requireAuth, async (req, res) => {
 
   // Compute endTime for conflict detection
   const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
+
+  // Enforce within room operating window (local wall clock). Using server local time for now.
+  const localY = start.getFullYear();
+  const localM = start.getMonth();
+  const localD = start.getDate();
+  const minutesFromMidnight = (dt: Date) => dt.getHours() * 60 + dt.getMinutes();
+  const startMinutes = minutesFromMidnight(start);
+  const endMinutes = minutesFromMidnight(end);
+  if (start.getFullYear() !== localY || start.getMonth() !== localM || start.getDate() !== localD) {
+    // cross-day bookings not supported
+    return res.status(400).json({ error: 'Cross-day bookings not supported' });
+  }
+  if (room.openMinutes !== undefined && room.closeMinutes !== undefined && !(startMinutes >= room.openMinutes && endMinutes <= room.closeMinutes)) {
+    return res.status(400).json({ error: 'Booking outside room operating hours' });
+  }
 
   // Rule: cannot book a past time slot
   const now = new Date();
@@ -136,13 +161,18 @@ router.get('/availability', async (req, res) => {
   const { roomId } = req.query as { roomId?: string };
   const dateStr = (req.query.date as string) || undefined;
   const slotMinutes = parseInt((req.query.slotMinutes as string) || '30', 10);
-  const openStart = (req.query.openStart as string) || '09:00';
-  const openEnd = (req.query.openEnd as string) || '23:00';
   const hours = Math.min(Math.max(parseInt((req.query.hours as string) || '1', 10) || 1, 1), 4);
 
   if (!roomId) return res.status(400).json({ error: 'roomId required' });
   if (!dateStr) return res.status(400).json({ error: 'date required (YYYY-MM-DD)' });
   if (!(slotMinutes > 0 && slotMinutes <= 120)) return res.status(400).json({ error: 'slotMinutes must be 1-120' });
+
+  // Fetch room (hours + status)
+  const room: any = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!room) return res.status(404).json({ error: 'Room not found' });
+  if (room.status && room.status !== 'ACTIVE') {
+    return res.json({ meta: { roomId, date: dateStr, status: room.status, slots: 0 }, slots: [] });
+  }
 
   // Build day window in UTC from the provided local date string.
   // Assumption: dateStr refers to local timezone of the venue; adjust if TZ handling is needed.
@@ -154,11 +184,13 @@ router.get('/availability', async (req, res) => {
     return new Date(y, m - 1, d, hours24, minutes, 0, 0);
   }
 
-  const [openSh, openSm] = openStart.split(':').map((n) => parseInt(n, 10));
-  const [openEh, openEm] = openEnd.split(':').map((n) => parseInt(n, 10));
-  const dayOpen = makeTime(openSh, openSm);
-  const dayClose = makeTime(openEh, openEm);
-  if (!(dayClose.getTime() > dayOpen.getTime())) return res.status(400).json({ error: 'openEnd must be after openStart' });
+  // Derive open/close from room minutes
+  const minutesToHM = (mins: number) => ({ h: Math.floor(mins / 60), m: mins % 60 });
+  const { h: openH, m: openM } = minutesToHM(room.openMinutes ?? 540);
+  const { h: closeH, m: closeM } = minutesToHM(room.closeMinutes ?? 1140);
+  const dayOpen = makeTime(openH, openM);
+  const dayClose = makeTime(closeH, closeM);
+  if (!(dayClose.getTime() > dayOpen.getTime())) return res.status(500).json({ error: 'Invalid room operating window' });
 
   // Fetch existing bookings that intersect the day window
   const existing = await listRoomBookingsBetween(roomId, dayOpen, dayClose);
@@ -182,13 +214,66 @@ router.get('/availability', async (req, res) => {
     meta: {
       roomId,
       date: dateStr,
-      openStart,
-      openEnd,
+  openMinutes: room.openMinutes ?? 540,
+  closeMinutes: room.closeMinutes ?? 1140,
+  status: room.status ?? 'ACTIVE',
       slotMinutes,
       hours,
     },
     slots,
   });
+});
+
+// Admin-only endpoint to update room schedule / status
+const updateRoomSchema = z.object({
+  openMinutes: z.number().int().min(0).max(1439).optional(),
+  closeMinutes: z.number().int().min(1).max(1440).optional(),
+  status: z.enum(['ACTIVE', 'MAINTENANCE', 'CLOSED']).optional(),
+});
+
+router.patch('/rooms/:id', requireAuth, async (req, res) => {
+  const userRole = (req.user as any)?.role;
+  if (userRole !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
+  const parsed = updateRoomSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const { id } = req.params as { id: string };
+  const data = parsed.data;
+  if (data.openMinutes !== undefined && data.closeMinutes !== undefined) {
+    if (!(data.closeMinutes > data.openMinutes)) {
+      return res.status(400).json({ error: 'closeMinutes must be greater than openMinutes' });
+    }
+  }
+  try {
+    // Prevent shrinking hours that would orphan existing future bookings
+    if (data.openMinutes !== undefined || data.closeMinutes !== undefined) {
+  const room: any = await prisma.room.findUnique({ where: { id } });
+      if (!room) return res.status(404).json({ error: 'Room not found' });
+  const newOpen = data.openMinutes ?? room.openMinutes ?? 540;
+  const newClose = data.closeMinutes ?? room.closeMinutes ?? 1140;
+      if (!(newClose > newOpen)) return res.status(400).json({ error: 'Invalid window' });
+      // Look for future bookings outside new window
+      const now = new Date();
+      const future = await prisma.booking.findFirst({
+        where: {
+          roomId: id,
+          startTime: { gt: now },
+          status: { not: 'CANCELED' },
+          OR: [
+            { startTime: { lt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(newOpen/60), newOpen%60) } },
+            { endTime: { gt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(newClose/60), newClose%60) } },
+          ],
+        },
+      });
+      if (future) {
+        return res.status(409).json({ error: 'Future bookings exist outside new window' });
+      }
+    }
+    const updated = await prisma.room.update({ where: { id }, data });
+    res.json({ room: updated });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 export { router as bookingRouter };

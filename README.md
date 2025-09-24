@@ -34,7 +34,7 @@ Auth and UX
 - Auto-logout on expiry: frontend revalidates the session on mount, window focus/visibility, online events, and every 5 minutes; a 401 clears local user and shows a toast “Session expired, please log in again.”
 
 Bookings and Availability
-- Availability API: `GET /api/bookings/availability?roomId&date&hours&slotMinutes&openStart&openEnd` computes valid continuous windows (no extra table).
+- Availability API: `GET /api/bookings/availability?roomId&date&hours&slotMinutes` computes valid continuous windows using stored per-room operating hours (openMinutes/closeMinutes).
 - Overlap prevention: server checks for conflicting bookings; optional DB constraint planned.
 - Price stored as decimal: Booking.price is `Decimal(10,2)` (replaced older cents field).
 - Rooms API: `GET /api/bookings/rooms` returns active rooms only.
@@ -75,14 +75,14 @@ A local Electron application that:
   - Backend API with Prisma/PostgreSQL persistence, overlap checks (excluding canceled bookings), and price stored as Decimal(10,2).
   - Rooms API and seed: ensures exactly four active rooms (Room 1–4) for deterministic mapping in the UI.
   - Session handling with HttpOnly cookie, email verification/password login, resend cooldown, structured errors, and auto-logout on expiry.
-  - Availability endpoint: `GET /api/bookings/availability` computes valid slots by date/room/hours.
+  - Availability endpoint: `GET /api/bookings/availability` computes valid slots by date/room/hours using stored room hours (defaults 09:00–19:00) and skips non-ACTIVE rooms.
   - Booking endpoints: `POST /api/bookings`, `GET /api/bookings`, `GET /api/bookings/mine`, `PATCH /api/bookings/:id/cancel`.
   - Database: Booking.status switched to TEXT with default `CONFIRMED`; "completed" is derived by `endTime < now` in API responses/UI.
   - Time rules: reject past bookings; availability hides past starts. Dashboard totals only include completed bookings.
 
 - Next
   - Endpoint: `GET /api/bookings/:id` (single booking detail).
-  - Validation & rules: hours-of-operation config; slot rounding server-side; optional cancel cutoff window (e.g., cannot cancel within N minutes).
+  - Validation & rules: hours-of-operation config (DONE – per-room open/close); slot rounding server-side; optional cancel cutoff window (e.g., cannot cancel within N minutes).
   - Pricing: extract unified calculator used by server and (optionally) client.
   - Observability: logging with request IDs; health/readiness checks; basic metrics stub.
   - Security: tighten CORS, add rate limiting, refine headers, and ensure secure cookie settings in prod.
@@ -265,11 +265,12 @@ Future improvements (not yet automated): gzip/static caching at proxy, rate limi
 ## API quick reference
 
 - GET `/api/bookings/rooms` → list active rooms
-- GET `/api/bookings/availability?roomId&date=YYYY-MM-DD&hours=1..4&slotMinutes=30&openStart=09:00&openEnd=23:00` → available slots (ISO UTC)
+- GET `/api/bookings/availability?roomId&date=YYYY-MM-DD&hours=1..4&slotMinutes=30` → available slots (ISO UTC) within stored hours
 - GET `/api/bookings` → list all bookings (admin/dev)
 - GET `/api/bookings/mine` → current user's bookings (status normalized: `booked` | `completed` | `canceled`)
-- POST `/api/bookings` { roomId, startTimeIso, players, hours } → create booking (rejects past-start)
-- PATCH `/api/bookings/:id/cancel` → cancel own upcoming booking
+ - POST `/api/bookings` { roomId, startTimeIso, players, hours } → create booking (rejects past-start)
+ - PATCH `/api/bookings/:id/cancel` → cancel own upcoming booking
+ - PATCH `/api/bookings/rooms/:id` (ADMIN) { openMinutes?, closeMinutes?, status? } → update room schedule/status
 
 ## Notes: Room IDs vs UI Labels
 
@@ -282,6 +283,19 @@ POS hub dev scripts will be added as implementation progresses.
 **Repository (e.g. bookingRepo)**: A thin module wrapping all database calls for one domain (create/find/list/cancel bookings) so route handlers stay simple (validate → call → respond) and future logic/ORM changes live in one place.
 
 **Zod**: A TypeScript-first schema validator used to define expected request body shapes once, validate incoming JSON at runtime, and infer static types—reducing boilerplate and preventing malformed data from reaching business logic.
+
+### Room Operating Hours & Status
+Each room stores:
+- `openMinutes` / `closeMinutes` (minutes from midnight local, defaults 540=09:00, 1140=19:00)
+- `status` one of `ACTIVE | MAINTENANCE | CLOSED`
+
+Rules:
+- Non-ACTIVE rooms return empty availability (status included in meta).
+- Bookings must fit entirely within `[openMinutes, closeMinutes)` same calendar day.
+- Creation rejected if room status != ACTIVE.
+- Admin-only update endpoint prevents shrinking hours if future bookings would fall outside the new window.
+
+Migration added enum `RoomStatus` + columns with defaults; existing rooms inherit ACTIVE 09:00–19:00.
 
 ---
 This README will expand as the POS hub and persistence layers are implemented.
