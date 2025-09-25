@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "lib": ["DOM", "ES2022"],
+    "types": ["node"],
+    "baseUrl": "src/renderer",
+    "paths": {
+      "@/*": ["*"]
+    },
+    "noEmit": true
+  },
+  "include": ["src/renderer"],
+  "exclude": []
+}
