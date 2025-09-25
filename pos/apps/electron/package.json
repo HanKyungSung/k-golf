@@ -4,12 +4,14 @@
   "version": "0.1.0",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "ELECTRON_DEV=1 concurrently -k \"tsc -w\" \"npm:bundle:renderer\" \"wait-on dist/main.js dist/renderer/index.js && electron dist/main.js\"",
+    "dev": "ELECTRON_DEV=1 concurrently -k \"tsc -w\" \"npm:bundle:renderer\" \"npm:copyhtml:watch\" \"wait-on dist/main.js dist/renderer/index.js dist/renderer/index.html && electron dist/main.js\"",
     "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch",
-    "build": "tsc -p tsconfig.build.json && npm run bundle:renderer:prod",
+    "build": "tsc -p tsconfig.build.json && npm run copyhtml && npm run bundle:renderer:prod",
     "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --minify --outfile=dist/renderer/index.js",
     "start": "node dist/main.js",
-    "rebuild:native": "electron-rebuild -f --only better-sqlite3,keytar"
+    "rebuild:native": "electron-rebuild -f --only better-sqlite3,keytar",
+    "copyhtml": "mkdir -p dist/renderer && cp src/renderer/index.html dist/renderer/index.html",
+    "copyhtml:watch": "npm run copyhtml && chokidar src/renderer/index.html -c 'npm run copyhtml'"
   },
   "dependencies": {
     "axios": "^1.7.0",
