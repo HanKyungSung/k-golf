@@ -1,8 +1,4 @@
 {
   "name": "pos-root",
-  "private": true,
-  "workspaces": [
-    "apps/electron",
-    "packages/server"
-  ]
+  "private": true
 }
