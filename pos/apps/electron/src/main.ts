@@ -18,7 +18,7 @@ import { initDb } from './core/db';
 import { enqueueBooking } from './core/bookings';
 import { getQueueSize } from './core/outbox';
 import { processSyncCycle } from './core/sync';
-import { setAccessToken, saveRefreshToken, loadRefreshToken, setAuthenticatedUser, getAuthenticatedUser, setSessionCookies, getSessionCookieHeader } from './core/auth';
+import { setAccessToken, saveRefreshToken, loadRefreshToken, setAuthenticatedUser, getAuthenticatedUser, setSessionCookies, getSessionCookieHeader, clearAuthState, clearRefreshToken } from './core/auth';
 import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
@@ -29,10 +29,10 @@ async function createWindow() {
     height: 700,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      // Using CommonJS build for renderer; enable nodeIntegration temporarily until bundler/ESM split.
-      nodeIntegration: true,
+      // React renderer now uses secure preload bridge only
+      nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true
     }
   });
   // Maximize by default for POS terminal usage
@@ -48,10 +48,20 @@ async function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   const { path: dbPath, newlyCreated } = initDb();
   console.log('[MAIN] DB initialized at', dbPath, 'new?', newlyCreated);
   createWindow();
+  if (process.env.ELECTRON_DEV) {
+    try {
+      const installer = require('electron-devtools-installer');
+      const { REACT_DEVELOPER_TOOLS } = installer;
+      await installer.default(REACT_DEVELOPER_TOOLS).catch(()=>{});
+      console.log('[MAIN] React DevTools attempted install');
+    } catch (e: any) {
+      console.warn('[MAIN] React DevTools install failed', e?.message);
+    }
+  }
   // IPC handlers (Phase 0.4 temporary minimal wiring)
   function userHasStaffRole() {
     const u = getAuthenticatedUser();
@@ -107,6 +117,12 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('auth:getStatus', async () => {
     return { authenticated: !!getAuthenticatedUser(), user: getAuthenticatedUser() };
+  });
+  ipcMain.handle('auth:logout', async () => {
+    try { await clearRefreshToken(); } catch {}
+    clearAuthState();
+    emitToAll('auth:state', { authenticated: false });
+    return { ok: true };
   });
   ipcMain.handle('rooms:list', async () => {
     const user = getAuthenticatedUser();

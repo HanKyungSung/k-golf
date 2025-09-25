@@ -9,9 +9,7 @@
     "skipLibCheck": true,
     "strict": true,
     "types": ["node"],
-    "jsx": "react",
-    "jsxFactory": "h",
-    "jsxFragmentFactory": "Fragment"
+  "jsx": "react-jsx"
   },
   "include": [
     "src/main.ts",

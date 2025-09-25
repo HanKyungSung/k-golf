@@ -46,6 +46,18 @@ export function getSessionCookieHeader(): string | null {
   return sessionCookies.join('; ');
 }
 
+/** Clear any remembered (non-secure) session cookies (used on logout). */
+export function clearSessionCookies() {
+  sessionCookies = [];
+}
+
+/** Fully clear in-memory auth state (access token + user + cookies). */
+export function clearAuthState() {
+  accessToken = null;
+  authenticatedUser = null;
+  clearSessionCookies();
+}
+
 /** Persist refresh token securely in OS keychain. */
 export async function saveRefreshToken(token: string) {
   await keytar.setPassword(SERVICE, ACCOUNT, token);

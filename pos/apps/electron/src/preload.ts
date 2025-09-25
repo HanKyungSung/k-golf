@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('kgolf', {
 	getQueueSize: () => ipcRenderer.invoke('queue:getSize'),
 	forceSync: () => ipcRenderer.invoke('sync:force'),
 	login: (email: string, password: string) => ipcRenderer.invoke('auth:login', { email, password }),
+	logout: () => ipcRenderer.invoke('auth:logout'),
 	getAuthStatus: () => ipcRenderer.invoke('auth:getStatus'),
 	onAuthState: (cb: (s: any) => void) => {
 		ipcRenderer.removeAllListeners('auth:state');
