@@ -29,8 +29,10 @@ async function createWindow() {
     height: 700,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      // Using CommonJS build for renderer; enable nodeIntegration temporarily until bundler/ESM split.
+      nodeIntegration: true,
       contextIsolation: true,
-      nodeIntegration: false
+      sandbox: false
     }
   });
   // Maximize by default for POS terminal usage
