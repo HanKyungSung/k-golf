@@ -5,8 +5,7 @@
   "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-  "prebuild": "prisma generate",
-  "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "prisma:init": "prisma init",
     "prisma:generate": "prisma generate",
