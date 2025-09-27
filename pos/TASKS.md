@@ -40,11 +40,11 @@ Legend: [ ] pending  [~] in progress  [x] done
 
 **Acceptance (0.5 Auth)**
 [x] Fresh start: only login page visible; no dashboard action buttons (`Test Booking`, `Force Sync`, `Logout`) exist in DOM.
-[ ] Successful login replaces login page with dashboard; action buttons now present; `auth:state` event seen in console.
-[ ] App restart with valid session cookie auto-authenticates (silent `/api/auth/me`) and shows dashboard directly.
-[ ] Invalid credentials show inline error; dashboard never flashes before error.
-[ ] Logout returns to pure login page; dashboard action buttons removed from DOM.
-[ ] No refresh token or access token exposed on `window` (only `window.kgolf`).
+[x] Successful login: login page replaced by dashboard; action buttons become visible; AuthProvider state (React DevTools → AuthProvider first state hook) becomes `{ authenticated: true, user }`. Optional: `[AUTH][EMIT]` log appears if DEBUG auth logging enabled.
+[x] App restart with still-valid session cookie: within ~1s AuthProvider state auto-populates authenticated user (silent `/api/auth/me`), dashboard renders without manual login.
+[x] Invalid credentials: inline error message appears (no dashboard mount / no transient authenticated flash in DevTools state timeline).
+[x] Logout: AuthProvider state resets to `{ authenticated:false }`; dashboard unmounts; only login page visible.
+[x] Security: No refresh/access tokens or user object properties leak on `window` (inspect window keys in DevTools console; only `window.kgolf`).
 
 
 ### 0.6 Manual Push (Authenticated)
@@ -54,11 +54,11 @@ Legend: [ ] pending  [~] in progress  [x] done
 [ ] Failure: 401 triggers auth-needed UI (currently logs and stops)  
 
 **Acceptance (0.6 Manual Push)**
-[ ] Offline enqueue increments queue; DB Outbox row present.
-[ ] After reconnect + Force Sync: Outbox row deleted; associated Booking.dirty=0.
-[ ] Multiple items drain sequentially in one Force Sync.
-[ ] 401 during push returns user to login (once implemented) without infinite loop.
-[ ] Failure increments `attemptCount` for the affected Outbox entry only.
+[ ] Offline enqueue (disconnect network first) increments queue badge AND Outbox table row exists (`sqlite3 pos.sqlite 'select count(*) from Outbox;'`).
+[ ] After reconnect + Force Sync: Outbox row removed; corresponding Booking record has `dirty=0` (DB query) OR row deleted if design chooses removal.
+[ ] Multiple pending bookings: one Force Sync drains all (observe sequential network requests via optional DEBUG_HTTP panel or DB diff before/after).
+[ ] 401 during push (simulate by expiring session) resets AuthProvider to unauthenticated and shows login without rapid retry loop.
+[ ] Non-auth / transient failure (e.g., 500 injected) increments only that Outbox row's `attemptCount` (inspect changed row) and leaves others untouched.
 
 
 ### 0.6a Room Hours Admin UI (Earlier Integration)
@@ -72,10 +72,10 @@ Legend: [ ] pending  [~] in progress  [x] done
 [ ] Acceptance: Change hours → availability updates; set MAINTENANCE → availability empty; restore ACTIVE → slots return
 
 **Acceptance (0.6a Rooms Admin)**
-[ ] ADMIN sees rooms table; non-admin does not.
-[ ] Updating hours persists and reflects on reload (future update IPC).
-[ ] Setting MAINTENANCE hides availability / causes booking create rejection.
-[ ] Returning to ACTIVE restores availability.
+[ ] ADMIN role: rooms table visible; switching to non-admin test user (if available) hides table.
+[ ] Updating open/close minutes: reloading app (or re-fetch) shows new values persisted (DB `Room` row reflects minutes; UI matches).
+[ ] Set MAINTENANCE: availability list empties and booking creation attempt returns error (IPC result `FORBIDDEN_ROLE`/appropriate error or backend validation error).
+[ ] Revert to ACTIVE: availability repopulates with prior slot structure.
 
 
 ### 0.7 Queue Size Indicator
@@ -84,9 +84,9 @@ Legend: [ ] pending  [~] in progress  [x] done
 [ ] Acceptance: enqueue increments immediately; push decrements without restart (needs explicit validation)  
 
 **Acceptance (0.7 Queue Indicator)**
-[ ] Queue badge increments within 300ms of enqueue.
-[ ] After successful sync, queue returns to 0 without reload.
-[ ] Rapid multiple enqueues maintain correct count.
+[ ] Enqueue: badge increments within 300ms; AuthProvider (or queue state hook) reflects same numeric value.
+[ ] Post Force Sync (or successful manual push): badge returns to 0 without app reload; DB Outbox empty.
+[ ] Rapid multiple enqueues (>=3) produce strictly increasing counts then drain correctly upon sync.
 
 
 ### 0.8 Online / Offline Probe
@@ -95,8 +95,8 @@ Legend: [ ] pending  [~] in progress  [x] done
 [ ] Renderer status indicator reflects connectivity  
 
 **Acceptance (0.8 Online Probe)**
-[ ] Disconnect network: within 30s indicator switches to Offline, no push attempts fired.
-[ ] Reconnect: switches to Online and pending queue (if any) becomes eligible for scheduled push.
+[ ] Disable network: within probe interval (≤30s) UI status indicator changes to Offline; no new push attempts appear in DEBUG_HTTP log.
+[ ] Re-enable network: status flips to Online; if queue >0 and authenticated, next scheduled or manual sync proceeds.
 
 
 ### 0.9 Scheduled Push Loop
@@ -104,9 +104,9 @@ Legend: [ ] pending  [~] in progress  [x] done
 [ ] Acceptance: create offline, reconnect (and login if needed) -> queue auto drains  
 
 **Acceptance (0.9 Scheduled Push Loop)**
-[ ] With online=true, auth valid, queue>0: auto push occurs within 15s.
-[ ] While syncing, no concurrent second cycle starts.
-[ ] Offline prevents scheduled push attempts (no attemptCount increase) until back Online.
+[ ] When Online + Authenticated + queue>0: a push occurs automatically within one interval (≤15s) without manual button.
+[ ] During ongoing push (simulate longer cycle), no second overlapping push starts (no duplicate in-flight entries / logs).
+[ ] Offline state (disable network) halts scheduled pushes (attemptCount remains unchanged) until connectivity restored.
 
 
 ### 0.10 last_sync_ts Meta (Pre-Pull)
@@ -114,9 +114,9 @@ Legend: [ ] pending  [~] in progress  [x] done
 [ ] Renderer shows `Last Sync: <time or –>`  
 
 **Acceptance (0.10 last_sync_ts)**
-[ ] Successful push of >=1 mutation sets Meta.last_sync_ts.
-[ ] Subsequent push updates timestamp only if at least one mutation sent.
-[ ] Renderer displays formatted time or a dash when absent.
+[ ] First successful push sending ≥1 mutation writes `Meta.last_sync_ts` (verify via `select value from Meta where key='last_sync_ts';`).
+[ ] Subsequent push with no mutations leaves timestamp unchanged; with new mutations updates to later ISO value.
+[ ] UI displays human-friendly time; displays dash / placeholder when absent (before any push). 
 
 ### 0.11 Backend Cleanup & Tests (Room Hours)
 [ ] Run prisma generate; remove temporary `any` casts in booking route & seed script
