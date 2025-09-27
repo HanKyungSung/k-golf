@@ -20,14 +20,17 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-let db: Database.Database | null = null;
+// Use a lightweight exported type wrapper to avoid leaking the full better-sqlite3 type name in .d.ts, fixing TS4058.
+// We intentionally alias to any to keep consumer typing simple without re-exporting the module's types.
+export type SqliteDb = any; // runtime is better-sqlite3 Database instance
+let db: SqliteDb | null = null;
 
 export interface InitResult {
   path: string;
   newlyCreated: boolean;
 }
 
-export function getDb() {
+export function getDb(): SqliteDb {
   if (!db) throw new Error('DB not initialized');
   return db;
 }

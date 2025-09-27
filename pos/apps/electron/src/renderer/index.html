@@ -3,8 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>K-Golf POS Hub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <title>K-Golf POS Hub</title>
+  <!-- Content Security Policy: tightened but still allowing Tailwind CDN (temporary) and websocket for React DevTools -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8080 ws://localhost:8097; object-src 'none'; base-uri 'self'; frame-ancestors 'none';" />
+  <!-- TODO: Replace CDN Tailwind with local build (PostCSS) for production -->
+  <script src="https://cdn.tailwindcss.com"></script>
     <style>
       body { margin:0; height:100vh; width:100vw; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:linear-gradient(135deg,#f1f5f9 0%, #ffffff 70%); color:#1e293b; }
     </style>

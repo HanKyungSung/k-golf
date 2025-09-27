@@ -5,19 +5,20 @@
   "main": "dist/main.js",
   "scripts": {
     "dev": "ELECTRON_DEV=1 concurrently -k \"tsc -w\" \"npm:bundle:renderer\" \"npm:copyhtml:watch\" \"wait-on dist/main.js dist/renderer/index.js dist/renderer/index.html && electron dist/main.js\"",
-    "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch",
     "build": "tsc -p tsconfig.build.json && npm run copyhtml && npm run bundle:renderer:prod",
-    "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --minify --outfile=dist/renderer/index.js",
     "start": "node dist/main.js",
     "rebuild:native": "electron-rebuild -f --only better-sqlite3,keytar",
+    "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch",
+    "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --minify --outfile=dist/renderer/index.js",
     "copyhtml": "mkdir -p dist/renderer && cp src/renderer/index.html dist/renderer/index.html",
     "copyhtml:watch": "npm run copyhtml && chokidar src/renderer/index.html -c 'npm run copyhtml'"
   },
   "dependencies": {
     "axios": "^1.7.0",
-    "better-sqlite3": "^9.4.0",
-    "electron": "^30.0.0",
+    "better-sqlite3": "^11.0.0",
+    "electron": "35.7.5",
     "electron-log": "^5.1.0",
+    "dotenv": "^16.4.5",
     "keytar": "^7.9.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -27,15 +28,15 @@
   "devDependencies": {
     "ts-node": "^10.9.2",
     "typescript": "^5.4.0",
-  "@types/node": "^20.11.0",
-  "@types/better-sqlite3": "^7.6.9",
-  "@types/react": "^18.2.45",
-  "@types/react-dom": "^18.2.18",
-  "electron-rebuild": "^3.2.9",
-  "electron-devtools-installer": "^3.2.0",
-  "wait-on": "^7.2.0",
-  "chokidar-cli": "^3.0.0",
-  "esbuild": "^0.23.0",
-  "concurrently": "^8.2.0"
+    "@types/node": "^20.11.0",
+    "@types/better-sqlite3": "^7.6.9",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "electron-rebuild": "^3.2.9",
+    "wait-on": "^7.2.0",
+    "chokidar-cli": "^3.0.0",
+    "esbuild": "^0.23.0",
+    "concurrently": "^8.2.0",
+    "rimraf": "^5.0.5"
   }
 }
