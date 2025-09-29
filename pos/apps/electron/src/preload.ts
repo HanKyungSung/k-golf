@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('kgolf', {
 	login: (email: string, password: string) => ipcRenderer.invoke('auth:login', { email, password }),
 	logout: () => ipcRenderer.invoke('auth:logout'),
 	getAuthStatus: () => ipcRenderer.invoke('auth:getStatus'),
+	debugListOutbox: () => ipcRenderer.invoke('debug:outbox:list'),
 	onAuthState: (cb: (s: any) => void) => {
 		ipcRenderer.removeAllListeners('auth:state');
 		ipcRenderer.on('auth:state', (_e, payload) => cb(payload));

@@ -52,8 +52,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [state]);
 
   useEffect(() => {
-  api()?.onAuthState(() => refreshAuth());
-  api()?.onQueueUpdate(() => loadQueue());
+    api()?.onAuthState(() => refreshAuth());
+    // Use broader onSync listener so we can see sync cycle payloads (includes queue:update events)
+    api()?.onSync((payload: any) => {
+      try {
+        if (typeof payload?.queueSize === 'number') setQueueSize(payload.queueSize);
+        if (payload?.sync) {
+          // eslint-disable-next-line no-console
+          console.log('[SYNC][RENDERER] cycle result', payload.sync);
+        }
+      } catch {/* ignore */}
+    });
     refreshAuth();
     loadQueue();
   }, [refreshAuth, loadQueue]);
@@ -69,14 +78,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   async function createTestBooking() {
     if (!state.authenticated) return;
     const now = new Date();
-    const start = new Date(now.getTime() + 30*60000);
-    const end = new Date(start.getTime() + 60*60000);
-  await api()?.createBooking({ customerName: 'Test User ' + start.toLocaleTimeString(), startsAt: start.toISOString(), endsAt: end.toISOString() });
+    // Derive operating window heuristics (fallback to 09:00-19:00 local) using first admin room if available
+    let openMinutes = 540; // 09:00
+    let closeMinutes = 1140; // 19:00
+    if (rooms && rooms.length) {
+      // Use first active room as heuristic
+      const r: any = rooms[0];
+      if (typeof r.openMinutes === 'number') openMinutes = r.openMinutes;
+      if (typeof r.closeMinutes === 'number') closeMinutes = r.closeMinutes;
+    }
+    const minutesFromMidnight = (d: Date) => d.getHours()*60 + d.getMinutes();
+    const todayMinutes = minutesFromMidnight(now);
+    const durationMinutes = 60; // 1 hour test booking
+    // Choose a start inside window with at least 30m lead; if late, schedule tomorrow inside window
+    let targetDate = new Date(now);
+    let startMinutesCandidate = Math.max(openMinutes + 30, todayMinutes + 30); // ensure 30m lead and after open
+    if (startMinutesCandidate + durationMinutes > closeMinutes) {
+      // push to tomorrow
+      targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+      startMinutesCandidate = openMinutes + 30; // open + 30 tomorrow
+    }
+    const start = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), Math.floor(startMinutesCandidate/60), startMinutesCandidate%60, 0, 0);
+    const end = new Date(start.getTime() + durationMinutes*60000);
+    await api()?.createBooking({ customerName: 'Test User ' + start.toLocaleTimeString(), startsAt: start.toISOString(), endsAt: end.toISOString() });
     loadQueue();
   }
   async function forceSync() {
-    const el = document.getElementById('syncResult'); if (el) el.textContent = 'Syncing...';
-  try { const res = await api()?.forceSync(); if (res && el) el.textContent = `Pushed ${res.pushed}, failures ${res.failures}`; loadQueue(); } catch { if (el) el.textContent = 'Sync error'; }
+    const el = document.getElementById('syncResult');
+    if (el) el.textContent = 'Syncing...';
+    try {
+      const res: any = await api()?.forceSync();
+      if (res) {
+        if (el) el.textContent = `Pushed ${res.pushed}, failures ${res.failures}${res.lastError ? ' ('+res.lastError.code+')' : ''}`;
+        // eslint-disable-next-line no-console
+        console.log('[SYNC][RENDERER] forceSync result', res);
+      }
+      loadQueue();
+    } catch {
+      if (el) el.textContent = 'Sync error';
+    }
   }
 
   const value: AuthContextValue = { state, queueSize, rooms, loadingRooms, login, logout, createTestBooking, forceSync, reloadRooms };

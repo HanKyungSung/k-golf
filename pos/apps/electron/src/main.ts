@@ -33,7 +33,7 @@ try {
 } catch {/* ignore dotenv load errors */}
 import { initDb } from './core/db';
 import { enqueueBooking } from './core/bookings';
-import { getQueueSize } from './core/outbox';
+import { getQueueSize, listOutbox } from './core/outbox';
 import { processSyncCycle } from './core/sync';
 import { setAccessToken, saveRefreshToken, loadRefreshToken, setAuthenticatedUser, getAuthenticatedUser, setSessionCookies, getSessionCookieHeader, clearAuthState, clearRefreshToken } from './core/auth';
 import axios from 'axios';
@@ -282,9 +282,25 @@ app.whenReady().then(async () => {
       return { pushed: 0, failures: 1, remaining: 0, error: 'FORBIDDEN_ROLE' };
     }
     const apiBase = process.env.API_BASE_URL || 'http://localhost:8080';
+    console.log('asdasdfsafd');
     const res = await processSyncCycle(apiBase);
+    if ((res as any).authExpired) {
+      // Clear local auth state and notify renderer so UI can prompt re-login
+      clearAuthState();
+      emitToAll('auth:state', { authenticated: false });
+      emitToAll('queue:update', { queueSize: getQueueSize(), sync: res });
+      return { ...res, error: 'AUTH_EXPIRED' };
+    }
     emitToAll('queue:update', { queueSize: getQueueSize(), sync: res });
     return res;
+  });
+  ipcMain.handle('debug:outbox:list', () => {
+    try {
+      const items = listOutbox();
+      return { ok: true, items };
+    } catch (e: any) {
+      return { ok: false, error: e?.message };
+    }
   });
   ipcMain.handle('auth:login', async (_evt: any, creds: { email: string; password: string }) => {
     const apiBase = process.env.API_BASE_URL || 'http://localhost:8080';

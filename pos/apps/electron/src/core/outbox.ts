@@ -69,3 +69,9 @@ export function incrementAttempt(id: string) {
   const db = getDb();
   db.prepare('UPDATE Outbox SET attemptCount = attemptCount + 1 WHERE id = ?').run(id);
 }
+
+/** List current outbox items (debug / diagnostics). */
+export function listOutbox(): OutboxItem[] {
+  const db = getDb();
+  return db.prepare('SELECT * FROM Outbox ORDER BY createdAt ASC').all() as OutboxItem[];
+}

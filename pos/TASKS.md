@@ -50,15 +50,41 @@ Legend: [ ] pending  [~] in progress  [x] done
 ### 0.6 Manual Push (Authenticated)
 [x] Core `processSyncCycle()` implemented  
 [x] Endpoint adjusted to `/api/bookings` with payload adapter  
-[~] Acceptance: After successful login, `forceSync` drains queue (drains but booking dirty flag partly handled; needs explicit test)  
-[ ] Failure: 401 triggers auth-needed UI (currently logs and stops)  
+[x] Acceptance: After successful login, `forceSync` drains queue (booking row dirty flag cleared)  
+[x] Failure: 401 triggers auth-needed UI (auth cleared + login screen)  
 
 **Acceptance (0.6 Manual Push)**
-[ ] Offline enqueue (disconnect network first) increments queue badge AND Outbox table row exists (`sqlite3 pos.sqlite 'select count(*) from Outbox;'`).
+Checklist
+[x] Offline enqueue (disconnect network first) increments queue badge AND Outbox table row exists (`sqlite3 pos.sqlite 'select count(*) from Outbox;'`).
 [ ] After reconnect + Force Sync: Outbox row removed; corresponding Booking record has `dirty=0` (DB query) OR row deleted if design chooses removal.
 [ ] Multiple pending bookings: one Force Sync drains all (observe sequential network requests via optional DEBUG_HTTP panel or DB diff before/after).
-[ ] 401 during push (simulate by expiring session) resets AuthProvider to unauthenticated and shows login without rapid retry loop.
-[ ] Non-auth / transient failure (e.g., 500 injected) increments only that Outbox row's `attemptCount` (inspect changed row) and leaves others untouched.
+[ ] 401 during push (simulate by expiring session) resets AuthProvider to unauthenticated and shows login without rapid retry loop; Outbox row still present; its `attemptCount` UNCHANGED.
+[ ] Non-auth / transient failure (e.g., 500 injected) increments only that Outbox row's `attemptCount` (inspect changed row) and leaves others untouched; `queue:update` event payload `sync.remaining` equals COUNT(*) from DB.
+
+How to Verify (DevTools + DB)
+1. Prepare Environment: Start backend & POS with `ELECTRON_DEV=1 DEBUG_HTTP=1` so Network panel & React DevTools available. Open React DevTools → locate AuthProvider & any queue state component.
+2. Offline Enqueue:
+	- Disable network (OS toggle or unplug) BEFORE clicking test booking create.
+	- Observe: queue badge increments; `Outbox` table count increases (`sqlite3 pos/apps/electron/data/pos.sqlite "select count(*) from Outbox;"`). No network POST appears in DEBUG_HTTP.
+3. Successful Drain:
+	- Re-enable network; press Force Sync.
+	- Observe: sequential POST /api/bookings entries in Network debug; `queue:update` event with `sync.pushed = numberOfPending`; DB Outbox count returns to 0; related Booking row now `dirty=0` (`select dirty from Booking where id=...;`).
+4. Multiple Items:
+	- Enqueue 3+ while offline; reconnect; single Force Sync drains all (Network panel shows N POSTs). Final `sync.remaining=0`.
+5. Auth Expired Path (401):
+	- Login, enqueue 1 booking (remain online so room discovery works), then invalidate session (e.g., delete server-side session or restart backend without cookie recognition) BEFORE Force Sync.
+	- Force Sync → Expect: one failed POST 401; `queue:update` sync object shows `authExpired:true`; AuthProvider becomes `{ authenticated:false }`; login UI visible; Outbox row still present; its attemptCount unchanged (`select attemptCount from Outbox;`).
+6. Generic Failure (500 / network):
+	- Cause server to return 500 (temporary handler or kill backend after accepting TCP but before logic) OR point API_BASE_URL to wrong port.
+	- Force Sync → `attemptCount` for first item increments by 1; `authExpired:false`; remaining count matches DB COUNT; processing stops after first failure (others remain untouched).
+7. Remaining Count Accuracy:
+	- With 5 queued items and forced first failure (e.g., invalid payload tweak), verify `sync.remaining` in last `queue:update` equals `select count(*) from Outbox;`.
+8. No Attempt Increment on Auth Expired:
+	- Repeat auth-expired test; compare attemptCount before/after (unchanged) to confirm selective increment logic.
+9. Logging Signals:
+	- Console shows `[SYNC] Auth expired (401)...` when 401 occurs; absence of increment logged for that case. Success path shows `[SYNC] POST` per item.
+10. Regression Guard:
+	- Enqueue -> Force Sync cycle multiple times; no residual dirty=1 rows for successfully pushed bookings.
 
 
 ### 0.6a Room Hours Admin UI (Earlier Integration)
