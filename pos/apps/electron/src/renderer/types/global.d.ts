@@ -13,6 +13,7 @@ export interface KgolfAPI {
   onSync(cb: (p: any) => void): void;
   onQueueUpdate(cb: (p: { queueSize: number }) => void): void;
   listRooms(): Promise<{ ok: boolean; rooms: Array<{ id: number; name: string; openMinutes?: number; closeMinutes?: number; status?: string }>; error?: string }>;
+  updateRoom(id: number, patch: { openMinutes?: number; closeMinutes?: number; status?: string }): Promise<{ ok: boolean; room?: { id: number; name: string; openMinutes?: number; closeMinutes?: number; status?: string }; error?: string }>;
 }
 
 declare global {

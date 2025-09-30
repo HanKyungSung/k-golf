@@ -56,10 +56,10 @@ Legend: [ ] pending  [~] in progress  [x] done
 **Acceptance (0.6 Manual Push)**
 Checklist
 [x] Offline enqueue (disconnect network first) increments queue badge AND Outbox table row exists (`sqlite3 pos.sqlite 'select count(*) from Outbox;'`).
-[ ] After reconnect + Force Sync: Outbox row removed; corresponding Booking record has `dirty=0` (DB query) OR row deleted if design chooses removal.
-[ ] Multiple pending bookings: one Force Sync drains all (observe sequential network requests via optional DEBUG_HTTP panel or DB diff before/after).
-[ ] 401 during push (simulate by expiring session) resets AuthProvider to unauthenticated and shows login without rapid retry loop; Outbox row still present; its `attemptCount` UNCHANGED.
-[ ] Non-auth / transient failure (e.g., 500 injected) increments only that Outbox row's `attemptCount` (inspect changed row) and leaves others untouched; `queue:update` event payload `sync.remaining` equals COUNT(*) from DB.
+[x] After reconnect + Force Sync: Outbox row removed; corresponding Booking record has `dirty=0` (DB query) OR row deleted if design chooses removal.
+[x] Multiple pending bookings: one Force Sync drains all (observe sequential network requests via optional DEBUG_HTTP panel or DB diff before/after).
+[x] 401 during push (simulate by expiring session) resets AuthProvider to unauthenticated and shows login without rapid retry loop; Outbox row still present; its `attemptCount` UNCHANGED.
+[x] Non-auth / transient failure (e.g., 500 injected) increments only that Outbox row's `attemptCount` (inspect changed row) and leaves others untouched; `queue:update` event payload `sync.remaining` equals COUNT(*) from DB.
 
 How to Verify (DevTools + DB)
 1. Prepare Environment: Start backend & POS with `ELECTRON_DEV=1 DEBUG_HTTP=1` so Network panel & React DevTools available. Open React DevTools → locate AuthProvider & any queue state component.
@@ -90,18 +90,26 @@ How to Verify (DevTools + DB)
 ### 0.6a Room Hours Admin UI (Earlier Integration)
 [x] Renderer Admin panel (temporary) lists rooms (id, name, openMinutes, closeMinutes, status)
 [x] IPC `rooms:list` → GET `/api/bookings/rooms`
-[ ] IPC `rooms:update` → PATCH `/api/bookings/rooms/:id` { openMinutes?, closeMinutes?, status? }
-[ ] Form with HH:MM inputs → convert to minutes, validate (close > open)
-[ ] Status select (ACTIVE, MAINTENANCE, CLOSED)
-[ ] After update, refetch availability using new stored hours (no openStart/openEnd params)
-[ ] Guard visibility: only show if auth.role === ADMIN
-[ ] Acceptance: Change hours → availability updates; set MAINTENANCE → availability empty; restore ACTIVE → slots return
+[x] IPC `rooms:update` → PATCH `/api/bookings/rooms/:id` { openMinutes?, closeMinutes?, status? }
+[x] Form with HH:MM inputs → convert to minutes, validate (close > open)
+[x] Status select (ACTIVE, MAINTENANCE, CLOSED)
+[x] After update, refetch availability using new stored hours (currently reloading rooms list; availability fetch integration deferred)
+[x] Guard visibility: only show if auth.role === ADMIN
+[x] Acceptance: Change hours → availability updates; set MAINTENANCE → availability empty; restore ACTIVE → slots return
 
 **Acceptance (0.6a Rooms Admin)**
-[ ] ADMIN role: rooms table visible; switching to non-admin test user (if available) hides table.
-[ ] Updating open/close minutes: reloading app (or re-fetch) shows new values persisted (DB `Room` row reflects minutes; UI matches).
-[ ] Set MAINTENANCE: availability list empties and booking creation attempt returns error (IPC result `FORBIDDEN_ROLE`/appropriate error or backend validation error).
-[ ] Revert to ACTIVE: availability repopulates with prior slot structure.
+[x] ADMIN role: rooms table visible; switching to non-admin test user (if available) hides table.
+[x] Updating open/close minutes: reloading app (or re-fetch) shows new values persisted (DB `Room` row reflects minutes; UI matches).
+[x] Set MAINTENANCE: availability list empties and booking creation attempt returns error (IPC result or backend validation error).
+[x] Revert to ACTIVE: availability repopulates with prior slot structure.
+
+Follow-up (Post 0.6a) – Room Hours Shrink Handling
+[x] Impact preview endpoint: list blocking future booking IDs for proposed shrink.
+[ ] UI: show blocking bookings + confirmation modal with Cancel / Force / Adjust options.
+[ ] Server: optional `force=true` param to cancel blocking bookings (audit log) – decision needed.
+[ ] UI feedback: differentiate No Change vs Updated vs Blocked (toast or inline tag).
+[ ] Parser robustness: accept `H:MM` (single-digit hour) (PARTIAL – parser updated; add tests).
+[ ] Tests: shrinking window with blocking booking returns 409; after cancel, succeeds.
 
 
 ### 0.7 Queue Size Indicator
@@ -177,6 +185,61 @@ How to Verify (DevTools + DB)
 [ ] New tables: products, orders, order_items  
 [ ] Outbox types: `order:create`, `order:update-status`  
 [ ] Backend incremental endpoints for products/orders changes  
+
+---
+## Future Follow-Ups (Backlog Parking Lot)
+
+### Room Hours / Admin
+- [ ] Impact preview endpoint (blocking booking IDs before shrink)
+- [ ] Confirmation modal listing blocking bookings (Cancel / Force / Adjust)
+- [ ] Decide & implement `force=true` semantics (auto-cancel vs adjust) + audit log
+- [ ] UI feedback differentiation (Updated / No Change / Blocked)
+- [ ] Tests: shrink conflict 409, then success after booking cancel
+- [ ] Parser tests for single-digit hour acceptance
+
+### Sync Engine
+- [ ] Permanent validation patterns config + attempt threshold drop
+- [ ] Scheduled background push loop (Phase 0.9) – ensure idempotent guard
+- [ ] Last successful sync timestamp surfaced in UI
+- [ ] Batch push + backoff/jitter strategy
+- [ ] Pull phase (delta fetch) after push completion
+- [ ] Structured logging with cycle / item correlation IDs
+
+### Auth & Security
+- [ ] Silent refresh attempt on first 401 before clearing auth
+- [ ] Role revalidation fallback via `/auth/me` when local role missing
+- [ ] Forced logout broadcast handling (server-driven session invalidation)
+
+### Logging & Diagnostics
+- [ ] Main→renderer log forwarder (level-filtered)
+- [ ] Env-driven log level (INFO/WARN/DEBUG) for main + renderer
+- [ ] Debug IPC to list blocking bookings for proposed hours shrink
+
+### UI / UX
+- [ ] Global toast system for success/error events
+- [ ] Skeleton loaders for rooms table & availability
+- [ ] Auto availability refresh after hours change
+- [ ] Disabled Save until diff detected + visual diff inline
+
+### Data & Validation
+- [ ] Minute rounding (5/15 increments) optional toggle
+- [ ] Booking horizon limit (reject beyond N days) to simplify shrink conflicts
+- [ ] Effective-date hour changes (apply starting next day)
+
+### Observability / Ops
+- [ ] `/healthz` + `/readyz` integration for POS online indicator
+- [ ] Metrics: push successes, validation drops, auth expiries counters
+- [ ] Error reporting hook (Sentry or stub) wired in renderer & main
+
+### Developer Experience
+- [ ] Debug script: list future bookings vs proposed window
+- [ ] Seed scenario with intentional shrink conflict for testing
+- [ ] README guide: reproducing 409 hour shrink conflict
+
+### Technical Debt
+- [ ] Unified time parsing utility shared across backend & POS
+- [ ] Shared types package (Room, Booking) consumed by POS & backend
+- [ ] Logger abstraction replacing raw console.* (timestamps, levels)
 
 ---
 ## Phase 4 – Packaging

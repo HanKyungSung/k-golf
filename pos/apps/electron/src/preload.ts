@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('kgolf', {
 	logout: () => ipcRenderer.invoke('auth:logout'),
 	getAuthStatus: () => ipcRenderer.invoke('auth:getStatus'),
 	debugListOutbox: () => ipcRenderer.invoke('debug:outbox:list'),
+	updateRoom: (id: number, patch: { openMinutes?: number; closeMinutes?: number; status?: string }) => ipcRenderer.invoke('rooms:update', { id, patch }),
 	onAuthState: (cb: (s: any) => void) => {
 		ipcRenderer.removeAllListeners('auth:state');
 		ipcRenderer.on('auth:state', (_e, payload) => cb(payload));

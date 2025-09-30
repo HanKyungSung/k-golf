@@ -134,6 +134,26 @@ Enhancements (Later / Nice-to-have)
 POS Hub
 - Continue Electron app scaffolding (SQLite sync, printer integration, sync engine).
 
+### Technical Debt & Known Constraints
+This section tracks notable limitations / design debts that have explicit follow-up actions.
+
+#### Room Hours Shrink Guard
+- Behavior: PATCH room hours rejects shrinking when any future (non-canceled) booking would end up outside the new `[openMinutes, closeMinutes)` window (HTTP 409, `{"error":"Future bookings exist outside new window"}`).
+- Current Gaps:
+  - Blocking bookings not enumerated to the client.
+  - No preview / confirmation or force override.
+  - Early POS HH:MM parser required zero‑padding (`09:00`); non‑padded forms could cause silent no-op (parser now relaxed but needs tests).
+- Planned:
+  1. Impact preview endpoint (list blocking booking IDs).
+  2. UI confirmation modal (Cancel / Force / Adjust manually).
+  3. Optional `force=true` path (cancels blocking bookings with audit log) – pending decision.
+  4. Distinct UI feedback: No Change vs Updated vs Blocked.
+  5. Parser test coverage & validation messages.
+- Workaround: Adjust/cancel conflicting future bookings first, or widen temporarily then shrink.
+- Tracking: `pos/TASKS.md` Phase 0.6a follow-ups.
+
+_(Add additional items here as they’re discovered: e.g., sync batching, auth refresh strategy, pricing calculator duplication.)_
+
 ## Getting Started (Current)
 ```
 # 1) Start the database (from repo root)

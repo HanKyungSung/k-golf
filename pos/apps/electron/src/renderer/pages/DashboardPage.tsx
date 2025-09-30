@@ -22,7 +22,7 @@ const DashboardPage: React.FC = () => {
             </div>
             <div className="text-xs text-slate-500 mb-2">{loadingRooms ? 'Loading...' : `${rooms.length} room(s)`}</div>
             <div className="overflow-x-auto">
-              <RoomsTable rooms={rooms} />
+              <RoomsTable rooms={rooms} onUpdated={reloadRooms} />
             </div>
           </section>
         )}

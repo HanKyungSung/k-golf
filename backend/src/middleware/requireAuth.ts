@@ -7,7 +7,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     if (!token) return res.status(401).json({ error: 'Unauthenticated' });
     const session = await getSession(token);
     if (!session) return res.status(401).json({ error: 'Unauthenticated' });
-    (req as any).user = { id: session.user.id, email: session.user.email };
+    (req as any).user = { id: session.user.id, email: session.user.email, role: session.user.role };
     (req as any).sessionToken = token;
     return next();
   } catch (e) {

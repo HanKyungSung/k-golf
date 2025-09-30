@@ -251,7 +251,12 @@ app.whenReady().then(async () => {
   // IPC handlers (Phase 0.4 temporary minimal wiring)
   function userHasStaffRole() {
     const u = getAuthenticatedUser();
-    return !!u && (u.role === 'ADMIN' || u.role === 'STAFF');
+    const role = (u?.role || '').toUpperCase();
+    return !!u && (role === 'ADMIN' || role === 'STAFF');
+  }
+  function userIsAdmin() {
+    const u = getAuthenticatedUser();
+    return !!u && (u.role || '').toUpperCase() === 'ADMIN';
   }
 
   ipcMain.handle('booking:create', (_evt: any, payload: any) => {
@@ -310,6 +315,7 @@ app.whenReady().then(async () => {
       // For now backend sets httpOnly cookie session; treat session presence as auth.
       const user = res.data.user;
       setAuthenticatedUser(user);
+      try { console.log('[AUTH][LOGIN] user object', user); } catch {/* ignore */}
       // Placeholder: no access token yet (session cookie used). If future endpoint returns tokens, setAccessToken(...)
       emitToAll('auth:state', { authenticated: true, user });
       return { ok: true, user };
@@ -328,8 +334,12 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle('rooms:list', async () => {
     const user = getAuthenticatedUser();
+    try { console.log('[ROOMS][TRACE] rooms:list role=', user?.role, 'user=', user); } catch {/* ignore */}
     if (!user) return { ok: false, error: 'NOT_AUTHENTICATED' };
-    if (user.role !== 'ADMIN') return { ok: false, error: 'FORBIDDEN_ROLE' };
+    if (!userIsAdmin()) {
+      console.warn('[ROOMS][GUARD] Forbidden list attempt role=', user?.role);
+      return { ok: false, error: 'FORBIDDEN_ROLE' };
+    }
     try {
       const apiBase = process.env.API_BASE_URL || 'http://localhost:8080';
       const cookieHeader = getSessionCookieHeader();
@@ -337,6 +347,29 @@ app.whenReady().then(async () => {
       return { ok: true, rooms: res.data.rooms || [] };
     } catch (e: any) {
       return { ok: false, error: e?.response?.data?.error || e?.message || 'ROOMS_FETCH_FAILED' };
+    }
+  });
+  ipcMain.handle('rooms:update', async (_evt: any, payload: { id: number; patch: { openMinutes?: number; closeMinutes?: number; status?: string } }) => {
+    const user = getAuthenticatedUser();
+    try { console.log('[ROOMS][TRACE] rooms:update role=', user?.role, 'payload.id=', payload?.id); } catch {/* ignore */}
+    if (!user) return { ok: false, error: 'NOT_AUTHENTICATED' };
+    if (!userIsAdmin()) {
+      console.warn('[ROOMS][GUARD] Forbidden update attempt role=', user?.role);
+      return { ok: false, error: 'FORBIDDEN_ROLE' };
+    }
+    try {
+      const { id, patch } = payload || {} as any;
+      if (!id) return { ok: false, error: 'MISSING_ID' };
+      // Basic validation if both provided
+      if (typeof patch.openMinutes === 'number' && typeof patch.closeMinutes === 'number' && patch.openMinutes >= patch.closeMinutes) {
+        return { ok: false, error: 'INVALID_RANGE' };
+      }
+      const apiBase = process.env.API_BASE_URL || 'http://localhost:8080';
+      const cookieHeader = getSessionCookieHeader();
+      const res = await axios.patch(`${apiBase}/api/bookings/rooms/${id}`, patch, { withCredentials: true, headers: cookieHeader ? { Cookie: cookieHeader } : {} });
+      return { ok: true, room: (res.data && (res.data.room || res.data)) };
+    } catch (e: any) {
+      return { ok: false, error: e?.response?.data?.error || e?.message || 'ROOM_UPDATE_FAILED' };
     }
   });
   // Silent session check (cookie based) after window created
