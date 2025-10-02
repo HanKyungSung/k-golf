@@ -6,6 +6,17 @@ Mark items as you complete them. Keep commits small (1–2 checklist items each)
 Legend: [ ] pending  [~] in progress  [x] done
 
 ---
+<!-- Consolidated: Former Phases 0.12–0.16 merged into existing Phase 0 & Backlog categories -->
+### 0.6b Admin Dashboard & Booking Detail (Base UI) – Completed
+[x] Tabs (Bookings / Rooms / Weekly Calendar / Timeline) switch content
+[x] Booking list row click → navigate `/booking/:id`
+[x] Booking list status buttons (Complete / Cancel / Reset)
+[x] Room status select (updates in‑memory state)
+[x] Weekly Calendar week navigation (Prev / Next)
+[x] Timeline week navigation (Prev / Next)
+[x] Timeline booking block click → detail navigation
+[x] Booking Detail actions (Back / Complete / Cancel / Restore)
+
 ## Phase 0 – Scaffolding (Target: Minimal Push-Only Working Prototype)
 
 ### 0.1 Workspace & Dependencies
@@ -220,6 +231,36 @@ Follow-up (Post 0.6a) – Room Hours Shrink Handling
 - [ ] Skeleton loaders for rooms table & availability
 - [ ] Auto availability refresh after hours change
 - [ ] Disabled Save until diff detected + visual diff inline
+- [ ] Tabs: Keyboard navigation (ArrowLeft/Right/Home/End) + ARIA linkage
+- [ ] Tabs: Persist last active tab (localStorage)
+- [ ] Booking list: Focus-visible & hover affordance
+- [ ] Booking list: Optional context menu for quick status change
+- [ ] Booking buttons: Disable while status transition pending (future async)
+- [ ] Booking list: Tooltip (derived end time & price breakdown)
+- [ ] Booking actions: Confirmation dialog before Cancel
+- [ ] Booking actions: Toast feedback after status change
+- [ ] Booking actions: Optimistic rollback pathway
+- [ ] Weekly Calendar: Empty slot click → new booking modal (stub)
+- [ ] Weekly Calendar: Overlap warning styling
+- [ ] Weekly Calendar: Vertical scroll / virtualization prep
+- [ ] Timeline: Current time indicator (today)
+- [ ] Timeline: Zoom controls (30m vs 15m)
+- [ ] Timeline: Drag & resize bookings (spike)
+- [ ] Timeline booking block: Keyboard tooltip / accessible description
+- [ ] Booking Detail: Computed end time display
+- [ ] Booking Detail: Editable notes + Save
+- [ ] Booking Detail: Prev / Next booking navigation
+- [ ] Booking Detail: Mini room occupancy timeline snippet
+- [ ] Global: Centralize Card/Badge primitives
+- [ ] Global: Standard Button variants (primary/subtle/destructive)
+- [ ] Global: Loading overlay pattern for async mutations
+- [ ] Multi-select bookings (bulk status update)
+- [ ] Export bookings (week CSV)
+- [ ] Inline duration edit via timeline resize
+- [ ] Keyboard shortcuts: `g t` (Timeline), `g b` (Bookings)
+- [ ] Search / filter field (customer / room / date)
+- [ ] Filter toggle: show only active bookings
+- [ ] Theme toggle (dark/light)
 
 ### Data & Validation
 - [ ] Minute rounding (5/15 increments) optional toggle
@@ -240,6 +281,11 @@ Follow-up (Post 0.6a) – Room Hours Shrink Handling
 - [ ] Unified time parsing utility shared across backend & POS
 - [ ] Shared types package (Room, Booking) consumed by POS & backend
 - [ ] Logger abstraction replacing raw console.* (timestamps, levels)
+- [ ] Extract time slot & week utilities (`timeUtils.ts`)
+- [ ] Replace repeated Tailwind utility chains with component classes / `@apply`
+- [ ] Shared enum for booking status (context + UI)
+- [ ] Externalize operating hours (9–22) into config constants
+- [ ] Error boundary around Dashboard main content
 
 ---
 ## Phase 4 – Packaging
