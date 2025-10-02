@@ -14,9 +14,9 @@
   "include": [
     "src/main.ts",
     "src/preload.ts",
-    "src/core/**/*"
+    "src/core/**/*",
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx"
   ],
-  "exclude": [
-    "src/renderer" 
-  ]
+  "exclude": []
 }

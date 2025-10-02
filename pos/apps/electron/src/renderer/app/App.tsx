@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from '../pages/LoginPage';
 import DashboardPage from '../pages/DashboardPage';
 import BookingDetailPage from '../pages/BookingDetailPage';
+import MenuManagementPage from '../pages/MenuManagementPage';
 import { useAuth } from './authState';
 import { BookingProvider } from './bookingContext';
 
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<Protected><DashboardPage /></Protected>} />
           <Route path="/booking/:id" element={<Protected><BookingDetailPage /></Protected>} />
+          <Route path="/menu" element={<Protected><MenuManagementPage /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BookingProvider>

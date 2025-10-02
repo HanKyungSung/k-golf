@@ -17,6 +17,44 @@ Legend: [ ] pending  [~] in progress  [x] done
 [x] Timeline booking block click → detail navigation
 [x] Booking Detail actions (Back / Complete / Cancel / Restore)
 
+### 0.6c Booking Detail Ordering + Menu Management (Local Mock) – Completed
+[x] Booking Detail: Local menu mock (12 items across 4 categories)
+[x] Booking Detail: Category toggle & scrollable list
+[x] Booking Detail: Add item → increment quantity if existing
+[x] Booking Detail: Update quantity (± buttons) & remove item
+[x] Booking Detail: Receipt panel with subtotal, tax, grand total (room + items)
+[x] Booking Detail: Print-friendly styles (media print) & print action
+[x] Booking Detail: Clear order button (local state reset)
+[x] Dashboard: Menu tab button navigates to `/menu`
+[x] Route: `/menu` protected route registered in `App.tsx`
+[x] Menu Management Page: Filters (category/all) & search
+[x] Menu Management Page: Create item form (name, description, price, category, availability)
+[x] Menu Management Page: Edit existing item (prefill & save)
+[x] Menu Management Page: Delete with confirmation overlay
+[x] Menu Management Page: Toggle availability inline
+[x] Menu Management Page: Basic stats (total, available, unavailable, avg price)
+[x] Menu Management Page: Duplicated UI primitives reused (pending unification)
+[x] Tasks file updated with new section & follow-ups
+
+Follow‑Ups (Post 0.6c)
+[ ] Unify UI primitives (Card/Badge/Button/etc.) into shared module
+[ ] Introduce `MenuProvider` (context) to share menu + order state across pages
+[ ] Persist menu + orders to SQLite via IPC (define schema: Product, Order, OrderItem)
+[ ] Integrate order persistence with Booking Detail (associate order with booking id)
+[ ] Menu item category CRUD (create new categories, reorder)
+[ ] Bulk availability toggle & multi-select actions
+[ ] Price history / audit (track previous prices)
+[ ] Drag to reorder items within category (affects `displayOrder` column)
+[ ] Keyboard + ARIA support for category toggles & item actions
+[ ] Advanced print layout (receipt header/footer config, optional logo override)
+[ ] Export menu to CSV / PDF
+[ ] Cost-of-goods fields (optional) and margin display in stats
+[ ] Toast notifications (create/update/delete item, print success)
+[ ] Optimistic updates + rollback on failure once persistence exists
+[ ] Merge booking receipt + order print into unified template component
+[ ] Unit tests: add/edit/delete menu item reducers / helpers
+[ ] E2E smoke: create item → appears in Booking Detail category list without reload (once shared provider added)
+
 ## Phase 0 – Scaffolding (Target: Minimal Push-Only Working Prototype)
 
 ### 0.1 Workspace & Dependencies
@@ -261,6 +299,15 @@ Follow-up (Post 0.6a) – Room Hours Shrink Handling
 - [ ] Search / filter field (customer / room / date)
 - [ ] Filter toggle: show only active bookings
 - [ ] Theme toggle (dark/light)
+ - [ ] Menu Management: Category CRUD & reorder (moved from 0.6c follow-ups once persistence ready)
+ - [ ] Menu Management: Bulk availability toggle
+ - [ ] Menu Management: Price history drill-in modal
+ - [ ] Menu Management: Cost-of-goods & margin display
+ - [ ] Menu Management: CSV / PDF export
+ - [ ] Menu / Ordering: Shared MenuProvider bridging Booking Detail & Management page
+ - [ ] Ordering: Persist order items per booking & show historical receipt
+ - [ ] Ordering: Toast feedback on add/remove/print
+ - [ ] Ordering: Optimistic quantity mutation rollback on error
 
 ### Data & Validation
 - [ ] Minute rounding (5/15 increments) optional toggle

@@ -82,6 +82,7 @@ const DashboardPage: React.FC = () => {
               <TabsTrigger value="rooms">Rooms</TabsTrigger>
               <TabsTrigger value="calendar">Weekly Calendar</TabsTrigger>
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsTrigger value="menu">Menu</TabsTrigger>
             </TabsTriggersRow>
             <TabsContent when="bookings">
               <Card>
@@ -158,6 +159,24 @@ const DashboardPage: React.FC = () => {
             </TabsContent>
             <TabsContent when="timeline">
               <TimelineView weekDays={weekDays} rooms={rooms} bookings={bookings} navigateWeek={navigateWeek} />
+            </TabsContent>
+            <TabsContent when="menu">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Menu Management</CardTitle>
+                  <CardDescription>Administer food & drink items</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4 text-sm">
+                    <p className="text-slate-300">Open the full menu management workspace to add, edit, archive, and re-order menu items. This operates on local mock data until persistence is wired.</p>
+                    <div className="flex gap-3">
+                      <button onClick={()=>navigate('/menu')} className="px-4 py-2 rounded bg-amber-500 text-black font-medium text-xs hover:bg-amber-600">Open Menu Management</button>
+                      <button onClick={()=>navigate('/menu')} className="px-4 py-2 rounded bg-slate-700 text-slate-200 font-medium text-xs hover:bg-slate-600 border border-slate-600">Quick Edit</button>
+                    </div>
+                    <p className="text-[11px] text-slate-500">Future enhancements: category CRUD, bulk availability toggles, price history, cost-of-goods, printing labels.</p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         ) : (
