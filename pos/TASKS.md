@@ -37,7 +37,7 @@ Legend: [ ] pending  [~] in progress  [x] done
 [x] Tasks file updated with new section & follow-ups
 
 Follow‑Ups (Post 0.6c)
-[ ] Unify UI primitives (Card/Badge/Button/etc.) into shared module
+[x] Unify UI primitives (Card/Badge/Button/etc.) into shared module
 [ ] Introduce `MenuProvider` (context) to share menu + order state across pages
 [ ] Persist menu + orders to SQLite via IPC (define schema: Product, Order, OrderItem)
 [ ] Integrate order persistence with Booking Detail (associate order with booking id)

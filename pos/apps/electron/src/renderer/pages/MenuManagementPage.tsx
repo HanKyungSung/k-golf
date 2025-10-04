@@ -2,13 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppHeader } from '../components/layout/AppHeader';
 
-// NOTE: UI primitives duplicated (see TODO in TASKS.md to unify)
-const Card: React.FC<{ className?: string; children: React.ReactNode }>=({ className='', children }) => <div className={`rounded-lg border border-slate-700 bg-slate-800/50 ${className}`}>{children}</div>;
-const CardHeader: React.FC<{ children: React.ReactNode; className?: string }>=({children,className=''})=> <div className={`p-4 border-b border-slate-700/60 ${className}`}>{children}</div>;
-const CardTitle: React.FC<{ children: React.ReactNode; className?: string }>=({children,className=''})=> <h3 className={`font-semibold text-white ${className}`}>{children}</h3>;
-const CardDescription: React.FC<{ children: React.ReactNode; className?: string }>=({children,className=''})=> <p className={`text-sm text-slate-400 ${className}`}>{children}</p>;
-const CardContent: React.FC<{ children: React.ReactNode; className?: string }>=({children,className=''})=> <div className={`p-4 space-y-4 ${className}`}>{children}</div>;
-const Badge: React.FC<{ children: React.ReactNode; className?: string }>=({children,className=''})=> <span className={`px-2 py-0.5 rounded text-[11px] font-medium tracking-wide bg-slate-700 text-slate-200 ${className}`}>{children}</span>;
+// Shared UI primitives
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from '../components/ui/primitives';
 
 // ---------------- Types ----------------
 export interface MenuItem { id: string; name: string; description: string; price: number; category: Category; available: boolean }
