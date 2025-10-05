@@ -24,3 +24,28 @@ setTimeout(() => {
 
 // Typed bridge helper
 function getKgolf() { return (window as any).kgolf as import('./types/global').KgolfAPI | undefined; }
+
+// Forward main process logs to DevTools console
+const kgolf = getKgolf();
+if (kgolf?.onMainLog) {
+  kgolf.onMainLog((log) => {
+    const prefix = `[MAIN]`;
+    const style = 'color: #888; font-weight: bold';
+    switch (log.level) {
+      case 'error':
+        console.error(prefix, ...log.message);
+        break;
+      case 'warn':
+        console.warn(prefix, ...log.message);
+        break;
+      case 'info':
+        console.info(prefix, ...log.message);
+        break;
+      case 'debug':
+        console.debug(prefix, ...log.message);
+        break;
+      default:
+        console.log(`%c${prefix}`, style, ...log.message);
+    }
+  });
+}

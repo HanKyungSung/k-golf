@@ -34,7 +34,11 @@ contextBridge.exposeInMainWorld('kgolf', {
 		ipcRenderer.removeAllListeners('queue:update');
 		ipcRenderer.on('queue:update', (_e, payload) => cb(payload));
 	},
-	listRooms: () => ipcRenderer.invoke('rooms:list')
+	listRooms: () => ipcRenderer.invoke('rooms:list'),
+	onMainLog: (cb: (log: { level: string; message: any[] }) => void) => {
+		ipcRenderer.removeAllListeners('main-log');
+		ipcRenderer.on('main-log', (_e, payload) => cb(payload));
+	}
 });
 
 console.log('[PRELOAD] injected');

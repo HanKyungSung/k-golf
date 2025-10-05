@@ -291,6 +291,29 @@ Follow-up (Post 0.6d) – Room Data Synchronization
 [x] Queue badge updates automatically as items are synced without manual Force Sync
 
 
+### 0.9.1 Development Logging Consolidation – Completed
+[x] Forward main process logs to renderer DevTools console (dev only)
+[x] Intercept console methods in main.ts and emit via IPC `main-log` channel
+[x] Added `onMainLog` listener in preload.ts bridge
+[x] Updated TypeScript definitions in global.d.ts
+[x] Renderer index.tsx listens for main logs and outputs to DevTools with `[MAIN]` prefix
+[x] Guarded with `ELECTRON_DEV` check - only active in development mode
+[x] Documented behavior in .env.example
+
+**Acceptance (0.9.1 Log Consolidation)** – VERIFIED
+[x] Dev Mode (`npm run dev`): All main process logs appear in DevTools console with `[MAIN]` prefix
+[x] Dev Mode: Both main process and renderer logs visible in one place (DevTools console)
+[x] Production Build: Log forwarding disabled; main process logs stay in terminal only
+[x] No performance overhead in production (console interception skipped)
+
+**Implementation Details:**
+- Interception: Main process console.log/warn/error/info/debug wrapped to emit IPC events
+- IPC Channel: `main-log` with payload `{ level: 'log'|'warn'|'error'|'info'|'debug', message: any[] }`
+- Prefix: `[MAIN]` added to all forwarded logs in DevTools for easy identification
+- Environment Guard: Only active when `ELECTRON_DEV=1` (automatically set by npm run dev)
+- Documentation: Added note to .env.example explaining automatic ELECTRON_DEV behavior
+
+
 ### 0.10 last_sync_ts Meta (Pre-Pull)
 [ ] After any successful push cycle sending >=1 mutation set `Meta.last_sync_ts` (ISO)  
 [ ] Renderer shows `Last Sync: <time or –>`  

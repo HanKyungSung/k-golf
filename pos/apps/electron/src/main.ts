@@ -418,3 +418,39 @@ function emitToAll(channel: string, payload: unknown) {
     try { w.webContents.send(channel, payload); } catch {/* ignore */}
   }
 }
+
+// Intercept console methods to forward main process logs to renderer (dev only)
+if (process.env.ELECTRON_DEV) {
+  const originalConsole = {
+    log: console.log,
+    warn: console.warn,
+    error: console.error,
+    info: console.info,
+    debug: console.debug
+  };
+
+  console.log = (...args: any[]) => {
+    originalConsole.log(...args);
+    emitToAll('main-log', { level: 'log', message: args });
+  };
+
+  console.warn = (...args: any[]) => {
+    originalConsole.warn(...args);
+    emitToAll('main-log', { level: 'warn', message: args });
+  };
+
+  console.error = (...args: any[]) => {
+    originalConsole.error(...args);
+    emitToAll('main-log', { level: 'error', message: args });
+  };
+
+  console.info = (...args: any[]) => {
+    originalConsole.info(...args);
+    emitToAll('main-log', { level: 'info', message: args });
+  };
+
+  console.debug = (...args: any[]) => {
+    originalConsole.debug(...args);
+    emitToAll('main-log', { level: 'debug', message: args });
+  };
+}
