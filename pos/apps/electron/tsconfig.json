@@ -14,9 +14,11 @@
   "include": [
     "src/main.ts",
     "src/preload.ts",
-    "src/core/**/*",
-    "src/renderer/**/*.ts",
-    "src/renderer/**/*.tsx"
+    "src/core/**/*"
   ],
-  "exclude": []
+  "exclude": [
+    // IMPORTANT: Exclude renderer because esbuild bundles it as ESM. If tsc compiles it with CommonJS,
+    // the browser sees a CJS wrapper (uses `exports`) causing 'exports is not defined'.
+    "src/renderer"
+  ]
 }
