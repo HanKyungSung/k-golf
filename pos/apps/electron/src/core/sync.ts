@@ -19,7 +19,7 @@
  *  - Batch push to reduce HTTP round trips
  */
 import axios from 'axios';
-import { peekOldest, deleteItem, incrementAttempt, getQueueSize } from './outbox';
+import { peekOldest, deleteItem, incrementAttempt, getQueueSize, type OutboxItem } from './outbox';
 import { getAccessToken, getSessionCookieHeader } from './auth';
 import { getDb } from './db';
 
@@ -61,9 +61,25 @@ export async function processSyncCycle(apiBase: string): Promise<SyncCycleResult
   let authExpired = false;
   let lastError: SyncCycleResult['lastError'];
   try {
+    // First: process room:update mutations (with collapse logic)
+    const roomResult = await processRoomUpdates(apiBase);
+    pushed += roomResult.pushed;
+    failures += roomResult.failures;
+    if (roomResult.authExpired) {
+      authExpired = true;
+      if (roomResult.lastError) lastError = roomResult.lastError;
+      return { pushed, failures, remaining: getQueueSize(), authExpired, lastError };
+    }
+
+    // Then: process booking:create mutations (existing logic)
     while (true) {
       const item = peekOldest();
       if (!item) break;
+      // Skip room updates (already handled above)
+      if (item.type === 'room:update') {
+        deleteItem(item.id); // shouldn't happen if collapse worked, but defensive
+        continue;
+      }
       const outcome = await pushSingle(apiBase, item.payloadJson, item.id);
       if (outcome === 'success') {
         pushed++;
@@ -191,4 +207,133 @@ async function pushSingle(apiBase: string, payloadJson: string, outboxId: string
 export function markBookingClean(localId: string) {
   const db = getDb();
   db.prepare('UPDATE Booking SET dirty=0 WHERE id = ?').run(localId);
+}
+
+/**
+ * Process room:update mutations with collapse logic.
+ * Collapses multiple status changes for the same room to only send the latest.
+ * Returns metrics for integration into main sync cycle.
+ */
+async function processRoomUpdates(apiBase: string): Promise<{ pushed: number; failures: number; authExpired: boolean; lastError?: SyncCycleResult['lastError'] }> {
+  let pushed = 0;
+  let failures = 0;
+  let authExpired = false;
+  let lastError: SyncCycleResult['lastError'];
+
+  // Gather all room:update items
+  const db = getDb();
+  const allRoomUpdates = db.prepare('SELECT * FROM Outbox WHERE type = ? ORDER BY createdAt ASC').all('room:update') as OutboxItem[];
+  
+  console.log('[SYNC][ROOM] Found', allRoomUpdates.length, 'room:update mutations in queue');
+  
+  if (allRoomUpdates.length === 0) {
+    return { pushed: 0, failures: 0, authExpired: false };
+  }
+
+  // Collapse: keep only the latest mutation per roomId
+  const byRoomId = new Map<string, OutboxItem>();
+  for (const item of allRoomUpdates) {
+    try {
+      const payload = JSON.parse(item.payloadJson);
+      const roomId = payload.roomId;
+      if (!roomId) continue;
+      
+      const existing = byRoomId.get(roomId);
+      if (!existing || item.createdAt > existing.createdAt) {
+        byRoomId.set(roomId, item);
+      }
+    } catch (e) {
+      console.error('[SYNC][ROOM] Invalid payload JSON for outbox item', item.id);
+      deleteItem(item.id); // drop malformed entry
+    }
+  }
+
+  // Delete superseded items (those not in the final map)
+  const finalIds = new Set(Array.from(byRoomId.values()).map(i => i.id));
+  for (const item of allRoomUpdates) {
+    if (!finalIds.has(item.id)) {
+      console.log('[SYNC][ROOM] Dropping superseded mutation', item.id);
+      deleteItem(item.id);
+    }
+  }
+
+  console.log('[SYNC][ROOM] After collapse:', byRoomId.size, 'unique room(s) to update');
+
+  // Push each final (latest) room update
+  for (const item of byRoomId.values()) {
+    const outcome = await pushRoomUpdate(apiBase, item);
+    if (outcome === 'success') {
+      pushed++;
+    } else if (outcome === 'auth-expired') {
+      authExpired = true;
+      failures++;
+      lastError = pendingErrorInfo;
+      break; // stop processing on auth failure
+    } else {
+      failures++;
+      lastError = pendingErrorInfo;
+      break; // stop on first failure for now
+    }
+  }
+
+  return { pushed, failures, authExpired, lastError };
+}
+
+/**
+ * Push a single room:update mutation to the backend.
+ */
+async function pushRoomUpdate(apiBase: string, item: OutboxItem): Promise<PushOutcome> {
+  try {
+    const payload = JSON.parse(item.payloadJson);
+    const { roomId, status } = payload;
+    
+    if (!roomId || !status) {
+      console.warn('[SYNC][ROOM] Missing roomId or status in payload', item.id);
+      deleteItem(item.id); // drop invalid
+      return 'success';
+    }
+
+    const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+    const token = getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const cookieHeader = getSessionCookieHeader();
+    if (cookieHeader) headers.Cookie = cookieHeader;
+    
+    const url = `${apiBase}/api/bookings/rooms/${roomId}`;
+    const body = { status };
+    
+    console.log('[SYNC][ROOM] PATCH', url, body);
+    await axios.patch(url, body, { headers, timeout: 8000, withCredentials: true });
+    
+    deleteItem(item.id);
+    console.log('[SYNC][ROOM] Successfully updated room', roomId, 'to', status);
+    return 'success';
+  } catch (e: any) {
+    const status = e?.response?.status;
+    const body = e?.response?.data;
+    console.error('[SYNC][ROOM] push failed', status, body || e?.message);
+    
+    if (status === 401) {
+      console.warn('[SYNC][ROOM] Auth expired (401)');
+      pendingErrorInfo = { code: 'AUTH_EXPIRED', status: 401, message: 'Authentication expired (401)', outboxId: item.id };
+      return 'auth-expired';
+    }
+    
+    if (status === 400 || status === 404 || status === 409) {
+      // Validation or conflict errors - log and drop to allow queue progress
+      console.warn('[SYNC][ROOM] Dropping permanent validation/conflict failure:', body?.error);
+      deleteItem(item.id);
+      pendingErrorInfo = { code: 'VALIDATION_DROPPED', status, message: body?.error || 'Validation error', outboxId: item.id };
+      return 'success'; // treat as success to continue draining
+    }
+    
+    incrementAttempt(item.id);
+    pendingErrorInfo = { 
+      code: status >= 500 ? 'SERVER_ERROR' : 'NETWORK_ERROR', 
+      status, 
+      message: body?.error || e?.message,
+      outboxId: item.id 
+    };
+    return 'failure';
+  }
 }

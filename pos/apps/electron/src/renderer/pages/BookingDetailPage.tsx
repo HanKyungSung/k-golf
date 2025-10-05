@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBookingData } from '../app/bookingContext';
+import { useAuth } from '../app/authState';
 import { AppHeader } from '../components/layout/AppHeader';
 
 // Shared UI primitives
@@ -33,6 +34,7 @@ const mockMenu: MenuItem[] = [
 export default function BookingDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { forceSync } = useAuth();
   const { getBookingById, updateBookingStatus, rooms } = useBookingData();
   const booking = getBookingById(id!);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -63,7 +65,7 @@ export default function BookingDetailPage() {
 
   return (
     <div className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
-      <AppHeader onTest={()=>{}} onSync={()=>{}} />
+      <AppHeader onTest={()=>{}} onSync={forceSync} />
       <main className="flex-1 px-6 py-8 space-y-8 max-w-5xl mx-auto w-full">
         <div className="flex items-center justify-between">
           <div>

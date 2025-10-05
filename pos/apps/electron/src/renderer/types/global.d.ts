@@ -5,6 +5,7 @@ export interface KgolfAPI {
   ping(): string;
   createBooking(data: { customerName: string; startsAt: string; endsAt: string }): Promise<any>;
   getQueueSize(): Promise<{ queueSize: number }>;
+  enqueue(type: string, payload: any): Promise<{ ok: boolean; outboxId?: string; error?: string }>;
   forceSync(): Promise<{ pushed: number; failures: number; remaining?: number; error?: string }>;
   login(email: string, password: string): Promise<{ ok: boolean; error?: string; user?: { email: string; role: string } }>;
   logout(): Promise<{ ok: boolean }>;

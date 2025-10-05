@@ -33,7 +33,7 @@ try {
 } catch {/* ignore dotenv load errors */}
 import { initDb } from './core/db';
 import { enqueueBooking } from './core/bookings';
-import { getQueueSize, listOutbox } from './core/outbox';
+import { getQueueSize, listOutbox, enqueue } from './core/outbox';
 import { processSyncCycle } from './core/sync';
 import { setAccessToken, saveRefreshToken, loadRefreshToken, setAuthenticatedUser, getAuthenticatedUser, setSessionCookies, getSessionCookieHeader, clearAuthState, clearRefreshToken } from './core/auth';
 import axios from 'axios';
@@ -202,52 +202,39 @@ app.whenReady().then(async () => {
     await loadReactDevTools();
   }
   createWindow();
-  // if (process.env.ELECTRON_DEV) {
-  //   // Manual React DevTools loading per Electron docs: use REACT_DEVTOOLS_PATH env var.
-  //   const fs = require('fs');
-  //   const pathMod = require('path');
-  //   const rawEnvPath = process.env.REACT_DEVTOOLS_PATH || '';
-  //   const cleaned = rawEnvPath.trim();
-  //   // Additional fallback: vendor directory inside project if user copies extension there
-  //   // dist/main.js lives at <project>/dist; we want to look relative to project root
-  //   const projectRoot = pathMod.join(__dirname, '..');
-  //   const vendorCandidate = pathMod.join(projectRoot, 'devtools', 'react');
-  //   const candidates: string[] = [];
-  //   if (cleaned) candidates.push(cleaned);
-  //   if (fs.existsSync(vendorCandidate)) candidates.push(vendorCandidate);
-  //   console.log('[MAIN] React DevTools candidate paths:', candidates.length ? candidates : '(none)');
-  //   let loadedOk = false;
-  //   for (const c of candidates) {
-  //     try {
-  //       if (!fs.existsSync(c)) {
-  //         console.warn('[MAIN] DevTools candidate missing:', c);
-  //         continue;
-  //       }
-  //       // loadExtension expects the directory that directly contains manifest.json
-  //       const manifestPath = pathMod.join(c, 'manifest.json');
-  //       if (!fs.existsSync(manifestPath)) {
-  //         console.warn('[MAIN] No manifest.json at', manifestPath, 'skipping');
-  //         continue;
-  //       }
-  //       const loaded = await session.defaultSession.loadExtension(c, { allowFileAccess: true });
-  //       console.log('[MAIN] React DevTools loaded:', loaded.name, loaded.version, 'from', c);
-  //       loadedOk = true;
-  //       break;
-  //     } catch (e: any) {
-  //       console.warn('[MAIN] React DevTools load failed for', c, e?.message);
-  //     }
-  //   }
-  //   if (!loadedOk) {
-  //     console.log('[MAIN] React DevTools not loaded (set REACT_DEVTOOLS_PATH or place extension in devtools/react)');
-  //   }
-  //   try {
-  //     const exts = await session.defaultSession.getAllExtensions();
-  //     const names = Object.values(exts).map((e: any) => `${e.name}@${e.version}`);
-  //     console.log('[MAIN] DevTools extensions present:', names.join(', ') || '(none)');
-  //   } catch (e: any) {
-  //     console.warn('[MAIN] Could not enumerate extensions', e?.message);
-  //   }
-  // }
+  
+  // Start periodic sync cycle (15 seconds)
+  const SYNC_INTERVAL_MS = 15000;
+  console.log('[MAIN] Starting periodic sync cycle, interval:', SYNC_INTERVAL_MS, 'ms');
+  setInterval(async () => {
+    const user = getAuthenticatedUser();
+    const queueSize = getQueueSize();
+    
+    // Only sync if: authenticated + queue not empty
+    if (!user || queueSize === 0) {
+      return;
+    }
+    
+    console.log('[MAIN][AUTO_SYNC] Triggering sync cycle, queue size:', queueSize);
+    const apiBase = process.env.API_BASE_URL || 'http://localhost:8080';
+    
+    try {
+      const res = await processSyncCycle(apiBase);
+      console.log('[MAIN][AUTO_SYNC] Completed:', res);
+      
+      // Handle auth expiry
+      if ((res as any).authExpired) {
+        clearAuthState();
+        emitToAll('auth:state', { authenticated: false });
+      }
+      
+      // Notify renderer of sync results
+      emitToAll('queue:update', { queueSize: getQueueSize(), sync: res });
+    } catch (e: any) {
+      console.error('[MAIN][AUTO_SYNC] Error:', e.message);
+    }
+  }, SYNC_INTERVAL_MS);
+  
   // IPC handlers (Phase 0.4 temporary minimal wiring)
   function userHasStaffRole() {
     const u = getAuthenticatedUser();
@@ -281,14 +268,35 @@ app.whenReady().then(async () => {
     }
   });
   ipcMain.handle('queue:getSize', () => ({ queueSize: getQueueSize() }));
+  ipcMain.handle('queue:enqueue', (_evt: any, params: { type: string; payload: any }) => {
+    try {
+      console.log('[MAIN] queue:enqueue called with type:', params.type, 'payload:', params.payload);
+      const outboxId = enqueue(params.type, params.payload);
+      console.log('[MAIN] Enqueued successfully, outboxId:', outboxId, 'new queue size:', getQueueSize());
+      emitToAll('queue:update', { queueSize: getQueueSize() });
+      return { ok: true, outboxId };
+    } catch (e: any) {
+      console.error('[MAIN] queue:enqueue failed:', e.message);
+      return { ok: false, error: e.message };
+    }
+  });
   ipcMain.handle('sync:force', async () => {
-    if (!getAuthenticatedUser()) return { pushed: 0, failures: 1, remaining: 0, error: 'NOT_AUTHENTICATED' };
-    if (!(getAuthenticatedUser()?.role === 'ADMIN' || getAuthenticatedUser()?.role === 'STAFF')) {
+    console.log('[MAIN] sync:force called');
+    const user = getAuthenticatedUser();
+    console.log('[MAIN] Current user:', user);
+    
+    if (!user) {
+      console.log('[MAIN] sync:force blocked: NOT_AUTHENTICATED');
+      return { pushed: 0, failures: 1, remaining: 0, error: 'NOT_AUTHENTICATED' };
+    }
+    if (!(user.role === 'ADMIN' || user.role === 'STAFF')) {
+      console.log('[MAIN] sync:force blocked: FORBIDDEN_ROLE, user role:', user.role);
       return { pushed: 0, failures: 1, remaining: 0, error: 'FORBIDDEN_ROLE' };
     }
     const apiBase = process.env.API_BASE_URL || 'http://localhost:8080';
-    console.log('asdasdfsafd');
+    console.log('[MAIN] sync:force starting, apiBase:', apiBase, 'queue size:', getQueueSize());
     const res = await processSyncCycle(apiBase);
+    console.log('[MAIN] sync:force completed, result:', res);
     if ((res as any).authExpired) {
       // Clear local auth state and notify renderer so UI can prompt re-login
       clearAuthState();

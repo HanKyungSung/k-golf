@@ -271,7 +271,8 @@ router.patch('/rooms/:id', requireAuth, async (req, res) => {
     const updated = await prisma.room.update({ where: { id }, data });
     res.json({ room: updated });
   } catch (e) {
-    console.error(e);
+    console.error('[ROOM UPDATE] Error updating room:', id, 'data:', data);
+    console.error('[ROOM UPDATE] Exception:', e);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

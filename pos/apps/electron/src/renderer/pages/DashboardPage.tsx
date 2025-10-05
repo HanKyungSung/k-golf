@@ -31,9 +31,10 @@ const TabsContent: React.FC<{ when: string; children: React.ReactNode }> = ({ wh
 
 // ---------------- Component ----------------
 const DashboardPage: React.FC = () => {
-  const { state } = useAuth();
+  const { state, forceSync, rooms: realRooms } = useAuth();
   const user = state.user || {}; const isAdmin = user.role === 'ADMIN';
-  const { bookings, rooms, updateBookingStatus, updateRoomStatus } = useBookingData();
+  const { bookings, updateBookingStatus, updateRoomStatus } = useBookingData();
+  const rooms = realRooms; // Use real rooms from backend instead of mock data
   const navigate = useNavigate();
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => new Date('2024-01-15T00:00:00Z'));
   const weekDays = useMemo(()=>dayRange(currentWeekStart), [currentWeekStart]);
@@ -47,16 +48,16 @@ const DashboardPage: React.FC = () => {
       case 'confirmed': return 'bg-green-500/20 text-green-300';
       case 'completed': return 'bg-blue-500/20 text-blue-300';
       case 'cancelled': return 'bg-red-500/20 text-red-300';
-      case 'available': return 'bg-green-500/20 text-green-300';
-      case 'maintenance': return 'bg-amber-500/20 text-amber-300';
-      case 'occupied': return 'bg-fuchsia-500/20 text-fuchsia-300';
+      case 'ACTIVE': return 'bg-emerald-500/20 text-emerald-300';
+      case 'MAINTENANCE': return 'bg-amber-500/20 text-amber-300';
+      case 'CLOSED': return 'bg-slate-500/30 text-slate-300';
       default: return 'bg-slate-600 text-slate-100';
     }
   };
 
   return (
     <div className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
-      <AppHeader onTest={()=>{}} onSync={()=>{}} />
+      <AppHeader onTest={()=>{}} onSync={forceSync} />
       <main className="flex-1 px-6 py-8 space-y-8 max-w-7xl mx-auto w-full">
         <header className="space-y-2">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">Admin Dashboard</h1>
@@ -65,7 +66,7 @@ const DashboardPage: React.FC = () => {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard title="Rooms" value={rooms.length} accent="text-amber-400" />
-          <StatCard title="Available" value={rooms.filter(r=>r.status==='available').length} accent="text-emerald-400" />
+          <StatCard title="Active" value={rooms.filter(r=>r.status==='ACTIVE').length} accent="text-emerald-400" />
             <StatCard title="Active" value={activeBookings.length} accent="text-sky-400" />
             <StatCard title="Revenue" value={`$${totalRevenue}`} accent="text-fuchsia-400" />
         </div>
@@ -137,11 +138,11 @@ const DashboardPage: React.FC = () => {
                         </CardHeader>
                         <CardContent className="pt-0 space-y-2">
                           <label className="text-[11px] text-slate-400">Update Status</label>
-                          <select value={r.status} onChange={e=>updateRoomStatus(r.id, e.target.value as any)} className="w-full text-xs bg-slate-700/50 border border-slate-600 rounded px-2 py-1 text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-400">
-                            <option value="available">Available</option>
-                            <option value="occupied">Occupied</option>
-                            <option value="maintenance">Maintenance</option>
-                          </select>
+                            <select value={r.status} onChange={e=>updateRoomStatus(r.id, e.target.value as any)} className="w-full text-xs bg-slate-700/50 border border-slate-600 rounded px-2 py-1 text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-400">
+                              <option value="ACTIVE">Active</option>
+                              <option value="MAINTENANCE">Maintenance</option>
+                              <option value="CLOSED">Closed</option>
+                            </select>
                         </CardContent>
                       </Card>
                     ))}

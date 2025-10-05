@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../app/authState';
 import { AppHeader } from '../components/layout/AppHeader';
 
 // Shared UI primitives
@@ -31,6 +32,7 @@ const categories: { key: Category; label: string }[] = [
 
 const MenuManagementPage: React.FC = () => {
   const navigate = useNavigate();
+  const { forceSync } = useAuth();
   const [items, setItems] = useState<MenuItem[]>(initialItems);
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -62,7 +64,7 @@ const MenuManagementPage: React.FC = () => {
 
   return (
     <div className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
-      <AppHeader onTest={()=>{}} onSync={()=>{}} />
+      <AppHeader onTest={()=>{}} onSync={forceSync} />
       <main className="flex-1 px-6 py-8 space-y-8 max-w-6xl mx-auto w-full">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { AuthState, Room } from '../types/models';
 import { api } from '../utils/bridge';
 type User = AuthState['user'];
@@ -22,7 +22,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [queueSize, setQueueSize] = useState(0);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
-  const prevAuthRef = React.useRef<boolean>(false);
+  const prevAuthRef = useRef<boolean>(false);
+  const prevAdminRef = useRef<boolean>(false);
+  const stateRef = useRef<AuthState>(state);
+  
+  // Keep stateRef in sync with state
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   const refreshAuth = useCallback(async () => {
     try {
@@ -46,10 +53,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const reloadRooms = useCallback(async () => {
-    if (!state.authenticated || state.user?.role !== 'ADMIN') { setRooms([]); return; }
+    // Use ref to avoid dependency on state (prevents infinite loop)
+    if (!stateRef.current.authenticated || stateRef.current.user?.role !== 'ADMIN') { setRooms([]); return; }
     setLoadingRooms(true);
     try { const res = await api()?.listRooms(); if (res?.ok) setRooms(res.rooms); } finally { setLoadingRooms(false); }
-  }, [state]);
+  }, []);
 
   useEffect(() => {
     api()?.onAuthState(() => refreshAuth());
@@ -60,14 +68,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (payload?.sync) {
           // eslint-disable-next-line no-console
           console.log('[SYNC][RENDERER] cycle result', payload.sync);
+          
+          // Reload rooms after successful sync (to get latest status from backend)
+          // Use ref to access current state without adding to dependencies
+          if (payload.sync.pushed > 0 && stateRef.current.authenticated && stateRef.current.user?.role === 'ADMIN') {
+            console.log('[SYNC][RENDERER] Reloading rooms after successful sync');
+            reloadRooms();
+          }
         }
       } catch {/* ignore */}
     });
     refreshAuth();
     loadQueue();
-  }, [refreshAuth, loadQueue]);
+  }, [refreshAuth, loadQueue, reloadRooms]);
 
-  useEffect(() => { if (state.authenticated && state.user?.role === 'ADMIN') reloadRooms(); }, [state, reloadRooms]);
+  // Only reload rooms when user becomes authenticated as ADMIN (not on every state change)
+  useEffect(() => {
+    const isAdmin = state.authenticated && state.user?.role === 'ADMIN';
+    
+    // Only reload if transitioning TO admin (not already admin)
+    if (isAdmin && !prevAdminRef.current) {
+      reloadRooms();
+    }
+    
+    prevAdminRef.current = isAdmin;
+  }, [state.authenticated, state.user?.role, reloadRooms]);
 
   async function login(email: string, password: string) {
   const res = await api()?.login(email, password);
@@ -112,6 +137,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (el) el.textContent = `Pushed ${res.pushed}, failures ${res.failures}${res.lastError ? ' ('+res.lastError.code+')' : ''}`;
         // eslint-disable-next-line no-console
         console.log('[SYNC][RENDERER] forceSync result', res);
+        
+        // Reload rooms after successful sync
+        if (res.pushed > 0 && state.user?.role === 'ADMIN') {
+          console.log('[SYNC][RENDERER] Reloading rooms after force sync');
+          await reloadRooms();
+        }
       }
       loadQueue();
     } catch {

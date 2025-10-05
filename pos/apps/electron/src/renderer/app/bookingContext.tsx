@@ -3,14 +3,14 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 export interface Booking {
   id: string; customerName: string; customerEmail: string; customerPhone?: string; roomName: string; roomId: string; date: string; time: string; duration: number; players: number; price: number; status: 'confirmed' | 'completed' | 'cancelled'; notes?: string; createdAt?: string;
 }
-export interface Room { id: string; name: string; capacity: number; hourlyRate: number; status: 'available' | 'maintenance' | 'occupied'; color: string }
+export interface Room { id: string; name: string; capacity: number; hourlyRate: number; status: 'ACTIVE' | 'MAINTENANCE' | 'CLOSED'; color: string }
 
 // Initial mock data (shared across dashboard + detail page)
 const initialRooms: Room[] = [
-  { id: '1', name: 'Room 1', capacity: 4, hourlyRate: 50, status: 'available', color: 'bg-blue-500' },
-  { id: '2', name: 'Room 2', capacity: 4, hourlyRate: 50, status: 'available', color: 'bg-green-500' },
-  { id: '3', name: 'Room 3', capacity: 4, hourlyRate: 50, status: 'available', color: 'bg-purple-500' },
-  { id: '4', name: 'Room 4', capacity: 4, hourlyRate: 50, status: 'available', color: 'bg-orange-500' },
+  { id: '1', name: 'Room 1', capacity: 4, hourlyRate: 50, status: 'ACTIVE', color: 'bg-blue-500' },
+  { id: '2', name: 'Room 2', capacity: 4, hourlyRate: 50, status: 'ACTIVE', color: 'bg-green-500' },
+  { id: '3', name: 'Room 3', capacity: 4, hourlyRate: 50, status: 'ACTIVE', color: 'bg-purple-500' },
+  { id: '4', name: 'Room 4', capacity: 4, hourlyRate: 50, status: 'ACTIVE', color: 'bg-orange-500' },
 ];
 const initialBookings: Booking[] = [
   { id: '1', customerName: 'John Doe', customerEmail: 'john@example.com', customerPhone: '+1 (555) 123-4567', roomName: 'Room 1', roomId: '1', date: '2024-01-15', time: '10:00', duration: 2, players: 2, price: 100, status: 'confirmed', notes: 'Birthday celebration', createdAt: '2024-01-10T10:30:00Z' },
@@ -43,7 +43,20 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const updateRoomStatus = useCallback((id: string, status: Room['status']) => {
+    console.log('[BOOKING_CTX] updateRoomStatus called:', { roomId: id, status });
+    
+    // Optimistically update local state
     setRooms(rs => rs.map(r => r.id === id ? { ...r, status } : r));
+    
+    // Enqueue mutation for background sync
+    if (window.kgolf?.enqueue) {
+      console.log('[BOOKING_CTX] Enqueueing room:update mutation');
+      window.kgolf.enqueue('room:update', { roomId: id, status })
+        .then((result: any) => console.log('[BOOKING_CTX] Enqueue result:', result))
+        .catch((err: any) => console.error('[BOOKING_CTX] Failed to enqueue room update:', err));
+    } else {
+      console.warn('[BOOKING_CTX] window.kgolf.enqueue not available');
+    }
   }, []);
 
   const getBookingById = useCallback((id: string) => bookings.find(b => b.id === id), [bookings]);

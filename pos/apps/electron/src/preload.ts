@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('kgolf', {
 	ping: () => 'pong',
 	createBooking: (data: { customerName: string; startsAt: string; endsAt: string }) => ipcRenderer.invoke('booking:create', data),
 	getQueueSize: () => ipcRenderer.invoke('queue:getSize'),
+	enqueue: (type: string, payload: any) => ipcRenderer.invoke('queue:enqueue', { type, payload }),
 	forceSync: () => ipcRenderer.invoke('sync:force'),
 	login: (email: string, password: string) => ipcRenderer.invoke('auth:login', { email, password }),
 	logout: () => ipcRenderer.invoke('auth:logout'),
