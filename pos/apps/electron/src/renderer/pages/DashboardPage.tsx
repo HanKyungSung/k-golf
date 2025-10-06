@@ -33,8 +33,8 @@ const TabsContent: React.FC<{ when: string; children: React.ReactNode }> = ({ wh
 const DashboardPage: React.FC = () => {
   const { state, forceSync, rooms: realRooms } = useAuth();
   const user = state.user || {}; const isAdmin = user.role === 'ADMIN';
-  const { bookings, updateBookingStatus, updateRoomStatus } = useBookingData();
-  const rooms = realRooms; // Use real rooms from backend instead of mock data
+  const { bookings, updateBookingStatus, updateRoomStatus, rooms: mockRooms } = useBookingData();
+  const rooms = mockRooms; // Use mock rooms for now (TODO: sync with real backend data)
   const navigate = useNavigate();
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => new Date('2024-01-15T00:00:00Z'));
   const weekDays = useMemo(()=>dayRange(currentWeekStart), [currentWeekStart]);
@@ -286,6 +286,23 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek }: CalendarProps
                   <Badge className="bg-slate-700/60 text-slate-300">{dayBookings.length} booking{dayBookings.length!==1?'s':''}</Badge>
                 </div>
                 <div className="space-y-2">
+                  {/* Hour labels row - shown once per day */}
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-[90px]"></div>
+                    <div className="flex-1 flex">
+                      {Array.from({ length: 13 }, (_, i) => {
+                        const hour = 9 + i;
+                        const displayHour = hour > 12 ? hour - 12 : hour;
+                        const period = hour < 12 ? 'A' : 'P';
+                        const label = `${displayHour}${period}`;
+                        return (
+                          <div key={i} className="flex-1 text-left">
+                            <span className="text-[9px] text-slate-500 pl-1">{label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                   {rooms.map(room => {
                     const roomBookings = dayBookings.filter(b => b.roomId === room.id);
                     return (
@@ -295,12 +312,8 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek }: CalendarProps
                         </div>
                         <div className="flex-1 relative h-14 bg-slate-700/30 rounded-lg border border-slate-700 overflow-hidden">
                           <div className="absolute inset-0 flex">
-                            {Array.from({ length: 14 }, (_, i) => (
-                              <div key={i} className="flex-1 border-r border-slate-700/40 last:border-r-0 relative">
-                                {i === 0 && <span className="text-[9px] text-slate-500 absolute top-1 left-1">9A</span>}
-                                {i === 6 && <span className="text-[9px] text-slate-500 absolute top-1 left-1/2 -translate-x-1/2">3P</span>}
-                                {i === 13 && <span className="text-[9px] text-slate-500 absolute top-1 right-1">10P</span>}
-                              </div>
+                            {Array.from({ length: 13 }, (_, i) => (
+                              <div key={i} className="flex-1 border-r border-slate-700/40 last:border-r-0"></div>
                             ))}
                           </div>
                           {roomBookings.map(b => {
