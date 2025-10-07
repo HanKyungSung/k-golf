@@ -4,11 +4,15 @@ const prisma = new PrismaClient();
 
 export interface CreateBookingInput {
   roomId: string;
-  userId: string; // placeholder until auth implemented
+  userId: string;
+  customerName: string;
+  customerPhone: string;
   startTime: Date;
+  endTime?: Date; // Optional, will compute from hours if not provided
   players: number;
-  hours: number;
+  hours?: number; // Optional if endTime provided
   price: number | string; // stored as Decimal(10,2) in DB
+  status?: string;
 }
 
 // Compute endTime: independent hours selection
@@ -29,16 +33,19 @@ export async function findConflict(roomId: string, startTime: Date, endTime: Dat
 }
 
 export async function createBooking(data: CreateBookingInput): Promise<Booking> {
-  const endTime = computeEnd(data.startTime, data.hours);
+  const endTime = data.endTime || (data.hours ? computeEnd(data.startTime, data.hours) : new Date(data.startTime.getTime() + 3600000));
   // Cast prisma to any until Prisma client is regenerated with the new schema
   return (prisma as any).booking.create({
     data: {
       roomId: data.roomId,
       userId: data.userId,
+      customerName: data.customerName,
+      customerPhone: data.customerPhone,
       startTime: data.startTime,
       endTime,
       players: data.players,
       price: data.price,
+      status: data.status || 'CONFIRMED',
     },
   });
 }

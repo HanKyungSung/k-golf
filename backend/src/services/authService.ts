@@ -58,8 +58,8 @@ export async function verifyPassword(password: string, stored: string): Promise<
   }
 }
 
-export async function createUser(email: string, name: string | null, passwordHash: string) {
-  return prisma.user.create({ data: { email, name, passwordHash: passwordHash as any, passwordUpdatedAt: new Date() } as any });
+export async function createUser(email: string, name: string, phone: string, passwordHash: string) {
+  return prisma.user.create({ data: { email, name, phone, passwordHash: passwordHash as any, passwordUpdatedAt: new Date() } as any });
 }
 
 export async function findUserByEmail(email: string) {

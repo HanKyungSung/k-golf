@@ -137,15 +137,17 @@ router.post('/', requireAuth, async (req, res) => {
   const price = players * hours * HOURLY_RATE; // decimal dollars
 
   try {
-  const booking = await createBooking({
+    const booking = await createBooking({
       roomId,
       userId: req.user!.id,
+      customerName: (req.user as any).name || 'Unknown',
+      customerPhone: (req.user as any).phone || 'N/A',
       startTime: start,
       players,
       hours,
       price,
     });
-  res.status(201).json({ booking: presentBooking(booking) });
+    res.status(201).json({ booking: presentBooking(booking) });
   } catch (e: any) {
     if (e.code === 'P2002') { // unique constraint
       return res.status(409).json({ error: 'Time slot already booked' });
@@ -273,6 +275,109 @@ router.patch('/rooms/:id', requireAuth, async (req, res) => {
   } catch (e) {
     console.error('[ROOM UPDATE] Error updating room:', id, 'data:', data);
     console.error('[ROOM UPDATE] Exception:', e);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin-only: Create booking for walk-in or phone customers
+const adminCreateBookingSchema = z.object({
+  customerName: z.string().min(1, 'Customer name is required'),
+  customerEmail: z.string().email('Valid email is required'),
+  customerPhone: z.string().min(1, 'Customer phone is required'),
+  roomId: z.string().uuid().or(z.string()),
+  startTimeIso: z.string().datetime(),
+  players: z.number().int().min(1).max(4),
+  hours: z.number().int().min(1).max(4),
+});
+
+router.post('/admin/create', requireAuth, async (req, res) => {
+  // Check if user is admin
+  if ((req.user as any).role !== UserRole.ADMIN) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  const parsed = adminCreateBookingSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+
+  const { customerName, customerEmail, customerPhone, roomId, startTimeIso, players, hours } = parsed.data;
+
+  // Fetch room for validation
+  const room: any = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!room) return res.status(404).json({ error: 'Room not found' });
+  if (room.status && room.status !== 'ACTIVE') {
+    return res.status(409).json({ error: 'Room not bookable (status)', status: room.status });
+  }
+
+  let start: Date;
+  try {
+    start = new Date(startTimeIso);
+    if (isNaN(start.getTime())) throw new Error('Invalid date');
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid startTimeIso' });
+  }
+
+  const end = new Date(start.getTime() + hours * 3600 * 1000);
+
+  // Check room hours
+  const startMinutes = start.getHours() * 60 + start.getMinutes();
+  const endMinutes = end.getHours() * 60 + end.getMinutes();
+  const openMinutes = room.openMinutes ?? 540;
+  const closeMinutes = room.closeMinutes ?? 1140;
+
+  if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+    return res.status(400).json({
+      error: 'Booking outside room operating hours',
+      roomHours: { open: openMinutes, close: closeMinutes },
+      bookingHours: { start: startMinutes, end: endMinutes },
+    });
+  }
+
+  // Check for conflicts
+  const conflict = await findConflict(roomId, start, end);
+  if (conflict) {
+    return res.status(409).json({ error: 'Time slot already booked', conflictingBooking: conflict.id });
+  }
+
+  // Find or create user
+  let user = await prisma.user.findUnique({ where: { email: customerEmail.toLowerCase() } });
+  if (!user) {
+    // Create a customer account for this walk-in/phone booking
+    user = await (prisma.user as any).create({
+      data: {
+        email: customerEmail.toLowerCase(),
+        name: customerName,
+        phone: customerPhone,
+        role: UserRole.CUSTOMER,
+        emailVerifiedAt: new Date(), // Auto-verify for admin-created accounts
+      },
+    });
+  }
+
+  // Calculate price (basic: hourlyRate * hours, if available)
+  const hourlyRate = 50; // TODO: Get from room or pricing config
+  const price = hourlyRate * hours;
+
+  try {
+    const booking = await createBooking({
+      roomId,
+      userId: user!.id,
+      customerName,
+      customerPhone,
+      startTime: start,
+      endTime: end,
+      players,
+      price,
+      status: 'CONFIRMED',
+    });
+
+    res.status(201).json({ booking: presentBooking(booking) });
+  } catch (e: any) {
+    if (e.code === 'P2002') {
+      return res.status(409).json({ error: 'Time slot already booked' });
+    }
+    console.error('[ADMIN CREATE BOOKING] Error:', e);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

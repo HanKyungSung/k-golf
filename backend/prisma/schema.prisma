@@ -21,7 +21,8 @@ enum UserRole {
 model User {
   id                 String              @id @default(uuid())
   email              String              @unique
-  name               String?
+  name               String
+  phone              String
   emailVerifiedAt    DateTime? @db.Timestamptz // retained but unused in password-only flow (can drop later)
   passwordHash       String?
   passwordUpdatedAt  DateTime? @db.Timestamptz
@@ -54,18 +55,20 @@ enum RoomStatus {
 }
 
 model Booking {
-  id         String        @id @default(uuid())
-  room       Room          @relation(fields: [roomId], references: [id])
-  roomId     String
-  user       User          @relation(fields: [userId], references: [id])
-  userId     String
-  startTime  DateTime @db.Timestamptz
-  endTime    DateTime @db.Timestamptz
-  players    Int
-  price      Decimal       @db.Decimal(10, 2)
-  status     String        @default("CONFIRMED")
-  createdAt  DateTime      @default(now()) @db.Timestamptz
-  updatedAt  DateTime      @updatedAt @db.Timestamptz
+  id            String        @id @default(uuid())
+  room          Room          @relation(fields: [roomId], references: [id])
+  roomId        String
+  user          User          @relation(fields: [userId], references: [id])
+  userId        String
+  customerName  String        // Denormalized for display
+  customerPhone String        // Denormalized for contact
+  startTime     DateTime @db.Timestamptz
+  endTime       DateTime @db.Timestamptz
+  players       Int
+  price         Decimal       @db.Decimal(10, 2)
+  status        String        @default("CONFIRMED")
+  createdAt     DateTime      @default(now()) @db.Timestamptz
+  updatedAt     DateTime      @updatedAt @db.Timestamptz
 
   @@index([roomId, startTime])
   @@index([userId, startTime])

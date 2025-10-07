@@ -10,6 +10,7 @@ const router = Router();
 const registerSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
+  phone: z.string().min(1, 'Phone number is required'),
   password: z.string().min(10).regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, 'Password must contain a letter and a number')
 });
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
@@ -20,12 +21,12 @@ const resendSchema = z.object({ email: z.string().email() });
 router.post('/register', async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const { email, name, password } = parsed.data;
+  const { email, name, phone, password } = parsed.data;
   const normEmail = email.toLowerCase();
   const existing = await findUserByEmail(normEmail);
   if (existing) return res.status(409).json({ error: 'Email already in use' });
   const passwordHash = await hashPassword(password);
-  const user = await createUser(normEmail, name, passwordHash);
+  const user = await createUser(normEmail, name, phone, passwordHash);
   const { plain, expiresAt } = await createEmailVerificationToken(user.id);
   try {
     await sendVerificationEmail({ to: user.email, email: user.email, token: plain, expiresAt });
@@ -54,7 +55,7 @@ router.post('/login', async (req, res) => {
   if (!ok) return res.status(401).json({ code: 'WRONG_PASSWORD', message: 'Wrong password' });
   const { sessionToken } = await createSession(user.id);
   setAuthCookie(res, sessionToken);
-  return res.json({ user: { id: user.id, email: user.email, name: user.name, role: (user as any).role } });
+  return res.json({ user: { id: user.id, email: user.email, name: user.name, phone: (user as any).phone, role: (user as any).role } });
 });
 
 // POST /auth/verify (email + token) => sets emailVerifiedAt and issues session
@@ -83,7 +84,7 @@ router.get('/me', async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Unauthenticated' });
   const session = await getSession(token);
   if (!session) return res.status(401).json({ error: 'Unauthenticated' });
-  return res.json({ user: { id: session.user.id, email: session.user.email, name: (session.user as any).name, role: (session.user as any).role } });
+  return res.json({ user: { id: session.user.id, email: session.user.email, name: (session.user as any).name, phone: (session.user as any).phone, role: (session.user as any).role } });
 });
 
 // POST /auth/logout
