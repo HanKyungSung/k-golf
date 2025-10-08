@@ -3,33 +3,79 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useBookingData } from '../app/bookingContext';
 import { useAuth } from '../app/authState';
 import { AppHeader } from '../components/layout/AppHeader';
+import { 
+  Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, Button, 
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Separator, Tabs, TabsList, TabsTrigger, TabsContent 
+} from '../components/ui/primitives';
 
-// Shared UI primitives
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from '../components/ui/primitives';
+// Simple icon components (replacing lucide-react dependency)
+const Users = ({ className = '' }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+);
+const Plus = ({ className = '' }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+);
+const Minus = ({ className = '' }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
+);
+const Trash2 = ({ className = '' }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+);
+const Printer = ({ className = '' }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+);
+const MoveRight = ({ className = '' }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+);
+const Split = ({ className = '' }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12M8 12h12m-12 5h12M3 7h.01M3 12h.01M3 17h.01" /></svg>
+);
 
-const statusStyles: Record<string,string> = {
+const statusStyles: Record<string, string> = {
   confirmed: 'bg-green-500/20 text-green-300',
   completed: 'bg-blue-500/20 text-blue-300',
   cancelled: 'bg-red-500/20 text-red-300'
 };
 
-// Mock menu items (would come from bridge / IPC later)
-interface MenuItem { id: string; name: string; description: string; price: number; category: 'food'|'drinks'|'appetizers'|'desserts'; available: boolean }
-interface OrderItem { menuItem: MenuItem; quantity: number }
+// Enhanced menu items with full category support
+interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: 'food' | 'drinks' | 'appetizers' | 'desserts';
+  available: boolean;
+}
+
+interface OrderItem {
+  id: string; // Unique ID for each order item instance
+  menuItem: MenuItem;
+  quantity: number;
+  seat?: number;
+  splitPrice?: number; // For cost-split items
+}
+
 const mockMenu: MenuItem[] = [
-  { id:'1', name:'Club Sandwich', description:'Triple-decker with turkey, bacon, lettuce, tomato', price:12.99, category:'food', available:true },
-  { id:'2', name:'Korean Fried Chicken', description:'Crispy chicken w/ sweet & spicy sauce', price:15.99, category:'food', available:true },
-  { id:'3', name:'Bulgogi Burger', description:'Marinated beef burger w/ kimchi', price:14.99, category:'food', available:true },
-  { id:'4', name:'Caesar Salad', description:'Romaine, parmesan, croutons', price:9.99, category:'food', available:true },
-  { id:'5', name:'Soju', description:'Original / Peach / Grape', price:8.99, category:'drinks', available:true },
-  { id:'6', name:'Beer', description:'Domestic & imported', price:6.99, category:'drinks', available:true },
-  { id:'7', name:'Soft Drinks', description:'Coke • Sprite • Etc', price:2.99, category:'drinks', available:true },
-  { id:'8', name:'Iced Coffee', description:'Cold brew over ice', price:4.99, category:'drinks', available:true },
-  { id:'9', name:'Chicken Wings', description:'6pc choice of sauce', price:10.99, category:'appetizers', available:true },
-  { id:'10', name:'French Fries', description:'Crispy golden fries', price:5.99, category:'appetizers', available:true },
-  { id:'11', name:'Mozzarella Sticks', description:'6pc + marinara', price:8.99, category:'appetizers', available:true },
-  { id:'12', name:'Ice Cream', description:'Vanilla / Choc / Strawberry', price:5.99, category:'desserts', available:true },
+  // Food
+  { id: '1', name: 'Club Sandwich', description: 'Triple-decker with turkey, bacon, lettuce, and tomato', price: 12.99, category: 'food', available: true },
+  { id: '2', name: 'Korean Fried Chicken', description: 'Crispy chicken with sweet and spicy sauce', price: 15.99, category: 'food', available: true },
+  { id: '3', name: 'Bulgogi Burger', description: 'Korean-style marinated beef burger with kimchi', price: 14.99, category: 'food', available: true },
+  { id: '4', name: 'Caesar Salad', description: 'Fresh romaine with parmesan and croutons', price: 9.99, category: 'food', available: true },
+  // Drinks
+  { id: '5', name: 'Soju', description: 'Korean distilled spirit (Original/Peach/Grape)', price: 8.99, category: 'drinks', available: true },
+  { id: '6', name: 'Beer', description: 'Domestic and imported selection', price: 6.99, category: 'drinks', available: true },
+  { id: '7', name: 'Soft Drinks', description: 'Coke, Sprite, Fanta, etc.', price: 2.99, category: 'drinks', available: true },
+  { id: '8', name: 'Iced Coffee', description: 'Cold brew coffee with ice', price: 4.99, category: 'drinks', available: true },
+  // Appetizers
+  { id: '9', name: 'Chicken Wings', description: '6 pieces with choice of sauce', price: 10.99, category: 'appetizers', available: true },
+  { id: '10', name: 'French Fries', description: 'Crispy golden fries with ketchup', price: 5.99, category: 'appetizers', available: true },
+  { id: '11', name: 'Mozzarella Sticks', description: '6 pieces with marinara sauce', price: 8.99, category: 'appetizers', available: true },
+  // Desserts
+  { id: '12', name: 'Ice Cream', description: 'Vanilla, chocolate, or strawberry', price: 5.99, category: 'desserts', available: true },
 ];
+
+const seatColors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500'];
 
 export default function BookingDetailPage() {
   const { id } = useParams();
@@ -37,49 +83,494 @@ export default function BookingDetailPage() {
   const { forceSync } = useAuth();
   const { getBookingById, updateBookingStatus, rooms } = useBookingData();
   const booking = getBookingById(id!);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [activeMenuTab, setActiveMenuTab] = useState<'food'|'drinks'|'appetizers'|'desserts'>('food');
 
-  useEffect(()=>{ if(!booking) navigate('/', { replace:true }); }, [booking, navigate]);
-  const roomColor = useMemo(()=> rooms.find(r=>r.id===booking?.roomId)?.color || 'bg-slate-600', [rooms, booking]);
+  // Seat and order management state
+  const [numberOfSeats, setNumberOfSeats] = useState<number>(1);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [selectedOrderItem, setSelectedOrderItem] = useState<OrderItem | null>(null);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [showSplitDialog, setShowSplitDialog] = useState(false);
+  const [selectedSeatsForSplit, setSelectedSeatsForSplit] = useState<number[]>([]);
+  const [showAddItemDialog, setShowAddItemDialog] = useState(false);
+  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
+  const [printingSeat, setPrintingSeat] = useState<number | null>(null);
+
+  // Load saved orders and seats from localStorage
+  useEffect(() => {
+    if (!id) return;
+    const savedOrders = localStorage.getItem(`booking-${id}-orders`);
+    const savedSeats = localStorage.getItem(`booking-${id}-seats`);
+
+    if (savedOrders) {
+      try {
+        setOrderItems(JSON.parse(savedOrders));
+      } catch (e) {
+        console.error('[BookingDetail] Failed to load saved orders:', e);
+      }
+    }
+
+    if (savedSeats) {
+      try {
+        setNumberOfSeats(JSON.parse(savedSeats));
+      } catch (e) {
+        console.error('[BookingDetail] Failed to load saved seats:', e);
+      }
+    }
+  }, [id]);
+
+  // Save to localStorage whenever orders or seats change
+  useEffect(() => {
+    if (!id) return;
+    if (orderItems.length > 0 || numberOfSeats > 1) {
+      localStorage.setItem(`booking-${id}-orders`, JSON.stringify(orderItems));
+      localStorage.setItem(`booking-${id}-seats`, JSON.stringify(numberOfSeats));
+    }
+  }, [orderItems, numberOfSeats, id]);
+
+  // Initialize seats based on booking players
+  useEffect(() => {
+    if (booking && numberOfSeats === 1) {
+      setNumberOfSeats(Math.min(booking.players, 4));
+    }
+  }, [booking, numberOfSeats]);
+
+  useEffect(() => {
+    if (!booking) navigate('/', { replace: true });
+  }, [booking, navigate]);
+
+  const roomColor = useMemo(
+    () => rooms.find((r) => r.id === booking?.roomId)?.color || 'bg-slate-600',
+    [rooms, booking]
+  );
+
   if (!booking) return null;
 
   const changeStatus = (s: typeof booking.status) => updateBookingStatus(booking.id, s);
 
-  // --- Order helpers ---
-  const addItem = (item: MenuItem) => {
-    setOrderItems(curr => {
-      const existing = curr.find(ci => ci.menuItem.id === item.id);
-      if (existing) return curr.map(ci => ci.menuItem.id===item.id?{...ci, quantity: ci.quantity+1}:ci);
-      return [...curr, { menuItem: item, quantity: 1 }];
-    });
+  // Order management functions
+  const addItemToSeat = (menuItem: MenuItem, seat: number) => {
+    const newItem: OrderItem = {
+      id: `${menuItem.id}-${Date.now()}-${Math.random()}`,
+      menuItem,
+      quantity: 1,
+      seat,
+    };
+    setOrderItems([...orderItems, newItem]);
   };
-  const updateQty = (id: string, delta: number) => setOrderItems(curr => curr.map(ci => ci.menuItem.id===id?{...ci, quantity: Math.max(0, ci.quantity+delta)}:ci).filter(ci=>ci.quantity>0));
-  const removeItem = (id: string) => setOrderItems(c => c.filter(ci=>ci.menuItem.id!==id));
-  const subtotal = orderItems.reduce((s,oi)=> s + oi.menuItem.price * oi.quantity, 0);
-  const tax = subtotal * 0.08;
-  const totalFoods = subtotal + tax;
-  const grandTotal = booking.price + totalFoods;
-  const itemsByCategory = (cat: MenuItem['category']) => mockMenu.filter(m => m.category===cat && m.available);
-  const printReceipt = () => window.print();
+
+  const updateItemQuantity = (orderItemId: string, change: number) => {
+    setOrderItems(
+      orderItems
+        .map((item) =>
+          item.id === orderItemId ? { ...item, quantity: Math.max(0, item.quantity + change) } : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
+  const removeOrderItem = (orderItemId: string) => {
+    setOrderItems(orderItems.filter((item) => item.id !== orderItemId));
+  };
+
+  const moveItemToSeat = (orderItemId: string, newSeat: number | undefined) => {
+    setOrderItems(orderItems.map((item) => (item.id === orderItemId ? { ...item, seat: newSeat } : item)));
+    setShowMoveDialog(false);
+    setSelectedOrderItem(null);
+  };
+
+  const splitItemAcrossSeats = () => {
+    if (!selectedOrderItem || selectedSeatsForSplit.length === 0) return;
+
+    const splitPrice = selectedOrderItem.menuItem.price / selectedSeatsForSplit.length;
+
+    const newItems: OrderItem[] = selectedSeatsForSplit.map((seat) => ({
+      id: `${selectedOrderItem.menuItem.id}-${Date.now()}-${Math.random()}`,
+      menuItem: selectedOrderItem.menuItem,
+      quantity: selectedOrderItem.quantity,
+      seat,
+      splitPrice,
+    }));
+
+    setOrderItems([...orderItems.filter((item) => item.id !== selectedOrderItem.id), ...newItems]);
+    setShowSplitDialog(false);
+    setSelectedOrderItem(null);
+    setSelectedSeatsForSplit([]);
+  };
+
+  const openSplitDialog = (item: OrderItem) => {
+    setSelectedOrderItem(item);
+    setSelectedSeatsForSplit([]);
+    setShowSplitDialog(true);
+  };
+
+  const toggleSeatForSplit = (seat: number) => {
+    if (selectedSeatsForSplit.includes(seat)) {
+      setSelectedSeatsForSplit(selectedSeatsForSplit.filter((s) => s !== seat));
+    } else {
+      setSelectedSeatsForSplit([...selectedSeatsForSplit, seat]);
+    }
+  };
+
+  const handleMenuItemClick = (menuItem: MenuItem) => {
+    setSelectedMenuItem(menuItem);
+    setShowAddItemDialog(true);
+  };
+
+  const addItemFromDialog = (seat: number) => {
+    if (selectedMenuItem) {
+      addItemToSeat(selectedMenuItem, seat);
+      setShowAddItemDialog(false);
+      setSelectedMenuItem(null);
+    }
+  };
+
+  const handlePrintSeat = (seat: number) => {
+    setPrintingSeat(seat);
+    setTimeout(() => {
+      window.print();
+      setPrintingSeat(null);
+    }, 100);
+  };
+
+  const handlePrintReceipt = () => {
+    window.print();
+  };
+
+  // Calculation functions
+  const getItemsByCategory = (category: MenuItem['category']) => {
+    return mockMenu.filter((item) => item.category === category && item.available);
+  };
+
+  const getItemsForSeat = (seat: number) => {
+    return orderItems.filter((item) => item.seat === seat);
+  };
+
+  const calculateSeatSubtotal = (seat: number) => {
+    return getItemsForSeat(seat).reduce((sum, item) => {
+      const price = item.splitPrice || item.menuItem.price;
+      return sum + price * item.quantity;
+    }, 0);
+  };
+
+  const calculateSeatTax = (seat: number) => {
+    return calculateSeatSubtotal(seat) * 0.08;
+  };
+
+  const calculateSeatTotal = (seat: number) => {
+    return calculateSeatSubtotal(seat) + calculateSeatTax(seat);
+  };
+
+  const calculateSubtotal = () => {
+    return orderItems.reduce((sum, item) => sum + (item.splitPrice || item.menuItem.price) * item.quantity, 0);
+  };
+
+  const calculateTax = () => {
+    return calculateSubtotal() * 0.08;
+  };
+
+  const calculateTotal = () => {
+    return calculateSubtotal() + calculateTax();
+  };
 
   return (
     <div className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
-      <AppHeader onTest={()=>{}} onSync={forceSync} />
-      <main className="flex-1 px-6 py-8 space-y-8 max-w-5xl mx-auto w-full">
-        <div className="flex items-center justify-between">
+      <style>{`
+        @media print {
+          body {
+            background: white !important;
+          }
+          
+          .no-print {
+            display: none !important;
+          }
+          
+          .print-only {
+            display: block !important;
+          }
+
+          .seat-section {
+            display: none !important;
+          }
+
+          ${printingSeat ? `.seat-section-${printingSeat} { display: block !important; }` : '.seat-section { display: block !important; }'}
+          
+          .print-receipt {
+            background: white !important;
+            color: black !important;
+            border: none !important;
+            box-shadow: none !important;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+          }
+          
+          .print-receipt * {
+            background: transparent !important;
+            color: black !important;
+            border-color: #ddd !important;
+          }
+          
+          .print-receipt h1,
+          .print-receipt h2,
+          .print-receipt h3,
+          .print-receipt h4 {
+            color: black !important;
+          }
+          
+          .print-receipt .text-amber-400,
+          .print-receipt .text-amber-500,
+          .print-receipt .text-amber-600 {
+            color: #d97706 !important;
+          }
+          
+          .print-separator {
+            border-top: 2px solid #000 !important;
+            margin: 20px 0;
+          }
+        }
+        
+        .print-only {
+          display: none;
+        }
+      `}</style>
+
+      <AppHeader onTest={() => {}} onSync={forceSync} />
+
+      {/* Print-only header */}
+      <div className="print-only mb-8 text-center">
+        <h1 className="text-4xl font-bold mb-2">K-Golf</h1>
+        <p className="text-lg">Premium Screen Golf Experience</p>
+        <p className="text-sm mt-2">123 Golf Street, City, State 12345 | (555) 123-4567</p>
+        <div className="print-separator" />
+      </div>
+
+      <main className="flex-1 px-6 py-8 space-y-6 max-w-[1800px] mx-auto w-full">
+        <div className="flex items-center justify-between no-print">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">Booking Details</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
+              Booking Details
+            </h1>
             <p className="text-slate-400 text-sm mt-1">ID: {booking.id}</p>
           </div>
           <div className="flex items-center gap-3">
             <Badge className={`${statusStyles[booking.status]} capitalize`}>{booking.status}</Badge>
-            <button onClick={()=>navigate(-1)} className="text-xs px-3 py-2 rounded bg-slate-700 text-slate-200 hover:bg-slate-600 border border-slate-600">Back</button>
+            <Button size="sm" variant="outline" onClick={() => navigate(-1)}>
+              Back
+            </Button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4">
+            {/* Seat Management */}
+            <Card className="no-print">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-amber-400" />
+                  Seat Management
+                </CardTitle>
+                <CardDescription>Adjust number of seats for bill splitting</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
+                  <span className="text-white font-medium">Number of Seats</span>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      size="sm"
+                      onClick={() => setNumberOfSeats(Math.max(1, numberOfSeats - 1))}
+                      disabled={numberOfSeats <= 1}
+                      className="h-10 w-10 p-0"
+                    >
+                      <Minus className="h-5 w-5" />
+                    </Button>
+                    <span className="text-2xl font-bold text-amber-400 w-12 text-center">{numberOfSeats}</span>
+                    <Button
+                      size="sm"
+                      onClick={() => setNumberOfSeats(Math.min(4, numberOfSeats + 1))}
+                      disabled={numberOfSeats >= 4}
+                      className="h-10 w-10 p-0"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Current Order */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl">Current Order</CardTitle>
+                    <CardDescription>{orderItems.length} item(s)</CardDescription>
+                  </div>
+                  <Button size="sm" onClick={handlePrintReceipt} className="no-print">
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print All
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 max-h-[700px] overflow-y-auto">
+                {orderItems.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400">
+                    <p className="text-lg">No items yet</p>
+                    <p className="text-sm mt-2">Select items from the menu to add</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Seat sections */}
+                    {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => {
+                      const seatItems = getItemsForSeat(seat);
+                      if (seatItems.length === 0) return null;
+
+                      return (
+                        <div
+                          key={seat}
+                          className={`space-y-3 pt-4 border-t-2 border-slate-700 first:border-t-0 first:pt-0 seat-section seat-section-${seat}`}
+                        >
+                          <div className="flex items-center justify-between pb-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded-full ${seatColors[seat - 1]}`} />
+                              <h4 className="font-bold text-white uppercase text-lg">Seat {seat}</h4>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => handlePrintSeat(seat)}
+                              variant="outline"
+                              className="no-print bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border-amber-500/50"
+                            >
+                              <Printer className="h-4 w-4 mr-1" />
+                              Print Seat {seat}
+                            </Button>
+                          </div>
+
+                          {seatItems.map((item) => (
+                            <div key={item.id} className="p-4 bg-slate-900/50 rounded-lg space-y-3 border border-slate-700">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <p className="text-white font-semibold text-lg">{item.menuItem.name}</p>
+                                  <p className="text-sm text-slate-400">
+                                    {item.splitPrice ? (
+                                      <>
+                                        ${item.splitPrice.toFixed(2)} each{' '}
+                                        <span className="text-amber-400">(split)</span>
+                                      </>
+                                    ) : (
+                                      `$${item.menuItem.price.toFixed(2)} each`
+                                    )}
+                                  </p>
+                                </div>
+                                <p className="text-amber-400 font-bold text-xl">
+                                  ${((item.splitPrice || item.menuItem.price) * item.quantity).toFixed(2)}
+                                </p>
+                              </div>
+
+                              {/* Quantity controls */}
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => updateItemQuantity(item.id, -1)}
+                                  className="h-10 w-10 p-0 no-print"
+                                  variant="outline"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                <span className="text-white font-bold w-16 text-center text-xl">{item.quantity}</span>
+                                <Button
+                                  size="sm"
+                                  onClick={() => updateItemQuantity(item.id, 1)}
+                                  className="h-10 w-10 p-0 no-print"
+                                  variant="outline"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              {/* Action buttons */}
+                              <div className="grid grid-cols-3 gap-2 no-print">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedOrderItem(item);
+                                    setShowMoveDialog(true);
+                                  }}
+                                  variant="outline"
+                                  className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border-blue-500/50 h-10"
+                                >
+                                  Move
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => openSplitDialog(item)}
+                                  variant="outline"
+                                  className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 border-purple-500/50 h-10"
+                                >
+                                  Split
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => removeOrderItem(item.id)}
+                                  variant="outline"
+                                  className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/50 h-10"
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Seat totals */}
+                          <div className="space-y-1 pt-2 bg-slate-900/30 p-4 rounded-lg">
+                            <div className="flex justify-between text-slate-300">
+                              <span>Seat {seat} Subtotal</span>
+                              <span>${calculateSeatSubtotal(seat).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-slate-300">
+                              <span>Tax (8%)</span>
+                              <span>${calculateSeatTax(seat).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-white font-bold text-lg">
+                              <span>Seat {seat} Total</span>
+                              <span className="text-amber-400">${calculateSeatTotal(seat).toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Grand Total */}
+                    <div className="space-y-2 pt-4 border-t-2 border-amber-500/30">
+                      <div className="flex justify-between text-slate-300">
+                        <span>Food & Drinks Subtotal</span>
+                        <span>${calculateSubtotal().toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-300">
+                        <span>Tax (8%)</span>
+                        <span>${calculateTax().toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-white font-bold text-lg">
+                        <span>Food & Drinks Total</span>
+                        <span className="text-amber-400">${calculateTotal().toFixed(2)}</span>
+                      </div>
+                      <Separator className="bg-slate-700" />
+                      <div className="flex justify-between text-slate-300">
+                        <span>Room Booking ({booking.duration}h)</span>
+                        <span>${booking.price.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-white font-bold text-xl pt-2">
+                        <span>Grand Total</span>
+                        <span className="text-amber-400">${(booking.price + calculateTotal()).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            {/* Customer Info */}
             <Card>
               <CardHeader>
                 <CardTitle>Customer Information</CardTitle>
@@ -98,14 +589,23 @@ export default function BookingDetailPage() {
               </CardContent>
             </Card>
 
+            {/* Booking Info */}
             <Card>
               <CardHeader>
                 <CardTitle>Booking Information</CardTitle>
-                <CardDescription>Temporal + Room details</CardDescription>
+                <CardDescription>Session details</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <InfoBlock label="Room" value={<span className="flex items-center gap-2"><span className={`w-3 h-3 rounded ${roomColor}`}></span>{booking.roomName}</span>} />
+                  <InfoBlock
+                    label="Room"
+                    value={
+                      <span className="flex items-center gap-2">
+                        <span className={`w-3 h-3 rounded ${roomColor}`}></span>
+                        {booking.roomName}
+                      </span>
+                    }
+                  />
                   <InfoBlock label="Date" value={new Date(booking.date).toLocaleDateString()} />
                   <InfoBlock label="Start Time" value={booking.time} />
                   <InfoBlock label="Duration" value={`${booking.duration} hour(s)`} />
@@ -113,7 +613,7 @@ export default function BookingDetailPage() {
                   <InfoBlock label="Price" value={`$${booking.price}`} />
                 </div>
                 {booking.notes && (
-                  <div className="pt-4 border-t border-slate-700">
+                  <div className="pt-4 border-t border-slate-700 mt-4">
                     <p className="text-xs text-slate-400 mb-1">Notes</p>
                     <p className="text-sm text-slate-200">{booking.notes}</p>
                   </div>
@@ -121,37 +621,48 @@ export default function BookingDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Order Management */}
-            <Card>
+            {/* Menu */}
+            <Card className="no-print">
               <CardHeader>
-                <CardTitle>Order Management</CardTitle>
-                <CardDescription>Add food & drinks to this booking (local mock)</CardDescription>
+                <CardTitle>Menu</CardTitle>
+                <CardDescription>Click items to add to order</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {(['food','drinks','appetizers','desserts'] as const).map(cat => (
-                    <button key={cat} onClick={()=>setActiveMenuTab(cat)} className={`px-3 py-1 rounded border border-slate-600 capitalize ${activeMenuTab===cat? 'bg-amber-500 text-black border-amber-500':'bg-slate-700/40 text-slate-300 hover:bg-slate-600/50'}`}>{cat}</button>
-                  ))}
-                </div>
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {itemsByCategory(activeMenuTab).map(item => (
-                    <div key={item.id} className="flex items-start gap-4 justify-between p-3 rounded-md border border-slate-700 bg-slate-800/40 hover:bg-slate-700/40 transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{item.name}</p>
-                        <p className="text-[11px] text-slate-400 line-clamp-2">{item.description}</p>
-                        <p className="text-xs text-amber-400 font-medium mt-1">${item.price.toFixed(2)}</p>
+              <CardContent>
+                <Tabs defaultValue="food" className="space-y-4">
+                  <TabsList className="grid-cols-2 w-full">
+                    <TabsTrigger value="food">Food</TabsTrigger>
+                    <TabsTrigger value="drinks">Drinks</TabsTrigger>
+                  </TabsList>
+                  <TabsList className="grid-cols-2 w-full">
+                    <TabsTrigger value="appetizers">Appetizers</TabsTrigger>
+                    <TabsTrigger value="desserts">Desserts</TabsTrigger>
+                  </TabsList>
+
+                  {(['food', 'drinks', 'appetizers', 'desserts'] as const).map((category) => (
+                    <TabsContent key={category} value={category}>
+                      <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                        {getItemsByCategory(category).map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => handleMenuItemClick(item)}
+                            className="w-full flex flex-col items-start p-4 border-2 border-slate-700 rounded-lg hover:bg-amber-500/10 hover:border-amber-500 bg-slate-800/80 transition-all text-left group"
+                          >
+                            <h4 className="font-bold text-white text-base mb-1 group-hover:text-amber-400 transition-colors">
+                              {item.name}
+                            </h4>
+                            <p className="text-xs text-slate-400 mb-2 line-clamp-2">{item.description}</p>
+                            <p className="text-amber-400 font-bold text-lg">${item.price.toFixed(2)}</p>
+                          </button>
+                        ))}
                       </div>
-                      <button onClick={()=>addItem(item)} className="text-xs px-2 py-1 rounded bg-amber-500 text-black font-medium hover:bg-amber-600">Add</button>
-                    </div>
+                    </TabsContent>
                   ))}
-                  {itemsByCategory(activeMenuTab).length===0 && <div className="text-xs text-slate-500 py-6 text-center">No items</div>}
-                </div>
+                </Tabs>
               </CardContent>
             </Card>
-          </div>
 
-          <div className="space-y-6">
-            <Card>
+            {/* Actions */}
+            <Card className="no-print">
               <CardHeader>
                 <CardTitle>Actions</CardTitle>
                 <CardDescription>Update booking status</CardDescription>
@@ -159,85 +670,221 @@ export default function BookingDetailPage() {
               <CardContent className="space-y-3">
                 {booking.status === 'confirmed' && (
                   <>
-                    <button onClick={()=>changeStatus('completed')} className="w-full text-sm px-3 py-2 rounded bg-green-500 text-white hover:bg-green-600">Mark as Completed</button>
-                    <button onClick={()=>changeStatus('cancelled')} className="w-full text-sm px-3 py-2 rounded bg-red-500/20 text-red-300 border border-red-500/40 hover:bg-red-500/30">Cancel Booking</button>
+                    <Button onClick={() => changeStatus('completed')} className="w-full bg-green-500 hover:bg-green-600">
+                      Mark as Completed
+                    </Button>
+                    <Button
+                      onClick={() => changeStatus('cancelled')}
+                      variant="outline"
+                      className="w-full border-red-400/50 text-red-400 hover:bg-red-500/10 bg-transparent"
+                    >
+                      Cancel Booking
+                    </Button>
                   </>
                 )}
                 {booking.status === 'cancelled' && (
-                  <button onClick={()=>changeStatus('confirmed')} className="w-full text-sm px-3 py-2 rounded bg-amber-500 text-black hover:bg-amber-600">Restore Booking</button>
+                  <Button onClick={() => changeStatus('confirmed')} className="w-full">
+                    Restore Booking
+                  </Button>
                 )}
-                {booking.status === 'completed' && <div className="text-center text-slate-400 text-xs py-4">Booking completed</div>}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Metadata</CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs space-y-3">
-                <div>
-                  <p className="text-slate-400">Created</p>
-                  <p className="text-slate-200">{booking.createdAt ? new Date(booking.createdAt).toLocaleString() : '—'}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400">Booking ID</p>
-                  <p className="text-slate-200 font-mono">{booking.id}</p>
-                </div>
+                {booking.status === 'completed' && (
+                  <div className="text-center text-slate-400 py-4">Booking completed</div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Order Receipt / Summary */}
-            <Card>
+            {/* Metadata */}
+            <Card className="no-print">
               <CardHeader>
-                <CardTitle>Receipt</CardTitle>
-                <CardDescription>Current order summary (local only)</CardDescription>
+                <CardTitle>Metadata</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {orderItems.length===0 && <div className="text-xs text-slate-500 text-center py-4">No items added</div>}
-                {orderItems.length>0 && (
-                  <div className="space-y-3">
-                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                      {orderItems.map(oi => (
-                        <div key={oi.menuItem.id} className="flex items-center justify-between gap-3 text-xs p-2 bg-slate-700/30 rounded border border-slate-600/40">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-slate-200 font-medium truncate">{oi.menuItem.name}</p>
-                            <p className="text-[10px] text-slate-400">${oi.menuItem.price.toFixed(2)} each</p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <button onClick={()=>updateQty(oi.menuItem.id,-1)} className="w-6 h-6 rounded bg-slate-600 text-slate-200 text-xs hover:bg-slate-500">-</button>
-                            <span className="w-6 text-center text-slate-100 font-semibold">{oi.quantity}</span>
-                            <button onClick={()=>updateQty(oi.menuItem.id,1)} className="w-6 h-6 rounded bg-slate-600 text-slate-200 text-xs hover:bg-slate-500">+</button>
-                          </div>
-                          <div className="text-slate-100 font-semibold w-14 text-right">${(oi.menuItem.price*oi.quantity).toFixed(2)}</div>
-                          <button onClick={()=>removeItem(oi.menuItem.id)} className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">x</button>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="text-[11px] space-y-1 pt-1 border-t border-slate-700">
-                      <div className="flex justify-between"><span className="text-slate-400">Items Subtotal</span><span className="text-slate-200">${subtotal.toFixed(2)}</span></div>
-                      <div className="flex justify-between"><span className="text-slate-400">Tax (8%)</span><span className="text-slate-200">${tax.toFixed(2)}</span></div>
-                      <div className="flex justify-between font-semibold text-slate-100 pt-1"><span>Food & Drinks Total</span><span>${totalFoods.toFixed(2)}</span></div>
-                      <div className="flex justify-between font-semibold text-amber-400 border-t border-slate-700 pt-2 mt-1"><span>Grand Total</span><span>${grandTotal.toFixed(2)}</span></div>
-                    </div>
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <button onClick={printReceipt} className="flex-1 text-xs py-2 rounded bg-amber-500 text-black font-semibold hover:bg-amber-600 disabled:opacity-40" disabled={orderItems.length===0}>Print</button>
-                  <button onClick={()=>setOrderItems([])} className="flex-1 text-xs py-2 rounded bg-slate-700 text-slate-200 hover:bg-slate-600 disabled:opacity-40" disabled={orderItems.length===0}>Clear</button>
+              <CardContent className="space-y-2 text-sm">
+                <div>
+                  <p className="text-slate-400">Created</p>
+                  <p className="text-white">{booking.createdAt ? new Date(booking.createdAt).toLocaleString() : '—'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Booking ID</p>
+                  <p className="text-white font-mono">{booking.id}</p>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
-      {/* Basic print styles (no styled-jsx) */}
-      <style>{`
-        @media print {
-          .bg-gradient-to-br { background: #fff !important; }
-          header, .space-y-6 > :first-child button, button { display:none !important; }
-          .border, .border-slate-700, .border-slate-600 { border-color:#000 !important; }
-          body, .text-slate-200, .text-slate-300, .text-slate-400 { color:#000 !important; }
-        }
-      `}</style>
+
+      {/* Print-only footer */}
+      <div className="print-only mt-8 pt-6 border-t-2 border-black text-center text-sm">
+        <p className="font-medium mb-2">Thank you for choosing K-Golf!</p>
+        <p>Booking ID: {booking.id}</p>
+        <p>Printed: {new Date().toLocaleString()}</p>
+        {printingSeat && <p className="font-bold mt-2">Seat {printingSeat} Receipt</p>}
+      </div>
+
+      {/* Dialogs */}
+      <Dialog open={showAddItemDialog} onOpenChange={setShowAddItemDialog}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Add to Seat</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Select which seat to add "{selectedMenuItem?.name}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-4">
+            {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => (
+              <Button
+                key={seat}
+                onClick={() => addItemFromDialog(seat)}
+                className={`h-16 ${seatColors[seat - 1]} hover:opacity-90 text-white text-lg font-semibold`}
+              >
+                Seat {seat}
+              </Button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddItemDialog(false);
+                setSelectedMenuItem(null);
+              }}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Move Item</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Move "{selectedOrderItem?.menuItem.name}" to a different seat
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-4">
+            {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => (
+              <Button
+                key={seat}
+                onClick={() => moveItemToSeat(selectedOrderItem!.id, seat)}
+                className={`h-16 ${seatColors[seat - 1]} hover:opacity-90 text-white text-lg font-semibold`}
+              >
+                Seat {seat}
+              </Button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowMoveDialog(false);
+                setSelectedOrderItem(null);
+              }}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSplitDialog} onOpenChange={setShowSplitDialog}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle>Split Item Cost</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Select seats to split "{selectedOrderItem?.menuItem.name}" ($
+              {selectedOrderItem?.menuItem.price.toFixed(2)})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-slate-300">
+              The cost will be divided evenly across selected seats. Each seat will receive the full quantity.
+            </p>
+
+            {/* Seat selection */}
+            <div className="space-y-3">
+              {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => (
+                <div
+                  key={seat}
+                  onClick={() => toggleSeatForSplit(seat)}
+                  className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-all ${
+                    selectedSeatsForSplit.includes(seat)
+                      ? 'bg-amber-500/20 border-2 border-amber-500'
+                      : 'bg-slate-900/50 border-2 border-slate-700 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                        selectedSeatsForSplit.includes(seat)
+                          ? 'bg-amber-500 border-amber-500'
+                          : 'border-slate-500'
+                      }`}
+                    >
+                      {selectedSeatsForSplit.includes(seat) && (
+                        <svg className="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 20 20">
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                    <div className={`w-4 h-4 rounded-full ${seatColors[seat - 1]}`} />
+                    <span className="text-white font-medium">Seat {seat}</span>
+                  </div>
+                  {selectedSeatsForSplit.includes(seat) && selectedSeatsForSplit.length > 0 && selectedOrderItem && (
+                    <span className="text-amber-400 font-bold">
+                      ${(selectedOrderItem.menuItem.price / selectedSeatsForSplit.length).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Split preview */}
+            {selectedSeatsForSplit.length > 0 && selectedOrderItem && (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-300">Original Price:</span>
+                  <span className="text-white font-medium">${selectedOrderItem.menuItem.price.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-300">Split Between:</span>
+                  <span className="text-white font-medium">{selectedSeatsForSplit.length} seat(s)</span>
+                </div>
+                <Separator className="bg-amber-500/30" />
+                <div className="flex justify-between">
+                  <span className="text-amber-400 font-medium">Price Per Seat:</span>
+                  <span className="text-amber-400 font-bold text-lg">
+                    ${(selectedOrderItem.menuItem.price / selectedSeatsForSplit.length).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSplitDialog(false);
+                setSelectedOrderItem(null);
+                setSelectedSeatsForSplit([]);
+              }}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button onClick={splitItemAcrossSeats} disabled={selectedSeatsForSplit.length === 0}>
+              Split to {selectedSeatsForSplit.length} Seat(s)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

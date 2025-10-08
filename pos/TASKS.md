@@ -36,6 +36,61 @@ Legend: [ ] pending  [~] in progress  [x] done
 [x] Menu Management Page: Duplicated UI primitives reused (pending unification)
 [x] Tasks file updated with new section & follow-ups
 
+### 0.6e Advanced POS Booking Detail with Seat Management – Completed
+[x] Seat Management System: Dynamic 1-4 seat configuration with visual indicators
+[x] Order Operations: Add items to specific seats via modal dialog
+[x] Order Operations: Move items between seats
+[x] Order Operations: Split item costs evenly across multiple seats
+[x] Order Operations: Quantity controls (+ / -) per item
+[x] Order Operations: Delete items from orders
+[x] Per-Seat Billing: Individual subtotals, tax (8%), and totals for each seat
+[x] Per-Seat Billing: Grand total (all seats + room booking fee)
+[x] Print Functionality: Print individual seat receipts
+[x] Print Functionality: Print complete order (all seats)
+[x] Print Functionality: Professional K-Golf branded receipt layout
+[x] Data Persistence: localStorage saves orders per booking ID
+[x] Data Persistence: localStorage saves seat configuration per booking ID
+[x] Data Persistence: Auto-loads on page refresh
+[x] UI Components: Dialog modal system for seat selection and operations
+[x] UI Components: Separator component for visual clarity
+[x] UI Components: Enhanced Button with size (sm/md/lg) and variant (default/outline/ghost)
+[x] UI Components: Full Tabs system for menu categories
+[x] UI Components: Custom SVG icons (no external lucide-react dependency)
+[x] Menu System: 4 categories (Food, Drinks, Appetizers, Desserts)
+[x] Menu System: 12 mock menu items for testing
+[x] Menu System: Tabbed interface for easy navigation
+[x] Fixed Tabs component prop passing (activeValue/setActiveValue)
+[x] Removed broken icon components from action buttons (Move/Split/Delete)
+[x] Documentation: Comprehensive implementation guide in docs/pos_booking_detail_enhancement.md
+
+**Acceptance (0.6e Advanced POS Booking Detail)** – VERIFIED
+[x] Seat Configuration: Adjust seats 1-4; each seat has distinct color (blue/green/purple/orange)
+[x] Add to Seat: Click menu item → modal shows → select seat → item appears in that seat's section
+[x] Move Items: Click Move button → select destination seat → item transfers with all properties
+[x] Split Cost: Click Split → select 2+ seats → cost divided evenly (e.g., $12 item → $6 each for 2 seats)
+[x] Quantity Update: +/- buttons work; removing all quantity deletes item
+[x] Delete Item: Delete button removes item immediately
+[x] Per-Seat Totals: Each seat shows subtotal, tax, and total accurately
+[x] Grand Total: Sum of all seats + room booking fee displays correctly
+[x] Print Seat: Print Seat X button → only that seat's items appear in print preview
+[x] Print All: Print All button → all seats and grand total appear in print preview
+[x] Print Layout: K-Golf branding, business info, booking ID, timestamp visible
+[x] Persistence: Refresh page → orders and seat configuration restored from localStorage
+[x] Menu Tabs: Clicking Food/Drinks/Appetizers/Desserts switches visible menu items
+[x] Menu Display: All 12 menu items display correctly across 4 categories
+[x] No Errors: TypeScript compilation clean; no runtime errors in console
+[x] Button Icons: Move/Split/Delete buttons show text only (no broken icon rendering)
+
+**Implementation Details:**
+- Seat Colors: Seat 1=blue, Seat 2=green, Seat 3=purple, Seat 4=orange (bg-{color}-500)
+- OrderItem Type: `{ id: string, menuItem: MenuItem, quantity: number, seat?: number, splitPrice?: number }`
+- Split Logic: Creates N new OrderItem instances (one per selected seat) with splitPrice = original / N
+- localStorage Keys: `booking-{id}-orders`, `booking-{id}-seats`
+- Print Media Queries: `.no-print` hides UI elements; `.print-only` shows headers/footers
+- Tax Rate: 8% (configurable in calculateSeatTax functions)
+- Max Seats: 4 (matches typical golf simulator bay capacity)
+- Icon Solution: Inline SVG components (no lucide-react dependency)
+
 Follow‑Ups (Post 0.6c)
 [x] Unify UI primitives (Card/Badge/Button/etc.) into shared module
 [ ] Introduce `MenuProvider` (context) to share menu + order state across pages
@@ -54,6 +109,27 @@ Follow‑Ups (Post 0.6c)
 [ ] Merge booking receipt + order print into unified template component
 [ ] Unit tests: add/edit/delete menu item reducers / helpers
 [ ] E2E smoke: create item → appears in Booking Detail category list without reload (once shared provider added)
+
+Follow‑Ups (Post 0.6e) – Advanced POS Features
+[ ] Backend Integration: Replace mock menu with database-backed menu items
+[ ] Backend Integration: Persist orders to database (Order, OrderItem tables)
+[ ] Backend Integration: Link orders to bookings via foreign key
+[ ] Payment Processing: Add payment gateway integration for order checkout
+[ ] Order History: Display historical orders for completed bookings
+[ ] Kitchen Display: Send order to kitchen management system (KDS)
+[ ] Analytics: Track popular items, revenue per seat, average order value
+[ ] Discounts/Promotions: Add coupon codes and promotional pricing
+[ ] Multi-Currency: Support international payments (USD, KRW, etc.)
+[ ] SMS/Email Receipts: Send digital receipts to customers
+[ ] Inventory Management: Track stock levels and low-stock alerts
+[ ] Combo/Bundle Pricing: Special pricing for item combinations
+[ ] Modifiers/Add-ons: Customization options (extra toppings, size upgrades)
+[ ] Tax Configuration: Support different tax rates per jurisdiction
+[ ] Tip/Gratuity: Add optional tip calculation to receipts
+[ ] Void/Refund: Admin ability to cancel orders and issue refunds
+[ ] Order Notes: Allow special instructions per item (allergies, preferences)
+[ ] Table Service: Integrate with table/bay management system
+[ ] Happy Hour Pricing: Time-based dynamic pricing rules
 
 ## Phase 0 – Scaffolding (Target: Minimal Push-Only Working Prototype)
 
