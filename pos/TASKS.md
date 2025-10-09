@@ -110,6 +110,114 @@ Follow‑Ups (Post 0.6c)
 [ ] Unit tests: add/edit/delete menu item reducers / helpers
 [ ] E2E smoke: create item → appears in Booking Detail category list without reload (once shared provider added)
 
+### 0.6f Global Tax Rate Management with PostgreSQL Backend – Completed
+[x] Database Schema: Create Setting table with key-value store pattern
+[x] Database Schema: Fields include key, value, value_type, description, category, is_public, timestamps, updated_by
+[x] Database Schema: Foreign key to User table for audit trail (who changed settings)
+[x] Database Migration: Create migration file for Setting table
+[x] Database Migration: Seed default global_tax_rate setting (8%)
+[x] Database Migration: Follow naming convention (Setting vs settings)
+[x] Prisma Schema: Add Setting model with proper relations
+[x] Prisma Schema: Map field names (value_type, is_public, etc.) to database columns
+[x] Prisma Client: Regenerate with Setting model
+[x] Backend API: GET /api/settings - List all settings (admin: all, others: public only)
+[x] Backend API: GET /api/settings/:key - Get specific setting (public settings accessible without auth)
+[x] Backend API: PUT /api/settings/:key - Update setting (admin only)
+[x] Backend API: POST /api/settings - Create new setting (admin only)
+[x] Backend API: DELETE /api/settings/:key - Delete setting (admin only)
+[x] Backend API: Helper functions for type parsing (string/number/boolean/json)
+[x] Backend API: Validation for tax rate (0-100% range)
+[x] Backend Server: Register /api/settings route
+[x] Frontend Context: Add globalTaxRate state to BookingContext
+[x] Frontend Context: Initialize from localStorage (offline support)
+[x] Frontend Context: Fetch from API on mount (API value wins)
+[x] Frontend Context: Update localStorage when API responds
+[x] Frontend Context: updateGlobalTaxRate syncs to backend API
+[x] Frontend Context: Optimistic updates (instant UI response)
+[x] Frontend Context: Detailed console logging for debugging
+[x] Dashboard UI: Add "Tax Settings" tab to admin dashboard
+[x] Dashboard UI: Display current global tax rate prominently
+[x] Dashboard UI: Input field for updating tax rate (0-100%, decimal support)
+[x] Dashboard UI: Quick-select buttons for common rates (0%, 5%, 8%, 10%, 13%, 15%, 20%, 25%)
+[x] Dashboard UI: Save button with validation and feedback
+[x] Dashboard UI: Success/error messages with auto-dismiss
+[x] Dashboard UI: Sync input field when globalTaxRate changes (useEffect)
+[x] Booking Detail: Add bookingTaxRate state for per-booking overrides
+[x] Booking Detail: Load booking-specific tax rate from localStorage
+[x] Booking Detail: Calculate effectiveTaxRate (booking override || global default)
+[x] Booking Detail: Update calculateSeatTax to use effectiveTaxRate
+[x] Booking Detail: Update calculateTax to use effectiveTaxRate
+[x] Booking Detail: Display dynamic tax rate in receipts (not hardcoded 8%)
+[x] Booking Detail: Add Edit icon next to tax display
+[x] Booking Detail: Add tax edit dialog for per-booking customization
+[x] Booking Detail: Badge showing "Custom" vs "Global" tax rate status
+[x] Booking Detail: Quick-select buttons for common rates in dialog
+[x] Booking Detail: Reset to global rate button (clears localStorage override)
+[x] Booking Detail: Persist booking-specific tax rate to localStorage (booking-{id}-taxRate)
+[x] Booking Detail: Hide edit button in print view (.no-print class)
+
+**Acceptance (0.6f Tax Rate Management)** – VERIFIED
+[x] Database: Setting table exists with correct schema
+[x] Database: global_tax_rate seeded with value 8, type number, public true
+[x] Database: Can query "SELECT * FROM Setting" successfully
+[x] Backend API: curl http://localhost:8080/api/settings/global_tax_rate returns data without auth
+[x] Backend API: PUT request with valid auth updates tax rate in database
+[x] Backend API: Private settings require authentication
+[x] Frontend: POS app fetches tax rate from API on startup
+[x] Frontend: Console shows "[BOOKING_CTX] ✅ Loaded tax rate from API: 8"
+[x] Frontend: localStorage syncs with API value automatically
+[x] Dashboard: Tax Settings tab displays current rate correctly
+[x] Dashboard: Changing tax rate updates UI immediately (optimistic)
+[x] Dashboard: Tax rate change syncs to backend API in background
+[x] Dashboard: Success message appears after successful save
+[x] Dashboard: Input field updates when globalTaxRate changes
+[x] Dashboard: Quick-select buttons set rate instantly
+[x] Booking Detail: Tax rate displays correct percentage (dynamic)
+[x] Booking Detail: Edit button opens tax rate dialog
+[x] Booking Detail: Can set custom tax rate for individual booking
+[x] Booking Detail: Badge shows "Custom" when override active
+[x] Booking Detail: Badge shows "Global" when using default rate
+[x] Booking Detail: Reset button clears override, returns to global
+[x] Booking Detail: Tax calculations use correct rate (custom or global)
+[x] Booking Detail: Per-seat tax calculations accurate
+[x] Booking Detail: Grand total reflects correct tax rate
+[x] Offline Mode: Tax rate persists in localStorage if API unavailable
+[x] Multi-Device: Changing rate on Device A reflects on Device B after refresh
+
+**Implementation Details:**
+- Database Table: "Setting" (PascalCase, follows User/Room/Booking convention)
+- Storage Keys: 'global-tax-rate' (global), 'booking-{id}-taxRate' (per-booking)
+- API Endpoints: /api/settings, /api/settings/:key (GET public, PUT/POST/DELETE admin only)
+- Type Safety: Prisma schema enforces types; API validates 0-100% range
+- Audit Trail: updated_by field tracks which user changed settings
+- Offline Support: localStorage provides fallback; API syncs when available
+- Optimistic UI: Immediate local updates; background API sync
+- Multi-Device Sync: All devices fetch from shared PostgreSQL database
+- Value Types: 'number', 'string', 'boolean', 'json' (extensible for future settings)
+- Public Access: is_public flag allows unauthenticated access to specific settings
+- Tax Calculation: effectiveTaxRate = bookingTaxRate ?? globalTaxRate
+- Print Friendly: Edit button hidden via .no-print CSS class
+
+Follow‑Ups (Post 0.6f) – Tax & Settings Enhancements
+[ ] Add custom_tax_rate column to Booking table (replace localStorage)
+[ ] Sync booking-specific tax rates to database via API
+[ ] Settings audit log table (track all changes with old/new values, timestamp, user, IP)
+[ ] Setting categories management (group related settings)
+[ ] Setting validation rules (min/max, regex, custom validators)
+[ ] Setting dependencies (e.g., enable_tax requires tax_rate > 0)
+[ ] Setting search and filtering in admin UI
+[ ] Setting import/export (backup/restore configuration)
+[ ] Setting change notifications (alert admins of critical changes)
+[ ] Tax rate history chart (visualize changes over time)
+[ ] Per-room tax rates (different rates for different room types)
+[ ] Tax exemption flags for bookings (non-profit, promotional)
+[ ] Multiple tax types (sales tax, service charge, etc.)
+[ ] Tax calculation preview (show before/after in UI)
+[ ] Webhook notifications when settings change
+[ ] Settings cache layer (Redis) for high-performance reads
+[ ] Settings versioning (rollback to previous values)
+[ ] Settings A/B testing support (feature flags)
+
 Follow‑Ups (Post 0.6e) – Advanced POS Features
 [ ] Backend Integration: Replace mock menu with database-backed menu items
 [ ] Backend Integration: Persist orders to database (Order, OrderItem tables)

@@ -13,6 +13,7 @@ export default function SignUpPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     password: "",
     confirmPassword: "",
   })
@@ -35,7 +36,7 @@ export default function SignUpPage() {
     setErrorText(null)
 
     try {
-      const result = await signup(formData.name, formData.email, formData.password)
+      const result = await signup(formData.name, formData.email, formData.phone, formData.password)
       setSent({ email: formData.email, expiresAt: result.expiresAt })
     } catch (error) {
       console.error("Signup failed:", error)
@@ -138,6 +139,21 @@ export default function SignUpPage() {
                   type="email"
                   placeholder="Enter your email"
                   value={formData.email}
+                  onChange={handleChange}
+                  required
+                  className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-slate-300">
+                  Phone Number
+                </Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="Enter your phone number"
+                  value={formData.phone}
                   onChange={handleChange}
                   required
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"

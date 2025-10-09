@@ -31,6 +31,9 @@ const MoveRight = ({ className = '' }: { className?: string }) => (
 const Split = ({ className = '' }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12M8 12h12m-12 5h12M3 7h.01M3 12h.01M3 17h.01" /></svg>
 );
+const Edit = ({ className = '' }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+);
 
 const statusStyles: Record<string, string> = {
   confirmed: 'bg-green-500/20 text-green-300',
@@ -81,7 +84,7 @@ export default function BookingDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { forceSync } = useAuth();
-  const { getBookingById, updateBookingStatus, rooms } = useBookingData();
+  const { getBookingById, updateBookingStatus, rooms, globalTaxRate, updateGlobalTaxRate } = useBookingData();
   const booking = getBookingById(id!);
 
   // Seat and order management state
@@ -95,11 +98,17 @@ export default function BookingDetailPage() {
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [printingSeat, setPrintingSeat] = useState<number | null>(null);
 
+  // Tax rate override state
+  const [bookingTaxRate, setBookingTaxRate] = useState<number | null>(null); // null means use global rate
+  const [showTaxEditDialog, setShowTaxEditDialog] = useState(false);
+  const [taxRateInput, setTaxRateInput] = useState<string>('');
+
   // Load saved orders and seats from localStorage
   useEffect(() => {
     if (!id) return;
     const savedOrders = localStorage.getItem(`booking-${id}-orders`);
     const savedSeats = localStorage.getItem(`booking-${id}-seats`);
+    const savedTaxRate = localStorage.getItem(`booking-${id}-taxRate`);
 
     if (savedOrders) {
       try {
@@ -114,6 +123,14 @@ export default function BookingDetailPage() {
         setNumberOfSeats(JSON.parse(savedSeats));
       } catch (e) {
         console.error('[BookingDetail] Failed to load saved seats:', e);
+      }
+    }
+
+    if (savedTaxRate) {
+      try {
+        setBookingTaxRate(parseFloat(savedTaxRate));
+      } catch (e) {
+        console.error('[BookingDetail] Failed to load saved tax rate:', e);
       }
     }
   }, [id]);
@@ -237,6 +254,8 @@ export default function BookingDetailPage() {
   };
 
   // Calculation functions
+  const effectiveTaxRate = bookingTaxRate !== null ? bookingTaxRate : globalTaxRate;
+
   const getItemsByCategory = (category: MenuItem['category']) => {
     return mockMenu.filter((item) => item.category === category && item.available);
   };
@@ -253,7 +272,7 @@ export default function BookingDetailPage() {
   };
 
   const calculateSeatTax = (seat: number) => {
-    return calculateSeatSubtotal(seat) * 0.08;
+    return calculateSeatSubtotal(seat) * (effectiveTaxRate / 100);
   };
 
   const calculateSeatTotal = (seat: number) => {
@@ -265,7 +284,7 @@ export default function BookingDetailPage() {
   };
 
   const calculateTax = () => {
-    return calculateSubtotal() * 0.08;
+    return calculateSubtotal() * (effectiveTaxRate / 100);
   };
 
   const calculateTotal = () => {
@@ -527,7 +546,7 @@ export default function BookingDetailPage() {
                               <span>${calculateSeatSubtotal(seat).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-slate-300">
-                              <span>Tax (8%)</span>
+                              <span>Tax ({effectiveTaxRate}%)</span>
                               <span>${calculateSeatTax(seat).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-white font-bold text-lg">
@@ -545,8 +564,25 @@ export default function BookingDetailPage() {
                         <span>Food & Drinks Subtotal</span>
                         <span>${calculateSubtotal().toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between text-slate-300">
-                        <span>Tax (8%)</span>
+                      <div className="flex justify-between items-center text-slate-300">
+                        <div className="flex items-center gap-2">
+                          <span>Tax ({effectiveTaxRate}%)</span>
+                          {bookingTaxRate !== null ? (
+                            <Badge className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.5">Custom</Badge>
+                          ) : (
+                            <Badge className="bg-slate-600/30 text-slate-400 text-[10px] px-1.5 py-0.5">Global</Badge>
+                          )}
+                          <button
+                            onClick={() => {
+                              setTaxRateInput(effectiveTaxRate.toString());
+                              setShowTaxEditDialog(true);
+                            }}
+                            className="text-amber-400 hover:text-amber-300 transition-colors no-print"
+                            title="Edit tax rate for this booking"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        </div>
                         <span>${calculateTax().toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-white font-bold text-lg">
@@ -881,6 +917,89 @@ export default function BookingDetailPage() {
             </Button>
             <Button onClick={splitItemAcrossSeats} disabled={selectedSeatsForSplit.length === 0}>
               Split to {selectedSeatsForSplit.length} Seat(s)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tax Rate Edit Dialog */}
+      <Dialog open={showTaxEditDialog} onOpenChange={setShowTaxEditDialog}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Edit Tax Rate for This Booking</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Set a custom tax rate for this booking, or reset to use the global default ({globalTaxRate}%).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Current: {bookingTaxRate !== null ? `${bookingTaxRate}% (Custom)` : `${globalTaxRate}% (Global Default)`}
+              </label>
+              <div className="flex gap-3">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={taxRateInput}
+                  onChange={(e) => setTaxRateInput(e.target.value)}
+                  className="flex-1 bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  placeholder="Enter tax rate (0-100)"
+                />
+              </div>
+              <p className="text-xs text-slate-500 mt-2">Enter a value between 0 and 100. Decimals are supported (e.g., 8.5 for 8.5%)</p>
+            </div>
+
+            <div className="border-t border-slate-700 pt-4">
+              <h4 className="text-sm font-medium text-slate-300 mb-2">Quick Select</h4>
+              <div className="grid grid-cols-4 gap-2">
+                {[0, 5, 8, 10, 13, 15, 20, 25].map((rate) => (
+                  <button
+                    key={rate}
+                    onClick={() => setTaxRateInput(rate.toString())}
+                    className="px-3 py-2 rounded-md bg-slate-700/50 border border-slate-600 text-slate-200 text-sm hover:bg-slate-600/60 hover:border-amber-500/30 transition-colors"
+                  >
+                    {rate}%
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            {bookingTaxRate !== null && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setBookingTaxRate(null);
+                  localStorage.removeItem(`booking-${id}-taxRate`);
+                  setShowTaxEditDialog(false);
+                }}
+                className="border-red-500/30 text-red-300 hover:bg-red-500/10"
+              >
+                Reset to Global ({globalTaxRate}%)
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => setShowTaxEditDialog(false)}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const rate = parseFloat(taxRateInput);
+                if (isNaN(rate) || rate < 0 || rate > 100) {
+                  alert('Please enter a valid tax rate between 0 and 100');
+                  return;
+                }
+                setBookingTaxRate(rate);
+                localStorage.setItem(`booking-${id}-taxRate`, rate.toString());
+                setShowTaxEditDialog(false);
+              }}
+            >
+              Save Tax Rate
             </Button>
           </DialogFooter>
         </DialogContent>

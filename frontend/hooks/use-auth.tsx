@@ -10,7 +10,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<void>
-  signup: (name: string, email: string, password: string) => Promise<{ message: string; expiresAt?: string }>
+  signup: (name: string, email: string, phone: string, password: string) => Promise<{ message: string; expiresAt?: string }>
   logout: () => Promise<void>
   isLoading: boolean
   resendVerification: (email: string) => Promise<{ message: string; expiresAt?: string; retryAfterSeconds?: number }>
@@ -108,13 +108,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (name: string, email: string, phone: string, password: string) => {
     const apiBase = process.env.REACT_APP_API_BASE;
     const res = await fetch(`${apiBase}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ name, email, password })
+      body: JSON.stringify({ name, email, phone, password })
     });
     if (!res.ok) throw new Error(await getErrorMessage(res));
     const data = await res.json();

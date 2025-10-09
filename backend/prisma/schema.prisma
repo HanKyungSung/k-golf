@@ -19,33 +19,34 @@ enum UserRole {
 // Booking status moved to String for flexibility; enforce allowed values in app code
 
 model User {
-  id                 String              @id @default(uuid())
-  email              String              @unique
-  name               String
-  phone              String
-  emailVerifiedAt    DateTime? @db.Timestamptz // retained but unused in password-only flow (can drop later)
-  passwordHash       String?
-  passwordUpdatedAt  DateTime? @db.Timestamptz
-  role               UserRole            @default(CUSTOMER)
-  createdAt          DateTime            @default(now()) @db.Timestamptz
-  updatedAt          DateTime            @updatedAt @db.Timestamptz
-  bookings           Booking[]
-  authProviders      AuthProvider[]
-  sessions           Session[]
+  id                     String                  @id @default(uuid())
+  email                  String                  @unique
+  name                   String
+  phone                  String
+  emailVerifiedAt        DateTime?               @db.Timestamptz // retained but unused in password-only flow (can drop later)
+  passwordHash           String?
+  passwordUpdatedAt      DateTime?               @db.Timestamptz
+  role                   UserRole                @default(CUSTOMER)
+  createdAt              DateTime                @default(now()) @db.Timestamptz
+  updatedAt              DateTime                @updatedAt @db.Timestamptz
+  bookings               Booking[]
+  authProviders          AuthProvider[]
+  sessions               Session[]
   emailVerificationToken EmailVerificationToken?
+  settingsUpdates        Setting[]
 }
 
 model Room {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  capacity  Int       @default(4)
-  active    Boolean   @default(true) // legacy; prefer status
-  openMinutes  Int    @default(540)   // 09:00 local
-  closeMinutes Int    @default(1140)  // 19:00 local
-  status    RoomStatus @default(ACTIVE)
-  createdAt DateTime  @default(now()) @db.Timestamptz
-  updatedAt DateTime  @updatedAt @db.Timestamptz
-  bookings  Booking[]
+  id           String     @id @default(uuid())
+  name         String     @unique
+  capacity     Int        @default(4)
+  active       Boolean    @default(true) // legacy; prefer status
+  openMinutes  Int        @default(540) // 09:00 local
+  closeMinutes Int        @default(1140) // 19:00 local
+  status       RoomStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @db.Timestamptz
+  updatedAt    DateTime   @updatedAt @db.Timestamptz
+  bookings     Booking[]
 }
 
 enum RoomStatus {
@@ -55,20 +56,20 @@ enum RoomStatus {
 }
 
 model Booking {
-  id            String        @id @default(uuid())
-  room          Room          @relation(fields: [roomId], references: [id])
+  id            String   @id @default(uuid())
+  room          Room     @relation(fields: [roomId], references: [id])
   roomId        String
-  user          User          @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
   userId        String
-  customerName  String        // Denormalized for display
-  customerPhone String        // Denormalized for contact
+  customerName  String // Denormalized for display
+  customerPhone String // Denormalized for contact
   startTime     DateTime @db.Timestamptz
   endTime       DateTime @db.Timestamptz
   players       Int
-  price         Decimal       @db.Decimal(10, 2)
-  status        String        @default("CONFIRMED")
-  createdAt     DateTime      @default(now()) @db.Timestamptz
-  updatedAt     DateTime      @updatedAt @db.Timestamptz
+  price         Decimal  @db.Decimal(10, 2)
+  status        String   @default("CONFIRMED")
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  updatedAt     DateTime @updatedAt @db.Timestamptz
 
   @@index([roomId, startTime])
   @@index([userId, startTime])
@@ -85,7 +86,6 @@ model AuthProvider {
   @@unique([provider, providerUserId])
 }
 
-
 model Session {
   id           String   @id @default(uuid())
   user         User     @relation(fields: [userId], references: [id])
@@ -98,13 +98,27 @@ model Session {
 
 // Stores single active email verification token per user
 model EmailVerificationToken {
-  id         String   @id @default(uuid())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String   @unique
-  tokenHash  String   @unique
-  expiresAt  DateTime @db.Timestamptz
+  id         String    @id @default(uuid())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String    @unique
+  tokenHash  String    @unique
+  expiresAt  DateTime  @db.Timestamptz
   consumedAt DateTime? @db.Timestamptz
-  createdAt  DateTime @default(now()) @db.Timestamptz
+  createdAt  DateTime  @default(now()) @db.Timestamptz
 
   @@index([expiresAt])
+}
+
+model Setting {
+  id            Int      @id @default(autoincrement())
+  key           String   @unique @db.VarChar(255)
+  value         String   @db.Text
+  valueType     String   @map("value_type") @db.VarChar(50)
+  description   String?  @db.Text
+  category      String?  @db.VarChar(100)
+  isPublic      Boolean  @default(false) @map("is_public")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy     String?  @map("updated_by")
+  updatedByUser User?    @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
 }

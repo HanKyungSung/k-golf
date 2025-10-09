@@ -33,7 +33,7 @@ const TabsContent: React.FC<{ when: string; children: React.ReactNode }> = ({ wh
 const DashboardPage: React.FC = () => {
   const { state, forceSync, rooms: realRooms } = useAuth();
   const user = state.user || {}; const isAdmin = user.role === 'ADMIN';
-  const { bookings, updateBookingStatus, updateRoomStatus, rooms: mockRooms } = useBookingData();
+  const { bookings, updateBookingStatus, updateRoomStatus, rooms: mockRooms, globalTaxRate, updateGlobalTaxRate } = useBookingData();
   const rooms = mockRooms; // Use mock rooms for now (TODO: sync with real backend data)
   const navigate = useNavigate();
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => new Date('2024-01-15T00:00:00Z'));
@@ -53,6 +53,15 @@ const DashboardPage: React.FC = () => {
   });
   const [createError, setCreateError] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
+
+  // Tax settings state
+  const [taxRateInput, setTaxRateInput] = useState<string>(globalTaxRate.toString());
+  const [taxSaveMessage, setTaxSaveMessage] = useState<string>('');
+
+  // Sync tax rate input when globalTaxRate changes (e.g., from API)
+  React.useEffect(() => {
+    setTaxRateInput(globalTaxRate.toString());
+  }, [globalTaxRate]);
 
   const totalRevenue = bookings.reduce((s,b)=>s+b.price,0);
   const activeBookings = bookings.filter(b=>b.status==='confirmed');
@@ -88,12 +97,13 @@ const DashboardPage: React.FC = () => {
 
         {isAdmin ? (
           <Tabs defaultValue="bookings" className="space-y-6">
-            <TabsTriggersRow>
+            <TabsTriggersRow className="grid-cols-6">
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="rooms">Rooms</TabsTrigger>
               <TabsTrigger value="calendar">Weekly Calendar</TabsTrigger>
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
               <TabsTrigger value="menu">Menu</TabsTrigger>
+              <TabsTrigger value="tax">Tax Settings</TabsTrigger>
             </TabsTriggersRow>
             <TabsContent when="bookings">
               <Card>
@@ -195,6 +205,90 @@ const DashboardPage: React.FC = () => {
                       <button onClick={()=>navigate('/menu')} className="px-4 py-2 rounded bg-slate-700 text-slate-200 font-medium text-xs hover:bg-slate-600 border border-slate-600">Quick Edit</button>
                     </div>
                     <p className="text-[11px] text-slate-500">Future enhancements: category CRUD, bulk availability toggles, price history, cost-of-goods, printing labels.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent when="tax">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Global Tax Rate Settings</CardTitle>
+                  <CardDescription>Set the default tax rate applied to all bookings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-slate-300">Current Global Tax Rate</span>
+                        <span className="text-2xl font-bold text-amber-400">{globalTaxRate}%</span>
+                      </div>
+                      <p className="text-xs text-slate-500">This rate is applied to all new bookings by default. Individual bookings can override this rate.</p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Update Tax Rate (%)</label>
+                        <div className="flex gap-3">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={taxRateInput}
+                            onChange={(e) => setTaxRateInput(e.target.value)}
+                            className="flex-1 bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            placeholder="Enter tax rate (0-100)"
+                          />
+                          <button
+                            onClick={() => {
+                              const rate = parseFloat(taxRateInput);
+                              if (isNaN(rate) || rate < 0 || rate > 100) {
+                                setTaxSaveMessage('❌ Please enter a valid tax rate between 0 and 100');
+                                setTimeout(() => setTaxSaveMessage(''), 3000);
+                                return;
+                              }
+                              updateGlobalTaxRate(rate);
+                              setTaxSaveMessage('✅ Tax rate updated successfully!');
+                              setTimeout(() => setTaxSaveMessage(''), 3000);
+                            }}
+                            className="px-6 py-2 rounded-md bg-amber-500 text-black font-medium text-sm hover:bg-amber-400 transition-colors"
+                          >
+                            Save
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-2">Enter a value between 0 and 100. Decimals are supported (e.g., 8.5 for 8.5%)</p>
+                      </div>
+
+                      {taxSaveMessage && (
+                        <div className={`p-3 rounded-md border text-sm ${
+                          taxSaveMessage.includes('✅') 
+                            ? 'bg-green-500/10 border-green-500/30 text-green-300' 
+                            : 'bg-red-500/10 border-red-500/30 text-red-300'
+                        }`}>
+                          {taxSaveMessage}
+                        </div>
+                      )}
+
+                      <div className="border-t border-slate-700 pt-4">
+                        <h4 className="text-sm font-medium text-slate-300 mb-2">Common Tax Rates</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {[0, 5, 8, 10, 13, 15, 20, 25].map((rate) => (
+                            <button
+                              key={rate}
+                              onClick={() => {
+                                setTaxRateInput(rate.toString());
+                                updateGlobalTaxRate(rate);
+                                setTaxSaveMessage(`✅ Tax rate set to ${rate}%`);
+                                setTimeout(() => setTaxSaveMessage(''), 3000);
+                              }}
+                              className="px-3 py-2 rounded-md bg-slate-700/50 border border-slate-600 text-slate-200 text-sm hover:bg-slate-600/60 hover:border-amber-500/30 transition-colors"
+                            >
+                              {rate}%
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

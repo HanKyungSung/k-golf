@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 export interface Booking {
   id: string; customerName: string; customerEmail: string; customerPhone?: string; roomName: string; roomId: string; date: string; time: string; duration: number; players: number; price: number; status: 'confirmed' | 'completed' | 'cancelled'; notes?: string; createdAt?: string;
@@ -27,8 +27,10 @@ const initialBookings: Booking[] = [
 interface BookingContextValue {
   rooms: Room[];
   bookings: Booking[];
+  globalTaxRate: number; // Global default tax rate (0-100)
   updateBookingStatus: (id: string, status: Booking['status']) => void;
   updateRoomStatus: (id: string, status: Room['status']) => void;
+  updateGlobalTaxRate: (rate: number) => void;
   getBookingById: (id: string) => Booking | undefined;
 }
 
@@ -37,6 +39,57 @@ const BookingContext = createContext<BookingContextValue | null>(null);
 export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
+  
+  // Initialize global tax rate from localStorage or default to 8%
+  // This will be overwritten by API value when it loads
+  const [globalTaxRate, setGlobalTaxRate] = useState<number>(() => {
+    const saved = localStorage.getItem('global-tax-rate');
+    return saved ? parseFloat(saved) : 8;
+  });
+
+  // Fetch global tax rate from API on mount - API value always wins
+  useEffect(() => {
+    const fetchTaxRate = async () => {
+      console.log('[BOOKING_CTX] Fetching tax rate from API...');
+      try {
+        const response = await fetch('http://localhost:8080/api/settings/global_tax_rate', {
+          credentials: 'include', // Include cookies for auth
+        });
+        
+        console.log('[BOOKING_CTX] API response status:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[BOOKING_CTX] API response data:', data);
+          const apiTaxRate = data.parsedValue;
+          
+          if (typeof apiTaxRate === 'number' && apiTaxRate >= 0 && apiTaxRate <= 100) {
+            console.log('[BOOKING_CTX] ✅ Loaded tax rate from API:', apiTaxRate);
+            setGlobalTaxRate(apiTaxRate);
+            // Sync localStorage with authoritative API value
+            localStorage.setItem('global-tax-rate', apiTaxRate.toString());
+            console.log('[BOOKING_CTX] ✅ Updated localStorage to:', apiTaxRate);
+          } else {
+            console.warn('[BOOKING_CTX] ❌ Invalid tax rate from API:', apiTaxRate);
+          }
+        } else if (response.status === 401 || response.status === 403) {
+          const errorData = await response.json().catch(() => ({}));
+          console.warn('[BOOKING_CTX] ⚠️ Not authenticated (status:', response.status, '). Error:', errorData);
+          console.warn('[BOOKING_CTX] Will use localStorage value until authenticated');
+          // Not authenticated - use localStorage until user logs in
+        } else {
+          console.warn('[BOOKING_CTX] ❌ Failed to fetch tax rate from API (status:', response.status, ')');
+        }
+      } catch (error) {
+        console.error('[BOOKING_CTX] ❌ Error fetching tax rate from API:', error);
+        console.warn('[BOOKING_CTX] Using localStorage fallback');
+        // localStorage value is already loaded in initial state
+      }
+    };
+
+    // Always fetch from API on mount to ensure we have the latest value
+    fetchTaxRate();
+  }, []);
 
   const updateBookingStatus = useCallback((id: string, status: Booking['status']) => {
     setBookings(bs => bs.map(b => b.id === id ? { ...b, status } : b));
@@ -59,10 +112,41 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
+  const updateGlobalTaxRate = useCallback((rate: number) => {
+    // Validate rate is between 0 and 100
+    const validRate = Math.max(0, Math.min(100, rate));
+    
+    // Optimistically update local state and localStorage
+    setGlobalTaxRate(validRate);
+    localStorage.setItem('global-tax-rate', validRate.toString());
+    console.log('[BOOKING_CTX] Global tax rate updated locally to:', validRate);
+    
+    // Sync with backend API
+    fetch('http://localhost:8080/api/settings/global_tax_rate', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Include cookies for auth
+      body: JSON.stringify({ value: validRate }),
+    })
+      .then(response => {
+        if (response.ok) {
+          console.log('[BOOKING_CTX] Tax rate synced to backend successfully');
+        } else {
+          console.warn('[BOOKING_CTX] Failed to sync tax rate to backend, local change preserved');
+        }
+      })
+      .catch(error => {
+        console.warn('[BOOKING_CTX] Error syncing tax rate to backend, local change preserved:', error);
+        // Local change is already applied, so offline operation continues to work
+      });
+  }, []);
+
   const getBookingById = useCallback((id: string) => bookings.find(b => b.id === id), [bookings]);
 
   return (
-    <BookingContext.Provider value={{ rooms, bookings, updateBookingStatus, updateRoomStatus, getBookingById }}>
+    <BookingContext.Provider value={{ rooms, bookings, globalTaxRate, updateBookingStatus, updateRoomStatus, updateGlobalTaxRate, getBookingById }}>
       {children}
     </BookingContext.Provider>
   );
