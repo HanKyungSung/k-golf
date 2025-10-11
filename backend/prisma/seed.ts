@@ -27,6 +27,66 @@ async function main() {
 
 	console.log('Seed complete: 4 rooms active (Room 1-4); others deactivated');
 
+	// Seed default settings (idempotent by key)
+	const defaultSettings = [
+		{
+			key: 'global_tax_rate',
+			value: '8',
+			valueType: 'number',
+			description: 'Default tax rate percentage applied to all bookings',
+			category: 'tax',
+			isPublic: true,
+		},
+	];
+
+	for (const setting of defaultSettings) {
+		await prisma.setting.upsert({
+			where: { key: setting.key },
+			update: {
+				value: setting.value,
+				valueType: setting.valueType,
+				description: setting.description,
+				category: setting.category,
+				isPublic: setting.isPublic,
+			},
+			create: setting,
+		});
+	}
+	console.log('Seeded default settings: global_tax_rate');
+
+	// Create admin user (idempotent by email)
+	const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@kgolf.com';
+	const adminName = process.env.SEED_ADMIN_NAME || 'Admin User';
+	const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123';
+	const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+	
+	if (!existingAdmin) {
+		const adminPasswordHash = await hashPassword(adminPassword);
+		await prisma.user.create({
+			data: {
+				email: adminEmail,
+				name: adminName,
+				phone: '+1-555-0100',
+				passwordHash: adminPasswordHash,
+				passwordUpdatedAt: new Date(),
+				emailVerifiedAt: new Date(),
+				role: 'ADMIN',
+			} as any,
+		});
+		console.log(`Seeded admin user: ${adminEmail} / ${adminPassword} (role: ADMIN)`);
+	} else {
+		// Ensure existing admin has ADMIN role
+		if ((existingAdmin as any).role !== 'ADMIN') {
+			await prisma.user.update({
+				where: { email: adminEmail },
+				data: { role: 'ADMIN', emailVerifiedAt: new Date() },
+			});
+			console.log(`Updated existing user to ADMIN role: ${adminEmail}`);
+		} else {
+			console.log(`Admin user already exists: ${adminEmail}`);
+		}
+	}
+
 	// Create a test user for manual login (idempotent by email)
 	// Only in non-production by default. To force in prod/staging, set SEED_ENABLE_TEST_USER=true explicitly.
 	const enableTestUser = (process.env.NODE_ENV !== 'production') || process.env.SEED_ENABLE_TEST_USER === 'true';
