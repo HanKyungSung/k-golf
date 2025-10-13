@@ -58,7 +58,16 @@ async function main() {
 	const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@kgolf.com';
 	const adminName = process.env.SEED_ADMIN_NAME || 'Admin User';
 	const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123';
-	const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+	const adminPhone = process.env.SEED_ADMIN_PHONE || '+821012345678'; // Korean phone format
+	
+	const existingAdmin = await prisma.user.findFirst({ 
+		where: { 
+			OR: [
+				{ email: adminEmail },
+				{ phone: adminPhone }
+			]
+		} 
+	});
 	
 	if (!existingAdmin) {
 		const adminPasswordHash = await hashPassword(adminPassword);
@@ -66,24 +75,29 @@ async function main() {
 			data: {
 				email: adminEmail,
 				name: adminName,
-				phone: '+1-555-0100',
+				phone: adminPhone,
 				passwordHash: adminPasswordHash,
 				passwordUpdatedAt: new Date(),
 				emailVerifiedAt: new Date(),
 				role: 'ADMIN',
+				registrationSource: 'ONLINE',
 			} as any,
 		});
-		console.log(`Seeded admin user: ${adminEmail} / ${adminPassword} (role: ADMIN)`);
+		console.log(`Seeded admin user: ${adminEmail} / ${adminPhone} / ${adminPassword} (role: ADMIN)`);
 	} else {
-		// Ensure existing admin has ADMIN role
-		if ((existingAdmin as any).role !== 'ADMIN') {
+		// Ensure existing admin has ADMIN role and updated phone
+		if ((existingAdmin as any).role !== 'ADMIN' || (existingAdmin as any).phone !== adminPhone) {
 			await prisma.user.update({
-				where: { email: adminEmail },
-				data: { role: 'ADMIN', emailVerifiedAt: new Date() },
+				where: { id: existingAdmin.id },
+				data: { 
+					role: 'ADMIN', 
+					emailVerifiedAt: new Date(),
+					phone: adminPhone,
+				},
 			});
-			console.log(`Updated existing user to ADMIN role: ${adminEmail}`);
+			console.log(`Updated existing user to ADMIN role with phone: ${adminEmail} / ${adminPhone}`);
 		} else {
-			console.log(`Admin user already exists: ${adminEmail}`);
+			console.log(`Admin user already exists: ${adminEmail} / ${adminPhone}`);
 		}
 	}
 
@@ -94,25 +108,43 @@ async function main() {
 		const testEmail = process.env.SEED_TEST_EMAIL || 'test@example.com';
 		const testName = process.env.SEED_TEST_NAME || 'Test User';
 		const testPassword = process.env.SEED_TEST_PASSWORD || 'password123';
-		const existing = await prisma.user.findUnique({ where: { email: testEmail } });
+		const testPhone = process.env.SEED_TEST_PHONE || '+821098765432'; // Korean phone format
+		
+		const existing = await prisma.user.findFirst({ 
+			where: { 
+				OR: [
+					{ email: testEmail },
+					{ phone: testPhone }
+				]
+			} 
+		});
+		
 		if (!existing) {
 			const passwordHash = await hashPassword(testPassword);
 			await prisma.user.create({
 				data: {
 					email: testEmail,
 					name: testName,
+					phone: testPhone,
 					passwordHash,
 					passwordUpdatedAt: new Date(),
 					emailVerifiedAt: new Date(),
+					registrationSource: 'ONLINE',
 				} as any,
 			});
-			console.log(`Seeded test user: ${testEmail} / ${testPassword}`);
+			console.log(`Seeded test user: ${testEmail} / ${testPhone} / ${testPassword}`);
 		} else {
 			if (!(existing as any).emailVerifiedAt) {
-				await prisma.user.update({ where: { email: testEmail }, data: { emailVerifiedAt: new Date() } });
-				console.log(`Marked test user as verified: ${testEmail}`);
+				await prisma.user.update({ 
+					where: { id: existing.id }, 
+					data: { 
+						emailVerifiedAt: new Date(),
+						phone: testPhone,
+					} 
+				});
+				console.log(`Marked test user as verified: ${testEmail} / ${testPhone}`);
 			} else {
-				console.log(`Test user already exists: ${testEmail}`);
+				console.log(`Test user already exists: ${testEmail} / ${testPhone}`);
 			}
 		}
 	} else {

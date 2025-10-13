@@ -218,6 +218,573 @@ Follow‑Ups (Post 0.6f) – Tax & Settings Enhancements
 [ ] Settings versioning (rollback to previous values)
 [ ] Settings A/B testing support (feature flags)
 
+---
+
+## Phase 1 – Phone-Based Admin Booking System
+
+**Feature Documentation:** `/docs/admin_manual_booking_feature.md` (v1.0)  
+**Schema Guide:** `/docs/database_schema_explanation.md`
+
+**Overview:**
+Implement phone-number-based booking system allowing admins to manually create bookings for:
+1. **Existing customers** (search by phone)
+2. **New customers** (register with phone + name, email optional)
+3. **Guest customers** (walk-in only, no account creation)
+
+**Key Changes:**
+- Phone becomes primary identifier (unique, required)
+- Email becomes optional (nullable)
+- Guest bookings supported (nullable userId)
+- Track registration source (ONLINE/WALK_IN/PHONE)
+- Track booking source (ONLINE/WALK_IN/PHONE)
+- Admin audit trail (createdBy, registeredBy)
+
+---
+
+### 1.1 Database Schema Migration (Backend - Prisma)
+
+**User Model Changes:**
+[x] Migration: Make `User.email` nullable (currently required)
+[x] Migration: Make `User.phone` required with unique constraint
+[x] Migration: Add `User.phoneVerifiedAt` TIMESTAMPTZ (for future SMS verification)
+[x] Migration: Add `User.registrationSource` VARCHAR(50) DEFAULT 'ONLINE'
+[x] Migration: Add `User.registeredBy` TEXT (FK to User.id, nullable)
+[x] Migration: Backfill phone numbers for existing users (placeholder or manual data entry)
+[x] Prisma: Update User model with new fields
+[x] Prisma: Add self-relation `registeredByUser` / `usersRegistered`
+[x] Prisma: Regenerate Prisma Client (`npx prisma generate`)
+[x] Seed: Update seed file with phone numbers for test users
+
+**Booking Model Changes:**
+[x] Migration: Make `Booking.userId` nullable (for guest bookings)
+[x] Migration: Add `Booking.customerEmail` TEXT (optional, for guest email)
+[x] Migration: Add `Booking.isGuestBooking` BOOLEAN DEFAULT false
+[x] Migration: Add `Booking.bookingSource` VARCHAR(50) DEFAULT 'ONLINE'
+[x] Migration: Add `Booking.createdBy` TEXT (FK to User.id, nullable, admin tracking)
+[x] Migration: Add `Booking.internalNotes` TEXT (admin-only notes)
+[x] Migration: Add index on `customerPhone` for fast guest lookups
+[x] Migration: Add index on `bookingSource` for analytics queries
+[x] Prisma: Update Booking model with new fields
+[x] Prisma: Add `createdByUser` relation to User
+[x] Prisma: Make `user` relation optional (`user User?`)
+[x] Prisma: Regenerate Prisma Client
+
+**PhoneVerificationToken Model (Phase 2 Schema Prep):**
+[x] Migration: Create PhoneVerificationToken table
+[x] Fields: id, phone (unique), tokenHash, expiresAt, attempts, createdAt
+[x] Prisma: Add PhoneVerificationToken model
+[x] Note: Schema only - not used in v1.0, ready for SMS OTP in Phase 2
+
+**Acceptance Criteria (1.1 Database Migration):**
+[x] All migrations execute without errors (`npx prisma migrate dev`)
+[x] No data loss from existing users/bookings
+[x] Can create user with phone-only (email = null)
+[x] Can create booking with userId = null (guest booking)
+[x] Unique constraint on phone prevents duplicate phone numbers
+[x] Foreign keys (registeredBy, createdBy) validate correctly
+[x] Indexes created on customerPhone and bookingSource
+[x] Seed creates realistic test data for all scenarios (online/walk-in/phone/guest)
+[x] Schema matches specification in `/docs/admin_manual_booking_feature.md`
+
+**Migration Details:**
+- Migration file: `20251013065406_phone_based_booking_system/migration.sql`
+- User table: email nullable, phone unique & required, registrationSource, registeredBy, phoneVerifiedAt
+- Booking table: userId nullable, customerEmail, isGuestBooking, bookingSource, createdBy, internalNotes
+- PhoneVerificationToken table: Created for Phase 2 SMS OTP
+- Seed data: Admin (+821012345678) and Test User (+821098765432) with proper phone numbers
+[ ] Can create user with phone-only (email = null)
+[ ] Can create booking with userId = null (guest booking)
+[ ] Unique constraint on phone prevents duplicate phone numbers
+[ ] Foreign keys (registeredBy, createdBy) validate correctly
+[ ] Indexes created on customerPhone and bookingSource
+[ ] Seed creates realistic test data for all scenarios (online/walk-in/phone/guest)
+[ ] Schema matches specification in `/docs/admin_manual_booking_feature.md`
+
+---
+
+### 1.2 Backend Phone Utilities
+
+**Phone Normalization Functions:**
+[ ] Create `backend/src/utils/phoneUtils.ts`
+[ ] Implement `normalizePhone(input: string, countryCode = '+82'): string`
+  - Remove all non-digit/non-plus characters
+  - Handle Korean formats: "010-1234-5678" → "+821012345678"
+  - Handle formats: "10-1234-5678" → "+821012345678" (add +82 prefix)
+  - Add country code if missing
+  - Return E.164 format
+[ ] Implement `formatPhoneDisplay(phone: string): string`
+  - Convert "+821012345678" → "+82 10-1234-5678"
+  - Handle non-Korean numbers gracefully
+[ ] Implement `validatePhone(phone: string): boolean`
+  - Regex validation for Korean phone format
+  - Validate E.164 format (+ followed by 10-15 digits)
+  - Check length constraints
+[ ] Unit tests for all phone utility functions
+  - Test various input formats
+  - Test edge cases (empty, invalid, international)
+  - Test Korean-specific formats (010, 02, 031, etc.)
+
+**Acceptance Criteria (1.2 Phone Utilities):**
+[ ] normalizePhone("010-1234-5678") returns "+821012345678"
+[ ] normalizePhone("+82 10 1234 5678") returns "+821012345678"
+[ ] normalizePhone("10-1234-5678") returns "+821012345678"
+[ ] formatPhoneDisplay("+821012345678") returns "+82 10-1234-5678"
+[ ] validatePhone("+821012345678") returns true
+[ ] validatePhone("invalid") returns false
+[ ] All unit tests pass (npm test)
+
+---
+
+### 1.3 Backend API - User Lookup & Recent Customers
+
+**User Lookup Endpoint:**
+[ ] Create `GET /api/users/lookup?phone={phone}` (ADMIN only)
+[ ] Normalize phone before database lookup
+[ ] Return user details if found:
+  - id, name, phone, email, role
+  - bookingCount (aggregate COUNT of bookings)
+  - lastBookingDate (MAX of startTime)
+  - memberSince (createdAt)
+  - totalSpent (SUM of booking prices)
+  - registrationSource
+[ ] Return `{ found: false }` if not found (200 status, not 404)
+[ ] Add Zod validation for query params
+[ ] Add error handling (400 for invalid phone, 403 for non-admin)
+[ ] Add logging with user context
+
+**Recent Customers Endpoint:**
+[ ] Create `GET /api/users/recent?limit={10}` (ADMIN only)
+[ ] Query params: limit (default 10, max 50)
+[ ] Optional filters: registrationSource, role
+[ ] Return last N customers ordered by lastBookingDate DESC
+[ ] Include: id, name, phone, email, lastBookingDate, bookingCount
+[ ] Add pagination support (page, limit)
+
+**Route Registration:**
+[ ] Add to `backend/src/routes/users.ts` (or create new file)
+[ ] Register routes in `server.ts`
+[ ] Add requireAuth middleware with ADMIN role check
+
+**Acceptance Criteria (1.3 User Lookup API):**
+[ ] curl with valid phone returns complete user data with stats
+[ ] curl with invalid phone returns { found: false } (200)
+[ ] curl with non-existent phone returns { found: false } (200)
+[ ] Response includes accurate booking statistics
+[ ] Non-admin users get 403 Forbidden
+[ ] Phone normalization works (can search "010-1234-5678" or "+821012345678")
+[ ] Recent customers endpoint returns sorted list (most recent first)
+[ ] All required fields present in response
+
+---
+
+### 1.4 Backend API - Admin Manual Booking Creation
+
+**Admin Booking Creation Endpoint:**
+[ ] Create `POST /api/bookings/admin/create` (ADMIN only)
+[ ] Zod request body validation:
+  - customerMode: "existing" | "new" | "guest"
+  - customerPhone (for existing mode)
+  - newCustomer: { name, phone, email? } (for new mode)
+  - guest: { name, phone, email? } (for guest mode)
+  - roomId, startTimeIso, hours, players (required)
+  - bookingSource: "WALK_IN" | "PHONE"
+  - customPrice?, customTaxRate?, internalNotes? (optional)
+
+**Implement customerMode = "existing":**
+[ ] Lookup user by normalized phone
+[ ] Return 404 if user not found
+[ ] Use existing userId for booking
+[ ] Auto-fill customerName, customerPhone, customerEmail from user record
+
+**Implement customerMode = "new":**
+[ ] Validate phone uniqueness (check existing users)
+[ ] Return 409 if phone already exists
+[ ] Create new User with:
+  - name, phone, email (optional)
+  - registrationSource = bookingSource
+  - registeredBy = req.user.id (admin who created account)
+  - role = 'CUSTOMER'
+  - passwordHash = null (no password initially)
+[ ] Use new userId for booking
+
+**Implement customerMode = "guest":**
+[ ] Validate bookingSource !== 'PHONE' (guests only for walk-in)
+[ ] Return 400 if attempting guest phone booking
+[ ] Don't create User record
+[ ] Set userId = null
+[ ] Set isGuestBooking = true
+[ ] Store guest data in booking record (customerName, customerPhone, customerEmail)
+
+**Room Availability & Price Calculation:**
+[ ] Validate room exists and status = 'ACTIVE'
+[ ] Check for time slot conflicts (existing bookings overlap)
+[ ] Return 409 if conflict found
+[ ] Calculate price:
+  - Use customPrice if provided
+  - Otherwise: room.hourlyRate × hours
+  - Apply customTaxRate or globalTaxRate from settings
+  - Calculate totalPrice = basePrice × (1 + taxRate)
+
+**Booking Creation:**
+[ ] Create Booking with all fields:
+  - roomId, userId (or null), startTime, endTime
+  - customerName, customerPhone, customerEmail
+  - players, price, totalPrice, status = 'CONFIRMED'
+  - bookingSource, createdBy = req.user.id
+  - isGuestBooking, internalNotes
+[ ] Use transaction for new user + booking (rollback on error)
+[ ] Return comprehensive response:
+  - booking object (with all fields)
+  - userCreated: boolean (if new user created)
+  - emailSent: false (future feature placeholder)
+
+**Error Handling & Logging:**
+[ ] Handle all validation errors (400)
+[ ] Handle conflicts (409: duplicate phone, time slot)
+[ ] Handle not found (404: room or user)
+[ ] Transaction rollback on booking failure
+[ ] Detailed logging with admin, customer, booking context
+
+**Acceptance Criteria (1.4 Admin Booking API):**
+[ ] Can create booking for existing customer (by phone lookup)
+[ ] Can create booking + new customer account in one call
+[ ] Can create guest booking (walk-in only)
+[ ] Phone booking rejects guest mode (returns 400)
+[ ] Duplicate phone returns 409 with clear message
+[ ] Room time slot conflict returns 409
+[ ] Invalid roomId returns 404
+[ ] Price calculation correct (base + tax)
+[ ] Custom price override works
+[ ] Custom tax rate override works
+[ ] userId is null for guest bookings
+[ ] userId populated for existing/new customers
+[ ] createdBy tracks admin who created booking
+[ ] registrationSource matches bookingSource for new users
+[ ] Transaction rolls back if booking fails after user creation
+[ ] All required fields validated
+[ ] Response includes userCreated flag
+
+---
+
+### 1.5 Frontend - Phone Input Component (Shared UI)
+
+**PhoneInput Component:**
+[ ] Create `frontend/components/PhoneInput.tsx`
+[ ] Props interface:
+  - value: string
+  - onChange: (normalized: string) => void
+  - onSearch?: () => void
+  - countryCode?: string (default '+82')
+  - placeholder?: string
+  - disabled?: boolean
+  - error?: string
+[ ] Auto-formatting as user types:
+  - "0101234567 8" → "010-1234-5678" (display)
+  - Calls onChange with normalized "+821012345678"
+[ ] Country code selector dropdown (optional, default +82)
+[ ] Validation indicator:
+  - Green checkmark for valid phone
+  - Red X for invalid
+[ ] Optional "Search" button integration
+[ ] Styled with Tailwind to match existing UI
+[ ] Support disabled/readonly states
+[ ] Error message display below input
+[ ] aria-label and keyboard accessibility
+
+**Acceptance Criteria (1.5 Phone Input):**
+[ ] Component renders without errors
+[ ] Typing "010123456 78" auto-formats to "010-1234-5678" in display
+[ ] onChange receives normalized E.164 value ("+821012345678")
+[ ] Display shows user-friendly format ("+82 10-1234-5678")
+[ ] Search button triggers onSearch callback (if provided)
+[ ] Validation indicator shows green for valid, red for invalid
+[ ] Disabled state works (grayed out, no input)
+[ ] Error prop displays message below input
+[ ] Keyboard navigation works (Tab, Enter)
+[ ] Paste handling works correctly
+
+---
+
+### 1.6 Frontend - Customer Search Component
+
+**CustomerSearch Component:**
+[ ] Create `frontend/components/CustomerSearch.tsx`
+[ ] Phone input with "Search" button
+[ ] Search triggers API call to `/api/users/lookup?phone={normalized}`
+[ ] Display search results:
+  - **User found:** Show card with:
+    - Name, phone, email
+    - Stats: booking count, last booking date, member since
+    - Total spent (formatted currency)
+    - "Use This Customer" button
+  - **User not found:** Show:
+    - "No account found for this phone number"
+    - "Register New Customer" button
+    - "Book as Guest" button (only if bookingSource = "WALK_IN")
+[ ] Recent customers dropdown (optional quick-select)
+  - Fetch from `/api/users/recent`
+  - Click to auto-populate search
+[ ] Loading state during API call (spinner)
+[ ] Error handling for failed API calls (toast or inline message)
+[ ] Keyboard shortcuts (Enter to search)
+[ ] Clear search functionality (X button)
+
+**Acceptance Criteria (1.6 Customer Search):**
+[ ] Search with existing phone shows user card with stats
+[ ] User card displays all fields correctly formatted
+[ ] Search with non-existent phone shows "not found" message
+[ ] "Use This Customer" button triggers onSelect callback with user data
+[ ] "Register New Customer" button triggers onNewCustomer callback
+[ ] "Book as Guest" only visible when bookingSource = "WALK_IN"
+[ ] Recent customers list populates from API on mount
+[ ] Clicking recent customer auto-fills search and triggers lookup
+[ ] Loading spinner shows during search
+[ ] Error toast/message displays on API failure
+[ ] Clear button resets search input and results
+[ ] Enter key triggers search
+
+---
+
+### 1.7 Frontend - Enhanced Booking Modal (Dashboard Integration)
+
+**Multi-Step Booking Modal:**
+[ ] Update `frontend/src/pages/DashboardPage.tsx` booking modal
+[ ] Add modal state management (step tracking)
+
+**Step 1: Booking Source Selector**
+[ ] Radio buttons: "Walk-in" / "Phone Booking"
+[ ] Store in state: bookingSource ("WALK_IN" | "PHONE")
+[ ] Conditional rendering based on selection
+
+**Step 2: Customer Selection**
+[ ] Integrate CustomerSearch component
+[ ] Pass bookingSource prop (controls guest option visibility)
+[ ] Handle three customer paths:
+  - **Existing:** onSelect → store userId, pre-fill details, go to Step 4
+  - **New:** onNewCustomer → go to Step 3a (registration form)
+  - **Guest:** onGuest → go to Step 3b (guest form, walk-in only)
+
+**Step 3a: New Customer Registration Form**
+[ ] Form fields:
+  - Name (required)
+  - Phone (required, pre-filled from search)
+  - Email (optional)
+[ ] "Create Account & Continue" button
+[ ] Client-side validation:
+  - Phone format validation
+  - Name required
+[ ] Phone uniqueness check (call lookup API again)
+[ ] Show "User already exists" error if duplicate found
+[ ] On success: go to Step 4 with new user data
+
+**Step 3b: Guest Booking Form**
+[ ] Form fields:
+  - Name (required)
+  - Phone (required, NOT unique check)
+  - Email (optional)
+[ ] "Continue as Guest" button
+[ ] Only rendered if bookingSource = "WALK_IN"
+[ ] On submit: go to Step 4 with guest data
+
+**Step 4: Booking Details**
+[ ] Room selector dropdown
+  - Fetch available rooms
+  - Filter by ACTIVE status
+[ ] Date picker with availability calendar
+[ ] Time picker (only show available time slots)
+[ ] Duration selector (1-4 hours, dropdown or buttons)
+[ ] Players count (1-4, number input)
+[ ] Price preview section:
+  - Base price (auto-calculated)
+  - Tax rate % (show current global or custom)
+  - Total price (base × (1 + tax))
+  - Updates live as inputs change
+[ ] Admin-only fields (conditional rendering):
+  - Custom price override (checkbox + input)
+  - Custom tax rate override (checkbox + input)
+  - Internal notes (textarea)
+
+**Step 5: Confirmation Screen**
+[ ] Summary sections:
+  - **Customer details:**
+    - Name, phone, email
+    - Customer type (Existing / New / Guest)
+    - Registration source (if new)
+  - **Booking details:**
+    - Room name
+    - Date & time
+    - Duration, players
+    - Booking source (Walk-in / Phone)
+  - **Price breakdown:**
+    - Base price
+    - Tax (rate % and amount)
+    - Grand total
+    - Custom overrides (if any)
+    - Internal notes (if any)
+[ ] "Confirm & Create Booking" button
+[ ] "Back to Edit" button
+
+**Submit & Success/Error Handling:**
+[ ] Submit to `POST /api/bookings/admin/create`
+[ ] Request payload based on customer mode
+[ ] Loading state during submission (disable button, show spinner)
+[ ] **Success:**
+  - Show success toast ("Booking created successfully")
+  - Close modal
+  - Refresh bookings list
+  - Optional: Open print receipt dialog
+[ ] **Error:**
+  - Display error message inline (don't close modal)
+  - Allow user to retry
+  - Specific error messages for:
+    - 409 (duplicate phone, time conflict)
+    - 404 (room not found)
+    - 400 (validation errors)
+    - 500 (server error - generic message)
+
+**Acceptance Criteria (1.7 Booking Modal):**
+[ ] Booking source selector works (walk-in/phone radio buttons)
+[ ] Customer search finds and displays existing users with stats
+[ ] Can register new customer inline (Step 3a)
+[ ] New customer form validates phone format
+[ ] Duplicate phone check prevents conflicts
+[ ] Guest mode only available for walk-in bookings
+[ ] Phone bookings hide "Book as Guest" option
+[ ] Booking details form shows only available rooms
+[ ] Date/time pickers respect room availability
+[ ] Price preview calculates correctly with live updates
+[ ] Custom price override works (admin only)
+[ ] Custom tax rate override works (admin only)
+[ ] Internal notes field saves correctly
+[ ] Confirmation screen shows all details accurately
+[ ] Submit creates booking successfully
+[ ] Success toast appears and modal closes
+[ ] Bookings list auto-refreshes after creation
+[ ] Error messages display clearly without closing modal
+[ ] Can retry after error
+[ ] Modal navigation (back/next) works smoothly
+[ ] Form validation prevents invalid submissions
+
+---
+
+### 1.8 Analytics Dashboard (Optional - Future)
+
+**Registration Source Analytics:**
+[ ] Create analytics page or dashboard tab
+[ ] Chart: Users by registration source (pie or bar)
+  - Online, Walk-in, Phone counts
+[ ] Chart: Bookings by source over time (line chart)
+[ ] Cross-channel analysis table:
+  - Online users who book via walk-in
+  - Walk-in users who book online later
+[ ] Admin performance metrics:
+  - Top admins by registrations created
+  - Top admins by bookings created
+  - Average bookings per admin per day/week
+[ ] Filters: date range, registration source, booking source
+[ ] Export to CSV functionality
+[ ] Time-series charts (daily/weekly/monthly trends)
+
+**Acceptance Criteria (1.8 Analytics):**
+[ ] Charts render without errors
+[ ] Data accurately reflects database (spot-check counts)
+[ ] Filters update charts in real-time
+[ ] Export CSV downloads with correct data
+[ ] Cross-channel insights accurate (verified with SQL queries)
+[ ] Admin performance rankings correct
+
+---
+
+### 1.9 Testing & Documentation
+
+**Backend Integration Tests:**
+[ ] Test: Create booking for existing customer (by phone)
+[ ] Test: Create booking + new customer account
+[ ] Test: Create guest booking (walk-in only)
+[ ] Test: Reject guest booking via phone (400 error)
+[ ] Test: Duplicate phone validation (409 error)
+[ ] Test: Room time slot conflict (409 error)
+[ ] Test: Invalid roomId (404 error)
+[ ] Test: Phone normalization in lookups (multiple formats)
+[ ] Test: Price calculation with global tax rate
+[ ] Test: Price calculation with custom tax rate
+[ ] Test: Admin audit trail (createdBy, registeredBy)
+[ ] Test: Registration source tracking
+[ ] Test: Transaction rollback on booking creation failure
+
+**Frontend E2E Tests (Playwright/Cypress):**
+[ ] E2E: Complete walk-in guest booking flow (no account creation)
+[ ] E2E: Complete phone booking for new customer (creates user + booking)
+[ ] E2E: Search existing customer by phone and create booking
+[ ] E2E: Error handling (duplicate phone shows message, doesn't submit)
+[ ] E2E: Room conflict error (book same time slot twice)
+[ ] E2E: Walk-in booking can choose guest option
+[ ] E2E: Phone booking hides guest option
+[ ] E2E: Price preview updates when duration/room changes
+[ ] E2E: Custom price override works
+
+**Documentation:**
+[ ] API documentation for new endpoints:
+  - GET /api/users/lookup
+  - GET /api/users/recent
+  - POST /api/bookings/admin/create
+[ ] User guide for front desk staff (PDF or wiki page)
+[ ] Admin training guide (screenshots + step-by-step)
+[ ] Database schema documentation update (ER diagram)
+[ ] README update with new features
+[ ] Migration guide (existing email-based to phone-based)
+
+**Acceptance Criteria (1.9 Testing & Docs):**
+[ ] All backend integration tests pass (npm test)
+[ ] All E2E tests pass (npm run test:e2e)
+[ ] API docs complete with request/response examples
+[ ] User guides written and reviewed by team
+[ ] No TypeScript compilation errors
+[ ] No console errors in development or production builds
+[ ] All tests run in CI/CD pipeline
+
+---
+
+### Phase 1 Summary & Success Metrics
+
+**Deliverables:**
+✅ Database schema migrated (phone-based, guest bookings, tracking fields)  
+✅ Phone utility functions (normalize, format, validate)  
+✅ User lookup & recent customers API  
+✅ Admin booking creation API (3 customer modes)  
+✅ Phone input component (auto-formatting)  
+✅ Customer search component  
+✅ Enhanced booking modal (multi-step, all customer types)  
+✅ Comprehensive testing (integration + E2E)  
+✅ Documentation (API, user guides, training)
+
+**Success Metrics (Phase 1):**
+- [ ] < 60 seconds to create walk-in booking (timed user test)
+- [ ] Zero duplicate phone numbers in database (SQL constraint)
+- [ ] 90% of walk-ins choose to register vs guest (analytics query)
+- [ ] Phone search success rate: 100% (no false negatives)
+- [ ] < 500ms API response time for booking creation (performance test)
+- [ ] Zero data loss during migration (pre/post record counts match)
+
+**Follow-Ups (Phase 2 - SMS Verification & Enhancements):**
+[ ] Phone verification via SMS OTP (Twilio or NHN Cloud)
+[ ] PhoneVerificationToken usage (table already created)
+[ ] "Verified" badge for users in UI
+[ ] SMS booking confirmations to customers
+[ ] Account recovery via SMS OTP
+[ ] Phone-based login (OTP instead of password)
+[ ] Guest-to-registered migration tool (convert guest bookings to user accounts)
+[ ] Batch phone number cleanup (normalize existing data)
+[ ] Phone number blacklist (spam prevention)
+[ ] International phone support (multiple country codes)
+[ ] See `/docs/admin_manual_booking_feature.md` for Phase 2 details
+
+**Related Documentation:**
+- `/docs/admin_manual_booking_feature.md` - Full v1.0 specification
+- `/docs/database_schema_explanation.md` - Database relations guide
+- `/docs/api/bookings.md` - API documentation (to be created in 1.9)
+- `/docs/user-guide/admin-booking.md` - User guide (to be created in 1.9)
+
 Follow‑Ups (Post 0.6e) – Advanced POS Features
 [ ] Backend Integration: Replace mock menu with database-backed menu items
 [ ] Backend Integration: Persist orders to database (Order, OrderItem tables)
