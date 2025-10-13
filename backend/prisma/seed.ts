@@ -58,7 +58,7 @@ async function main() {
 	const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@kgolf.com';
 	const adminName = process.env.SEED_ADMIN_NAME || 'Admin User';
 	const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123';
-	const adminPhone = process.env.SEED_ADMIN_PHONE || '+821012345678'; // Korean phone format
+	const adminPhone = process.env.SEED_ADMIN_PHONE || '+14165551000'; // Canadian phone format (Toronto area code)
 	
 	const existingAdmin = await prisma.user.findFirst({ 
 		where: { 
@@ -108,7 +108,7 @@ async function main() {
 		const testEmail = process.env.SEED_TEST_EMAIL || 'test@example.com';
 		const testName = process.env.SEED_TEST_NAME || 'Test User';
 		const testPassword = process.env.SEED_TEST_PASSWORD || 'password123';
-		const testPhone = process.env.SEED_TEST_PHONE || '+821098765432'; // Korean phone format
+		const testPhone = process.env.SEED_TEST_PHONE || '+14165552000'; // Canadian phone format (Toronto area code)
 		
 		const existing = await prisma.user.findFirst({ 
 			where: { 

@@ -223,7 +223,8 @@ Follow‑Ups (Post 0.6f) – Tax & Settings Enhancements
 ## Phase 1 – Phone-Based Admin Booking System
 
 **Feature Documentation:** `/docs/admin_manual_booking_feature.md` (v1.0)  
-**Schema Guide:** `/docs/database_schema_explanation.md`
+**Schema Guide:** `/docs/database_schema_explanation.md`  
+**Phone Handling:** `/docs/phone_number_country_code_handling.md` (architecture details)
 
 **Overview:**
 Implement phone-number-based booking system allowing admins to manually create bookings for:
@@ -238,6 +239,18 @@ Implement phone-number-based booking system allowing admins to manually create b
 - Track registration source (ONLINE/WALK_IN/PHONE)
 - Track booking source (ONLINE/WALK_IN/PHONE)
 - Admin audit trail (createdBy, registeredBy)
+
+**Phone Number Architecture:**
+- **Storage:** E.164 format (`+14165551234`) in database
+- **Default Country:** Canada (`+1`) - hardcoded in backend/frontend code
+- **Frontend UI:** Country dropdown + auto-formatted input
+  ```
+  ┌─────────────┬──────────────────────────┐
+  │ 🇨🇦 +1  ▼  │ (416) 555-1234          │
+  └─────────────┴──────────────────────────┘
+  ```
+- **Supported Countries:** Canada (+1), Korea (+82), UK (+44), China (+86)
+- **Backend Utils:** `normalizePhone()`, `formatPhoneDisplay()`, `validatePhone()`
 
 ---
 
@@ -304,33 +317,54 @@ Implement phone-number-based booking system allowing admins to manually create b
 
 ### 1.2 Backend Phone Utilities
 
+**Configuration:**
+[ ] Default country code: `+1` (Canada) - hardcoded constant in code
+[ ] Supported countries: Canada (+1), Korea (+82), UK (+44), China (+86)
+[ ] Create `backend/src/config/phone.ts` for country configurations
+
 **Phone Normalization Functions:**
 [ ] Create `backend/src/utils/phoneUtils.ts`
-[ ] Implement `normalizePhone(input: string, countryCode = '+82'): string`
+[ ] Implement `normalizePhone(input: string, countryCode = '+1'): string`
   - Remove all non-digit/non-plus characters
+  - Handle Canadian formats: "416-555-1234" → "+14165551234"
   - Handle Korean formats: "010-1234-5678" → "+821012345678"
-  - Handle formats: "10-1234-5678" → "+821012345678" (add +82 prefix)
-  - Add country code if missing
+  - Handle formats without country code: "4165551234" → "+14165551234"
+  - If input already has +, validate and return
+  - Add default country code (+1) if missing
   - Return E.164 format
 [ ] Implement `formatPhoneDisplay(phone: string): string`
-  - Convert "+821012345678" → "+82 10-1234-5678"
-  - Handle non-Korean numbers gracefully
+  - Convert "+14165551234" → "+1 416-555-1234" (Canadian format)
+  - Convert "+821012345678" → "+82 10-1234-5678" (Korean format)
+  - Handle other countries gracefully (generic format)
 [ ] Implement `validatePhone(phone: string): boolean`
-  - Regex validation for Korean phone format
-  - Validate E.164 format (+ followed by 10-15 digits)
-  - Check length constraints
+  - Regex validation for E.164 format (+ followed by 1-15 digits)
+  - General validation (any country)
+[ ] Implement country-specific validators:
+  - `validateCanadianPhone(phone: string)` - +1 + 10 digits
+  - `validateKoreanPhone(phone: string)` - +82 + 9-11 digits
 [ ] Unit tests for all phone utility functions
-  - Test various input formats
-  - Test edge cases (empty, invalid, international)
-  - Test Korean-specific formats (010, 02, 031, etc.)
+  - Test various input formats (with/without dashes, spaces, parentheses)
+  - Test edge cases (empty, invalid, too short, too long)
+  - Test Canadian formats: "4165551234", "416-555-1234", "(416) 555-1234"
+  - Test Korean formats: "01012345678", "010-1234-5678"
+  - Test international formats: "+44", "+86", etc.
+  - Test normalization idempotency (normalizing twice = same result)
 
 **Acceptance Criteria (1.2 Phone Utilities):**
-[ ] normalizePhone("010-1234-5678") returns "+821012345678"
-[ ] normalizePhone("+82 10 1234 5678") returns "+821012345678"
-[ ] normalizePhone("10-1234-5678") returns "+821012345678"
-[ ] formatPhoneDisplay("+821012345678") returns "+82 10-1234-5678"
+[ ] normalizePhone("416-555-1234") returns "+14165551234" (Canadian default)
+[ ] normalizePhone("(416) 555-1234") returns "+14165551234"
+[ ] normalizePhone("4165551234") returns "+14165551234"
+[ ] normalizePhone("010-1234-5678", "+82") returns "+821012345678" (Korean with explicit country)
+[ ] normalizePhone("+14165551234") returns "+14165551234" (idempotent)
+[ ] normalizePhone("+82 10 1234 5678") returns "+821012345678" (handles spaces)
+[ ] formatPhoneDisplay("+14165551234") returns "+1 416-555-1234" (Canadian format)
+[ ] formatPhoneDisplay("+821012345678") returns "+82 10-1234-5678" (Korean format)
+[ ] validatePhone("+14165551234") returns true
 [ ] validatePhone("+821012345678") returns true
 [ ] validatePhone("invalid") returns false
+[ ] validatePhone("1234") returns false (too short)
+[ ] validateCanadianPhone("+14165551234") returns true
+[ ] validateCanadianPhone("+821012345678") returns false (wrong country)
 [ ] All unit tests pass (npm test)
 
 ---
@@ -474,14 +508,24 @@ Implement phone-number-based booking system allowing admins to manually create b
   - value: string
   - onChange: (normalized: string) => void
   - onSearch?: () => void
-  - countryCode?: string (default '+82')
+  - defaultCountryCode?: string (default '+1')
   - placeholder?: string
   - disabled?: boolean
   - error?: string
+[ ] **UI Layout:** Country dropdown + formatted input
+  ```
+  ┌─────────────┬──────────────────────────┐
+  │ 🇨🇦 +1  ▼  │ (416) 555-1234          │
+  └─────────────┴──────────────────────────┘
+  ```
+[ ] Country code dropdown:
+  - Options: 🇨🇦 +1, 🇰🇷 +82, 🇬🇧 +44, 🇨🇳 +86
+  - Default: +1 (Canada)
+  - Width: ~100px
 [ ] Auto-formatting as user types:
-  - "0101234567 8" → "010-1234-5678" (display)
-  - Calls onChange with normalized "+821012345678"
-[ ] Country code selector dropdown (optional, default +82)
+  - Canadian: "4165551234" → "(416) 555-1234" (display)
+  - Korean: "01012345678" → "010-1234-5678" (display)
+  - Calls onChange with normalized E.164: "+14165551234"
 [ ] Validation indicator:
   - Green checkmark for valid phone
   - Red X for invalid
@@ -493,15 +537,19 @@ Implement phone-number-based booking system allowing admins to manually create b
 
 **Acceptance Criteria (1.5 Phone Input):**
 [ ] Component renders without errors
-[ ] Typing "010123456 78" auto-formats to "010-1234-5678" in display
-[ ] onChange receives normalized E.164 value ("+821012345678")
-[ ] Display shows user-friendly format ("+82 10-1234-5678")
+[ ] Country dropdown defaults to 🇨🇦 +1
+[ ] Can change country to 🇰🇷 +82, 🇬🇧 +44, 🇨🇳 +86
+[ ] Typing "4165551234" auto-formats to "(416) 555-1234" (Canadian)
+[ ] Typing "01012345678" auto-formats to "010-1234-5678" when country = +82 (Korean)
+[ ] onChange receives normalized E.164 value ("+14165551234")
+[ ] Display shows user-friendly formatted value
+[ ] Changing country re-formats number appropriately
 [ ] Search button triggers onSearch callback (if provided)
 [ ] Validation indicator shows green for valid, red for invalid
 [ ] Disabled state works (grayed out, no input)
 [ ] Error prop displays message below input
 [ ] Keyboard navigation works (Tab, Enter)
-[ ] Paste handling works correctly
+[ ] Paste handling works correctly (e.g., paste "+14165551234" works)
 
 ---
 
