@@ -182,6 +182,8 @@ Notes on migrations
 - If you see: "The migrations recorded in the database diverge from the local migrations directory… We need to reset the schema", this is due to history divergence, not because every change resets data. In dev, you can accept the reset and then run `npm run db:seed` to restore sample data.
 - In production, never reset and never use `prisma migrate dev`. Use `prisma migrate deploy`, keep a linear, append‑only migration history, and avoid deleting past migrations.
 
+Testing: See [backend/README.md](backend/README.md#testing) for comprehensive testing documentation.
+
 ### Timestamps & Timezones (UTC)
 
 - Storage: All Prisma `DateTime` fields are mapped to Postgres `timestamptz` and persisted as UTC instants.
