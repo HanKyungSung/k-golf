@@ -224,9 +224,29 @@ backend/
 
 **Separate Test Database:**
 - Uses `TEST_DATABASE_URL` environment variable
-- Isolated from development database
+- Isolated from development database (`kgolf_test` vs `kgolf_app`)
 - Fresh migration state for each test run
 - Cleaned between test suites to prevent cross-contamination
+
+**Database Persistence Approach:**
+
+We use a **persistent test database** that remains between test runs:
+
+1. **Before tests:** Database `kgolf_test` exists with all tables/schema from migrations
+2. **Before each test file:** `clearDatabase()` wipes all data (but keeps tables/schema)
+3. **During tests:** Tests create and manipulate data
+4. **After each test:** Cleanup hooks delete test data
+5. **After tests complete:** Database and tables remain for next run
+
+**Why keep the database persistent?**
+- ✅ **Fast enough:** Tests run quickly (1-2s for typical suite)
+- ✅ **Easier debugging:** Can inspect database after failed tests
+- ✅ **Simpler setup:** Database already exists from initial setup
+- ✅ **Matches workflow:** Mirrors development database behavior
+
+**Alternative approaches we considered but didn't implement:**
+- **Transaction rollback:** Each test in a transaction that rolls back (faster, perfect isolation, but harder to debug)
+- **Full teardown:** Drop database after each run (complete isolation, but slower and more complex setup)
 
 **Database Helpers** (in `testDbSetup.ts`):
 - `clearDatabase()` - Wipe all tables (respecting FK order)
