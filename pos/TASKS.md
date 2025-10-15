@@ -572,10 +572,10 @@ Implement phone-number-based booking system allowing admins to manually create b
 ### 1.6 Frontend - Customer Search Component
 
 **CustomerSearch Component:**
-[ ] Create `frontend/components/CustomerSearch.tsx`
-[ ] Phone input with "Search" button
-[ ] Search triggers API call to `/api/users/lookup?phone={normalized}`
-[ ] Display search results:
+[x] Create `frontend/components/CustomerSearch.tsx`
+[x] Phone input with "Search" button
+[x] Search triggers API call to `/api/users/lookup?phone={normalized}`
+[x] Display search results:
   - **User found:** Show card with:
     - Name, phone, email
     - Stats: booking count, last booking date, member since
@@ -585,27 +585,34 @@ Implement phone-number-based booking system allowing admins to manually create b
     - "No account found for this phone number"
     - "Register New Customer" button
     - "Book as Guest" button (only if bookingSource = "WALK_IN")
-[ ] Recent customers dropdown (optional quick-select)
+[x] Recent customers dropdown (optional quick-select)
   - Fetch from `/api/users/recent`
   - Click to auto-populate search
-[ ] Loading state during API call (spinner)
-[ ] Error handling for failed API calls (toast or inline message)
-[ ] Keyboard shortcuts (Enter to search)
-[ ] Clear search functionality (X button)
+  - Shows customer name, phone, and booking count
+[x] Loading state during API call (spinner on search button)
+[x] Error handling for failed API calls (toast notifications)
+[x] Keyboard shortcuts (Enter to search from PhoneInput)
+[x] Clear search functionality (X button resets state)
+[x] TypeScript interfaces for CustomerData and props
+[x] Integration with PhoneInput component (Phase 1.5)
+[x] Currency formatting (CAD) for total spent
+[x] Date formatting for member since and last booking
 
 **Acceptance Criteria (1.6 Customer Search):**
-[ ] Search with existing phone shows user card with stats
-[ ] User card displays all fields correctly formatted
-[ ] Search with non-existent phone shows "not found" message
-[ ] "Use This Customer" button triggers onSelect callback with user data
-[ ] "Register New Customer" button triggers onNewCustomer callback
-[ ] "Book as Guest" only visible when bookingSource = "WALK_IN"
-[ ] Recent customers list populates from API on mount
-[ ] Clicking recent customer auto-fills search and triggers lookup
-[ ] Loading spinner shows during search
-[ ] Error toast/message displays on API failure
-[ ] Clear button resets search input and results
-[ ] Enter key triggers search
+[x] Search with existing phone shows user card with stats
+[x] User card displays all fields correctly formatted
+[x] Search with non-existent phone shows "not found" message
+[x] "Use This Customer" button triggers onSelectExisting callback with user data
+[x] "Register New Customer" button triggers onRegisterNew callback with phone
+[x] "Book as Guest" only visible when bookingSource = "WALK_IN"
+[x] Recent customers list populates from API on mount
+[x] Clicking recent customer auto-fills search and triggers lookup
+[x] Loading spinner shows during search
+[x] Error toast displays on API failure
+[x] Clear button resets search input and results
+[x] Enter key triggers search (inherited from PhoneInput)
+[x] Component exports CustomerData interface for type safety
+[x] **Usage examples created in CustomerSearchExample.tsx**
 
 ---
 
