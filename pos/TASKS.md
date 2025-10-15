@@ -507,47 +507,65 @@ Implement phone-number-based booking system allowing admins to manually create b
   - onChange: (normalized: string) => void
   - onSearch?: () => void
   - defaultCountryCode?: string (default '+1')
+### 1.5 Frontend - Phone Input Component (Shared UI)
+
+**PhoneInput Component:**
+[x] Create `frontend/components/PhoneInput.tsx`
+[x] Props interface:
+  - value: string (E.164 format)
+  - onChange: (normalized: string) => void
+  - onSearch?: () => void
   - placeholder?: string
   - disabled?: boolean
+  - readOnly?: boolean
   - error?: string
-[ ] **UI Layout:** Country dropdown + formatted input
+  - showValidation?: boolean
+  - showSearchButton?: boolean
+[x] **UI Layout:** Country display + formatted input
   ```
   ┌─────────────┬──────────────────────────┐
-  │ 🇨🇦 +1  ▼  │ (416) 555-1234          │
+  │ 🇨🇦 +1     │ (416) 555-1234          │
   └─────────────┴──────────────────────────┘
   ```
-[ ] Country code dropdown:
-  - Options: 🇨🇦 +1, 🇰🇷 +82, 🇬🇧 +44, 🇨🇳 +86
-  - Default: +1 (Canada)
-  - Width: ~100px
-[ ] Auto-formatting as user types:
+[x] Canada-only implementation (simplified from multi-country based on Phase 1.2 decision)
+  - Fixed country code: +1 (Canada)
+  - Display only (no dropdown needed)
+[x] Auto-formatting as user types:
   - Canadian: "4165551234" → "(416) 555-1234" (display)
-  - Korean: "01012345678" → "010-1234-5678" (display)
   - Calls onChange with normalized E.164: "+14165551234"
-[ ] Validation indicator:
-  - Green checkmark for valid phone
+[x] Validation indicator:
+  - Green checkmark for valid phone (10 digits)
   - Red X for invalid
-[ ] Optional "Search" button integration
-[ ] Styled with Tailwind to match existing UI
-[ ] Support disabled/readonly states
-[ ] Error message display below input
-[ ] aria-label and keyboard accessibility
+  - Optional via showValidation prop
+[x] Optional "Search" button integration
+  - Shown when showSearchButton=true
+  - Triggers onSearch callback
+  - Disabled when phone invalid
+  - Keyboard shortcut: Enter key
+[x] Styled with Tailwind to match existing shadcn/ui components
+[x] Support disabled/readonly states
+[x] Error message display below input
+[x] aria-label and keyboard accessibility
+[x] Helper functions:
+  - formatPhoneDisplay() - Format for display
+  - normalizePhone() - Convert to E.164
+  - validateCanadianPhone() - Validate format
 
 **Acceptance Criteria (1.5 Phone Input):**
-[ ] Component renders without errors
-[ ] Country dropdown defaults to 🇨🇦 +1
-[ ] Can change country to 🇰🇷 +82, 🇬🇧 +44, 🇨🇳 +86
-[ ] Typing "4165551234" auto-formats to "(416) 555-1234" (Canadian)
-[ ] Typing "01012345678" auto-formats to "010-1234-5678" when country = +82 (Korean)
-[ ] onChange receives normalized E.164 value ("+14165551234")
-[ ] Display shows user-friendly formatted value
-[ ] Changing country re-formats number appropriately
-[ ] Search button triggers onSearch callback (if provided)
-[ ] Validation indicator shows green for valid, red for invalid
-[ ] Disabled state works (grayed out, no input)
-[ ] Error prop displays message below input
-[ ] Keyboard navigation works (Tab, Enter)
-[ ] Paste handling works correctly (e.g., paste "+14165551234" works)
+[x] Component renders without errors
+[x] Country display shows 🇨🇦 +1 (fixed, Canada-only)
+[x] Typing "4165551234" auto-formats to "(416) 555-1234"
+[x] onChange receives normalized E.164 value ("+14165551234")
+[x] Display shows user-friendly formatted value
+[x] Search button triggers onSearch callback (when enabled)
+[x] Validation indicator shows green for valid, red for invalid
+[x] Disabled state works (grayed out, no input)
+[x] Read-only state works (display only)
+[x] Error prop displays message below input
+[x] Keyboard navigation works (Tab, Enter)
+[x] Paste handling works correctly (e.g., paste "+14165551234" formats properly)
+[x] Component exported and ready for use in forms
+[x] **Usage examples created in PhoneInputExample.tsx**
 
 ---
 
