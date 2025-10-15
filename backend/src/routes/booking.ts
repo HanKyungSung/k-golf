@@ -382,4 +382,319 @@ router.post('/admin/create', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * Phase 1.4: Admin Manual Booking Creation
+ * POST /api/bookings/admin/create
+ * 
+ * Supports three customer modes:
+ * 1. existing - Lookup existing customer by phone
+ * 2. new - Create new customer account + booking in transaction
+ * 3. guest - Create booking without user account (walk-in only)
+ */
+
+// Zod schemas for admin booking creation
+const newCustomerSchema = z.object({
+  name: z.string().min(1),
+  phone: z.string().min(1),
+  email: z.string().email().optional(),
+});
+
+const guestSchema = z.object({
+  name: z.string().min(1),
+  phone: z.string().min(1),
+  email: z.string().email().optional(),
+});
+
+const adminBookingSchema = z.object({
+  // Customer mode
+  customerMode: z.enum(['existing', 'new', 'guest']),
+  customerPhone: z.string().optional(), // For existing mode
+  newCustomer: newCustomerSchema.optional(), // For new mode
+  guest: guestSchema.optional(), // For guest mode
+  
+  // Booking details
+  roomId: z.string().uuid(),
+  startTimeIso: z.string().datetime(),
+  hours: z.number().int().min(1).max(8),
+  players: z.number().int().min(1).max(4),
+  
+  // Booking source
+  bookingSource: z.enum(['WALK_IN', 'PHONE']),
+  
+  // Optional overrides
+  customPrice: z.number().positive().optional(),
+  customTaxRate: z.number().min(0).max(1).optional(), // 0.13 = 13%
+  internalNotes: z.string().optional(),
+});
+
+// Helper: Get global tax rate from settings
+async function getGlobalTaxRate(): Promise<number> {
+  const setting = await prisma.setting.findUnique({
+    where: { key: 'global_tax_rate' },
+  });
+  return setting ? parseFloat(setting.value) : 0.13; // Default 13%
+}
+
+// Helper: Calculate price with tax
+function calculatePricing(basePrice: number, taxRate: number) {
+  const tax = basePrice * taxRate;
+  const totalPrice = basePrice + tax;
+  return {
+    basePrice,
+    taxRate,
+    tax,
+    totalPrice,
+  };
+}
+
+// Middleware: Require ADMIN role
+function requireAdmin(req: any, res: any, next: any) {
+  if (!req.user || req.user.role !== UserRole.ADMIN) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+}
+
+router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    // Validate request body
+    const parsed = adminBookingSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ 
+        error: 'Validation failed', 
+        details: parsed.error.flatten() 
+      });
+    }
+
+    const {
+      customerMode,
+      customerPhone,
+      newCustomer,
+      guest,
+      roomId,
+      startTimeIso,
+      hours,
+      players,
+      bookingSource,
+      customPrice,
+      customTaxRate,
+      internalNotes,
+    } = parsed.data;
+
+    // Validate mode-specific data
+    if (customerMode === 'existing' && !customerPhone) {
+      return res.status(400).json({ error: 'customerPhone required for existing mode' });
+    }
+    if (customerMode === 'new' && !newCustomer) {
+      return res.status(400).json({ error: 'newCustomer data required for new mode' });
+    }
+    if (customerMode === 'guest' && !guest) {
+      return res.status(400).json({ error: 'guest data required for guest mode' });
+    }
+
+    // Validate guest mode constraints
+    if (customerMode === 'guest' && bookingSource === 'PHONE') {
+      return res.status(400).json({ 
+        error: 'Guest bookings only allowed for walk-in (not phone bookings)' 
+      });
+    }
+
+    // Validate room exists and is active
+    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    if (!room) {
+      return res.status(404).json({ error: 'Room not found' });
+    }
+    if (room.status !== 'ACTIVE') {
+      return res.status(400).json({ 
+        error: 'Room not available for booking', 
+        roomStatus: room.status 
+      });
+    }
+
+    // Parse and validate times
+    const startTime = new Date(startTimeIso);
+    const endTime = new Date(startTime.getTime() + hours * 60 * 60 * 1000);
+
+    // Check for time slot conflicts
+    const conflict = await findConflict(roomId, startTime, endTime);
+    if (conflict) {
+      return res.status(409).json({
+        error: 'Time slot conflict',
+        conflictingBooking: {
+          id: conflict.id,
+          startTime: conflict.startTime,
+          endTime: conflict.endTime,
+        },
+      });
+    }
+
+    // Calculate pricing
+    const defaultHourlyRate = 50; // TODO: Get from room pricing config
+    const basePrice = customPrice || (defaultHourlyRate * hours);
+    const taxRate = customTaxRate !== undefined ? customTaxRate : await getGlobalTaxRate();
+    const pricing = calculatePricing(basePrice, taxRate);
+
+    // Import phone utilities
+    const { normalizePhone } = await import('../utils/phoneUtils');
+
+    let userId: string | null = null;
+    let customerName: string;
+    let customerPhoneNormalized: string;
+    let customerEmail: string | undefined;
+    let userCreated = false;
+
+    // Handle customer modes
+    if (customerMode === 'existing') {
+      // Lookup existing customer
+      const normalizedPhone = normalizePhone(customerPhone!);
+      const user = await prisma.user.findUnique({
+        where: { phone: normalizedPhone },
+      });
+
+      if (!user) {
+        return res.status(404).json({ 
+          error: 'Customer not found', 
+          phone: normalizedPhone 
+        });
+      }
+
+      userId = user.id;
+      customerName = user.name;
+      customerPhoneNormalized = user.phone;
+      customerEmail = user.email || undefined;
+
+    } else if (customerMode === 'new') {
+      // Create new customer account
+      const normalizedPhone = normalizePhone(newCustomer!.phone);
+
+      // Check for duplicate phone
+      const existingUser = await prisma.user.findUnique({
+        where: { phone: normalizedPhone },
+      });
+
+      if (existingUser) {
+        return res.status(409).json({
+          error: 'Phone number already registered',
+          phone: normalizedPhone,
+          userId: existingUser.id,
+        });
+      }
+
+      // Create user + booking in transaction
+      const result = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            name: newCustomer!.name,
+            phone: normalizedPhone,
+            email: newCustomer!.email || null,
+            role: UserRole.CUSTOMER,
+            registrationSource: bookingSource,
+            registeredBy: req.user!.id,
+            passwordHash: null, // No password initially
+          },
+        });
+
+        const booking = await tx.booking.create({
+          data: {
+            roomId,
+            userId: newUser.id,
+            customerName: newUser.name,
+            customerPhone: newUser.phone,
+            customerEmail: newUser.email,
+            startTime,
+            endTime,
+            players,
+            price: pricing.totalPrice,
+            status: 'CONFIRMED',
+            isGuestBooking: false,
+            bookingSource,
+            createdBy: req.user!.id,
+            internalNotes,
+          },
+        });
+
+        return { user: newUser, booking };
+      });
+
+      userId = result.user.id;
+      customerName = result.user.name;
+      customerPhoneNormalized = result.user.phone;
+      customerEmail = result.user.email || undefined;
+      userCreated = true;
+
+      return res.status(201).json({
+        booking: presentBooking(result.booking),
+        userCreated: true,
+        user: {
+          id: result.user.id,
+          name: result.user.name,
+          phone: result.user.phone,
+          email: result.user.email,
+        },
+        pricing: {
+          basePrice: pricing.basePrice,
+          taxRate: pricing.taxRate,
+          tax: pricing.tax,
+          totalPrice: pricing.totalPrice,
+        },
+        emailSent: false, // Placeholder for future feature
+      });
+
+    } else {
+      // Guest mode
+      const normalizedPhone = normalizePhone(guest!.phone);
+      
+      userId = null;
+      customerName = guest!.name;
+      customerPhoneNormalized = normalizedPhone;
+      customerEmail = guest!.email;
+    }
+
+    // Create booking (for existing and guest modes)
+    const booking = await prisma.booking.create({
+      data: {
+        roomId,
+        userId,
+        customerName,
+        customerPhone: customerPhoneNormalized,
+        customerEmail,
+        startTime,
+        endTime,
+        players,
+        price: pricing.totalPrice,
+        status: 'CONFIRMED',
+        isGuestBooking: customerMode === 'guest',
+        bookingSource,
+        createdBy: req.user!.id,
+        internalNotes,
+      },
+    });
+
+    res.status(201).json({
+      booking: presentBooking(booking),
+      userCreated,
+      pricing: {
+        basePrice: pricing.basePrice,
+        taxRate: pricing.taxRate,
+        tax: pricing.tax,
+        totalPrice: pricing.totalPrice,
+      },
+      emailSent: false, // Placeholder for future feature
+    });
+
+  } catch (error: any) {
+    console.error('[ADMIN CREATE BOOKING] Error:', error);
+    
+    // Handle Prisma errors
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'Duplicate constraint violation' });
+    }
+    
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message,
+    });
+  }
+});
+
 export { router as bookingRouter };

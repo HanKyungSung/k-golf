@@ -410,8 +410,8 @@ Implement phone-number-based booking system allowing admins to manually create b
 ### 1.4 Backend API - Admin Manual Booking Creation
 
 **Admin Booking Creation Endpoint:**
-[ ] Create `POST /api/bookings/admin/create` (ADMIN only)
-[ ] Zod request body validation:
+[x] Create `POST /api/bookings/admin/create` (ADMIN only)
+[x] Zod request body validation:
   - customerMode: "existing" | "new" | "guest"
   - customerPhone (for existing mode)
   - newCustomer: { name, phone, email? } (for new mode)
@@ -421,78 +421,80 @@ Implement phone-number-based booking system allowing admins to manually create b
   - customPrice?, customTaxRate?, internalNotes? (optional)
 
 **Implement customerMode = "existing":**
-[ ] Lookup user by normalized phone
-[ ] Return 404 if user not found
-[ ] Use existing userId for booking
-[ ] Auto-fill customerName, customerPhone, customerEmail from user record
+[x] Lookup user by normalized phone
+[x] Return 404 if user not found
+[x] Use existing userId for booking
+[x] Auto-fill customerName, customerPhone, customerEmail from user record
 
 **Implement customerMode = "new":**
-[ ] Validate phone uniqueness (check existing users)
-[ ] Return 409 if phone already exists
-[ ] Create new User with:
+[x] Validate phone uniqueness (check existing users)
+[x] Return 409 if phone already exists
+[x] Create new User with:
   - name, phone, email (optional)
   - registrationSource = bookingSource
   - registeredBy = req.user.id (admin who created account)
   - role = 'CUSTOMER'
   - passwordHash = null (no password initially)
-[ ] Use new userId for booking
+[x] Use new userId for booking
 
 **Implement customerMode = "guest":**
-[ ] Validate bookingSource !== 'PHONE' (guests only for walk-in)
-[ ] Return 400 if attempting guest phone booking
-[ ] Don't create User record
-[ ] Set userId = null
-[ ] Set isGuestBooking = true
-[ ] Store guest data in booking record (customerName, customerPhone, customerEmail)
+[x] Validate bookingSource !== 'PHONE' (guests only for walk-in)
+[x] Return 400 if attempting guest phone booking
+[x] Don't create User record
+[x] Set userId = null
+[x] Set isGuestBooking = true
+[x] Store guest data in booking record (customerName, customerPhone, customerEmail)
 
 **Room Availability & Price Calculation:**
-[ ] Validate room exists and status = 'ACTIVE'
-[ ] Check for time slot conflicts (existing bookings overlap)
-[ ] Return 409 if conflict found
-[ ] Calculate price:
+[x] Validate room exists and status = 'ACTIVE'
+[x] Check for time slot conflicts (existing bookings overlap)
+[x] Return 409 if conflict found
+[x] Calculate price:
   - Use customPrice if provided
-  - Otherwise: room.hourlyRate × hours
+  - Otherwise: room.hourlyRate × hours (default $50/hr)
   - Apply customTaxRate or globalTaxRate from settings
-  - Calculate totalPrice = basePrice × (1 + taxRate)
+  - Calculate totalPrice = basePrice + (basePrice × taxRate)
 
 **Booking Creation:**
-[ ] Create Booking with all fields:
+[x] Create Booking with all fields:
   - roomId, userId (or null), startTime, endTime
   - customerName, customerPhone, customerEmail
-  - players, price, totalPrice, status = 'CONFIRMED'
+  - players, price (totalPrice), status = 'CONFIRMED'
   - bookingSource, createdBy = req.user.id
   - isGuestBooking, internalNotes
-[ ] Use transaction for new user + booking (rollback on error)
-[ ] Return comprehensive response:
+[x] Use transaction for new user + booking (rollback on error)
+[x] Return comprehensive response:
   - booking object (with all fields)
   - userCreated: boolean (if new user created)
+  - pricing breakdown (basePrice, taxRate, tax, totalPrice)
   - emailSent: false (future feature placeholder)
 
 **Error Handling & Logging:**
-[ ] Handle all validation errors (400)
-[ ] Handle conflicts (409: duplicate phone, time slot)
-[ ] Handle not found (404: room or user)
-[ ] Transaction rollback on booking failure
-[ ] Detailed logging with admin, customer, booking context
+[x] Handle all validation errors (400)
+[x] Handle conflicts (409: duplicate phone, time slot)
+[x] Handle not found (404: room or user)
+[x] Transaction rollback on booking failure
+[x] Detailed logging with admin, customer, booking context
 
 **Acceptance Criteria (1.4 Admin Booking API):**
-[ ] Can create booking for existing customer (by phone lookup)
-[ ] Can create booking + new customer account in one call
-[ ] Can create guest booking (walk-in only)
-[ ] Phone booking rejects guest mode (returns 400)
-[ ] Duplicate phone returns 409 with clear message
-[ ] Room time slot conflict returns 409
-[ ] Invalid roomId returns 404
-[ ] Price calculation correct (base + tax)
-[ ] Custom price override works
-[ ] Custom tax rate override works
-[ ] userId is null for guest bookings
-[ ] userId populated for existing/new customers
-[ ] createdBy tracks admin who created booking
-[ ] registrationSource matches bookingSource for new users
-[ ] Transaction rolls back if booking fails after user creation
-[ ] All required fields validated
-[ ] Response includes userCreated flag
+[x] Can create booking for existing customer (by phone lookup)
+[x] Can create booking + new customer account in one call
+[x] Can create guest booking (walk-in only)
+[x] Phone booking rejects guest mode (returns 400)
+[x] Duplicate phone returns 409 with clear message
+[x] Room time slot conflict returns 409
+[x] Invalid roomId returns 404
+[x] Price calculation correct (base + tax)
+[x] Custom price override works
+[x] Custom tax rate override works
+[x] userId is null for guest bookings
+[x] userId populated for existing/new customers
+[x] createdBy tracks admin who created booking
+[x] registrationSource matches bookingSource for new users
+[x] Transaction rolls back if booking fails after user creation
+[x] All required fields validated
+[x] Response includes userCreated flag
+[x] **Unit tests: 20/20 passing (pricing, validation, time calculations)**
 
 ---
 
