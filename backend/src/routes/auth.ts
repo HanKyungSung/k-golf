@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createUser, findUserByEmail, hashPassword, verifyPassword, createSession, getSession, invalidateSession, createEmailVerificationToken, consumeEmailVerificationToken } from '../services/authService';
+import { createUser, findUserByEmail, findUserByPhone, hashPassword, verifyPassword, createSession, getSession, invalidateSession, createEmailVerificationToken, consumeEmailVerificationToken } from '../services/authService';
 import { sendVerificationEmail } from '../services/emailService';
+import { normalizePhone } from '../utils/phoneUtils';
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
@@ -23,10 +24,18 @@ router.post('/register', async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { email, name, phone, password } = parsed.data;
   const normEmail = email.toLowerCase();
+  const normPhone = normalizePhone(phone);
+  
+  // Check if email already exists
   const existing = await findUserByEmail(normEmail);
   if (existing) return res.status(409).json({ error: 'Email already in use' });
+  
+  // Check if phone already exists
+  const existingPhone = await findUserByPhone(normPhone);
+  if (existingPhone) return res.status(409).json({ error: 'Phone number already in use' });
+  
   const passwordHash = await hashPassword(password);
-  const user = await createUser(normEmail, name, phone, passwordHash);
+  const user = await createUser(normEmail, name, normPhone, passwordHash);
   const { plain, expiresAt } = await createEmailVerificationToken(user.id);
   try {
     if (user.email) {

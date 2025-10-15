@@ -66,6 +66,10 @@ export async function findUserByEmail(email: string) {
   return prisma.user.findUnique({ where: { email } }) as any;
 }
 
+export async function findUserByPhone(phone: string) {
+  return prisma.user.findUnique({ where: { phone } }) as any;
+}
+
 export async function createSession(userId: string, ttlHours = 24) {
   const sessionToken = generatePlainToken(24);
   const expiresAt = new Date(Date.now() + ttlHours * 3600 * 1000);

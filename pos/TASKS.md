@@ -616,6 +616,49 @@ Implement phone-number-based booking system allowing admins to manually create b
 
 ---
 
+### 1.6.1 Bug Fix - Registration Phone Uniqueness & Email Setup
+
+**Issue:** Duplicate phone number constraint violation during user registration
+**Root Cause:** 
+- Registration endpoint checked email uniqueness but not phone uniqueness
+- Phone field has `@unique` constraint in Prisma schema
+- Attempting to register with existing phone caused Prisma error instead of user-friendly 409 response
+- Gmail authentication failed due to missing App-Specific Password configuration
+
+**Backend Changes:**
+[x] Add `findUserByPhone()` helper function in authService.ts
+[x] Import `normalizePhone` utility in auth.ts routes
+[x] Add phone normalization in register endpoint (E.164 format)
+[x] Add phone uniqueness check before user creation
+[x] Return 409 error: "Phone number already in use"
+[x] Update `.env.example` with Gmail App Password setup instructions
+
+**Error Handling:**
+[x] Registration with duplicate email → 409: "Email already in use"
+[x] Registration with duplicate phone → 409: "Phone number already in use"
+[x] Prisma unique constraint error prevented (graceful validation)
+
+**Email Configuration:**
+[x] Updated `.env.example` with clear Gmail App Password instructions
+[x] Added link to Google account security settings
+[x] Documented 2-Step Verification requirement
+[x] Documented 16-character app password format
+
+**Files Modified:**
+- `backend/src/services/authService.ts` - Added findUserByPhone function
+- `backend/src/routes/auth.ts` - Added phone validation, normalization, uniqueness check
+- `backend/.env.example` - Updated email configuration documentation
+
+**Acceptance Criteria (1.6.1 Bug Fix):**
+[x] Duplicate phone registration returns 409 error with message
+[x] Phone numbers normalized to E.164 before storage
+[x] No Prisma constraint errors for duplicate phones
+[x] Clear error messages distinguish email vs phone duplicates
+[x] `.env.example` documents Gmail App Password setup
+[x] Email service uses App-Specific Password correctly
+
+---
+
 ### 1.7 Frontend - Enhanced Booking Modal (Dashboard Integration)
 
 **Multi-Step Booking Modal:**
