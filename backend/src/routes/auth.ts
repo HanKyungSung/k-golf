@@ -29,7 +29,9 @@ router.post('/register', async (req, res) => {
   const user = await createUser(normEmail, name, phone, passwordHash);
   const { plain, expiresAt } = await createEmailVerificationToken(user.id);
   try {
-    await sendVerificationEmail({ to: user.email, email: user.email, token: plain, expiresAt });
+    if (user.email) {
+      await sendVerificationEmail({ to: user.email, email: user.email, token: plain, expiresAt });
+    }
   } catch (e) {
     console.error('sendVerificationEmail error', e);
   }
