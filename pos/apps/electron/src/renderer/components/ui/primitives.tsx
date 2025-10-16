@@ -147,6 +147,39 @@ export const TabsContent: React.FC<{
     return <div className="mt-4">{children}</div>;
   };
 
+// Input component (for forms)
+export const Input = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(({ className = '', type, ...props }, ref) => {
+  return (
+    <input
+      type={type}
+      ref={ref}
+      className={`flex h-9 w-full rounded-md border border-slate-600 bg-slate-900/50 px-3 py-1 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      {...props}
+    />
+  );
+});
+Input.displayName = 'Input';
+
+// Label component (for forms)
+export const Label = React.forwardRef<
+  HTMLLabelElement,
+  React.LabelHTMLAttributes<HTMLLabelElement>
+>(({ className = '', children, ...props }, ref) => {
+  return (
+    <label
+      ref={ref}
+      className={`block text-sm font-medium text-slate-300 mb-1 ${className}`}
+      {...props}
+    >
+      {children}
+    </label>
+  );
+});
+Label.displayName = 'Label';
+
 // Future extension ideas:
 // - Variant prop for Card (e.g., subtle, outline)
 // Keep file focused until design system pass.

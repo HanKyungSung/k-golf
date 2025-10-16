@@ -18,6 +18,7 @@ function isBookingInSlot(b: import('../app/bookingContext').Booking, slot: strin
 
 // UI primitives centralized
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from '../components/ui/primitives';
+import { BookingModal } from '../components/BookingModal';
 
 interface TabsContextValue { value: string; setValue: (v:string)=>void }
 const TabsContext = createContext<TabsContextValue | null>(null);
@@ -41,18 +42,6 @@ const DashboardPage: React.FC = () => {
   
   // Create booking modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
-    roomId: '',
-    date: '',
-    time: '',
-    duration: 1,
-    players: 1
-  });
-  const [createError, setCreateError] = useState('');
-  const [createLoading, setCreateLoading] = useState(false);
 
   // Tax settings state
   const [taxRateInput, setTaxRateInput] = useState<string>(globalTaxRate.toString());
@@ -299,220 +288,16 @@ const DashboardPage: React.FC = () => {
         )}
       </main>
 
-      {/* Create Booking Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowCreateModal(false)}>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 w-full max-w-md mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-white">Create Booking</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
-            </div>
-
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              setCreateError('');
-              setCreateLoading(true);
-
-              // Validation
-              if (!createForm.customerName.trim()) {
-                setCreateError('Customer name is required');
-                setCreateLoading(false);
-                return;
-              }
-              if (!createForm.customerPhone.trim()) {
-                setCreateError('Customer phone is required');
-                setCreateLoading(false);
-                return;
-              }
-              if (!createForm.customerEmail.trim() || !createForm.customerEmail.includes('@')) {
-                setCreateError('Valid customer email is required');
-                setCreateLoading(false);
-                return;
-              }
-              if (!createForm.roomId) {
-                setCreateError('Please select a room');
-                setCreateLoading(false);
-                return;
-              }
-              if (!createForm.date || !createForm.time) {
-                setCreateError('Date and time are required');
-                setCreateLoading(false);
-                return;
-              }
-
-              try {
-                // Call backend API (you'll need to expose this via IPC)
-                const response = await fetch('http://localhost:8080/api/bookings/admin/create', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
-                  body: JSON.stringify({
-                    customerName: createForm.customerName,
-                    customerEmail: createForm.customerEmail,
-                    customerPhone: createForm.customerPhone,
-                    roomId: createForm.roomId,
-                    date: createForm.date,
-                    time: createForm.time,
-                    duration: createForm.duration,
-                    players: createForm.players
-                  })
-                });
-
-                if (!response.ok) {
-                  const error = await response.json();
-                  throw new Error(error.error || 'Failed to create booking');
-                }
-
-                // Success - close modal and reset form
-                setShowCreateModal(false);
-                setCreateForm({
-                  customerName: '',
-                  customerEmail: '',
-                  customerPhone: '',
-                  roomId: '',
-                  date: '',
-                  time: '',
-                  duration: 1,
-                  players: 1
-                });
-                // TODO: Refresh bookings list
-                alert('Booking created successfully!');
-              } catch (err: any) {
-                setCreateError(err.message || 'Failed to create booking');
-              } finally {
-                setCreateLoading(false);
-              }
-            }} className="space-y-4">
-              {createError && (
-                <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-3 py-2 rounded text-sm">
-                  {createError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">Customer Name *</label>
-                <input
-                  type="text"
-                  value={createForm.customerName}
-                  onChange={(e) => setCreateForm({...createForm, customerName: e.target.value})}
-                  className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">Customer Phone *</label>
-                <input
-                  type="tel"
-                  value={createForm.customerPhone}
-                  onChange={(e) => setCreateForm({...createForm, customerPhone: e.target.value})}
-                  className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="+1 (555) 123-4567"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">Customer Email *</label>
-                <input
-                  type="email"
-                  value={createForm.customerEmail}
-                  onChange={(e) => setCreateForm({...createForm, customerEmail: e.target.value})}
-                  className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="john@example.com"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">Room *</label>
-                <select
-                  value={createForm.roomId}
-                  onChange={(e) => setCreateForm({...createForm, roomId: e.target.value})}
-                  className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  required
-                >
-                  <option value="">Select a room</option>
-                  {rooms.filter(r => r.status === 'ACTIVE').map(r => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-slate-300 mb-1">Date *</label>
-                  <input
-                    type="date"
-                    value={createForm.date}
-                    onChange={(e) => setCreateForm({...createForm, date: e.target.value})}
-                    className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-slate-300 mb-1">Time *</label>
-                  <input
-                    type="time"
-                    value={createForm.time}
-                    onChange={(e) => setCreateForm({...createForm, time: e.target.value})}
-                    className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-slate-300 mb-1">Duration (hours)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="4"
-                    value={createForm.duration}
-                    onChange={(e) => setCreateForm({...createForm, duration: parseInt(e.target.value) || 1})}
-                    className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-slate-300 mb-1">Players</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="4"
-                    value={createForm.players}
-                    onChange={(e) => setCreateForm({...createForm, players: parseInt(e.target.value) || 1})}
-                    className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2 rounded bg-slate-700 text-slate-200 font-medium text-sm hover:bg-slate-600 border border-slate-600"
-                  disabled={createLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 rounded bg-amber-500 text-black font-medium text-sm hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={createLoading}
-                >
-                  {createLoading ? 'Creating...' : 'Create Booking'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Booking Modal */}
+      <BookingModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        rooms={rooms}
+        onSuccess={() => {
+          alert('Booking created successfully!');
+          // TODO: Refresh bookings list
+        }}
+      />
     </div>
   );
 };

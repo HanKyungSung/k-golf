@@ -279,7 +279,9 @@ router.patch('/rooms/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Admin-only: Create booking for walk-in or phone customers
+// DEPRECATED: Old admin create endpoint - kept for reference but disabled
+// Use the new /admin/create endpoint below that supports customerMode (existing/new/guest)
+/*
 const adminCreateBookingSchema = z.object({
   customerName: z.string().min(1, 'Customer name is required'),
   customerEmail: z.string().email('Valid email is required'),
@@ -290,7 +292,7 @@ const adminCreateBookingSchema = z.object({
   hours: z.number().int().min(1).max(4),
 });
 
-router.post('/admin/create', requireAuth, async (req, res) => {
+router.post('/admin/create-OLD', requireAuth, async (req, res) => {
   // Check if user is admin
   if ((req.user as any).role !== UserRole.ADMIN) {
     return res.status(403).json({ error: 'Admin access required' });
@@ -381,6 +383,7 @@ router.post('/admin/create', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+*/
 
 /**
  * Phase 1.4: Admin Manual Booking Creation
@@ -396,13 +399,13 @@ router.post('/admin/create', requireAuth, async (req, res) => {
 const newCustomerSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(1),
-  email: z.string().email().optional(),
+  email: z.string().email().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
 });
 
 const guestSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(1),
-  email: z.string().email().optional(),
+  email: z.string().email().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
 });
 
 const adminBookingSchema = z.object({
@@ -413,7 +416,7 @@ const adminBookingSchema = z.object({
   guest: guestSchema.optional(), // For guest mode
   
   // Booking details
-  roomId: z.string().uuid(),
+  roomId: z.string().uuid().or(z.string()), // Accept UUID or simple string for mock rooms
   startTimeIso: z.string().datetime(),
   hours: z.number().int().min(1).max(8),
   players: z.number().int().min(1).max(4),

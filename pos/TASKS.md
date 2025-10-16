@@ -498,19 +498,10 @@ Implement phone-number-based booking system allowing admins to manually create b
 
 ---
 
-### 1.5 Frontend - Phone Input Component (Shared UI)
+### 1.5 POS - Phone Input Component (Shared UI)
 
 **PhoneInput Component:**
-[ ] Create `frontend/components/PhoneInput.tsx`
-[ ] Props interface:
-  - value: string
-  - onChange: (normalized: string) => void
-  - onSearch?: () => void
-  - defaultCountryCode?: string (default '+1')
-### 1.5 Frontend - Phone Input Component (Shared UI)
-
-**PhoneInput Component:**
-[x] Create `frontend/components/PhoneInput.tsx`
+[x] Create `pos/apps/electron/src/renderer/components/PhoneInput.tsx`
 [x] Props interface:
   - value: string (E.164 format)
   - onChange: (normalized: string) => void
@@ -569,10 +560,10 @@ Implement phone-number-based booking system allowing admins to manually create b
 
 ---
 
-### 1.6 Frontend - Customer Search Component
+### 1.6 POS - Customer Search Component
 
 **CustomerSearch Component:**
-[x] Create `frontend/components/CustomerSearch.tsx`
+[x] Create `pos/apps/electron/src/renderer/components/CustomerSearch.tsx`
 [x] Phone input with "Search" button
 [x] Search triggers API call to `/api/users/lookup?phone={normalized}`
 [x] Display search results:
@@ -659,10 +650,10 @@ Implement phone-number-based booking system allowing admins to manually create b
 
 ---
 
-### 1.7 Frontend - Enhanced Booking Modal (Dashboard Integration)
+### 1.7 POS - Enhanced Booking Modal (Dashboard Integration)
 
 **Multi-Step Booking Modal:**
-[ ] Update `frontend/src/pages/DashboardPage.tsx` booking modal
+[ ] Update `pos/apps/electron/src/renderer/pages/DashboardPage.tsx` booking modal
 [ ] Add modal state management (step tracking)
 
 **Step 1: Booking Source Selector**

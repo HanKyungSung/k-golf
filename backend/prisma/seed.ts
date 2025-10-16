@@ -55,6 +55,7 @@ async function main() {
 	console.log('Seeded default settings: global_tax_rate');
 
 	// Create admin user (idempotent by email)
+	// This admin user is used for both web login and POS API authentication
 	const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@kgolf.com';
 	const adminName = process.env.SEED_ADMIN_NAME || 'Admin User';
 	const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123';

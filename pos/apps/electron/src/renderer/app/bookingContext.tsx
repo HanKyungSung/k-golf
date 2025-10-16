@@ -47,6 +47,45 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return saved ? parseFloat(saved) : 8;
   });
 
+  // Fetch real rooms from API on mount
+  useEffect(() => {
+    const fetchRooms = async () => {
+      console.log('[BOOKING_CTX] Fetching rooms from API...');
+      try {
+        const response = await fetch('http://localhost:8080/api/bookings/rooms', {
+          headers: {
+            'x-pos-admin-key': 'pos-dev-key-change-in-production'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[BOOKING_CTX] ✅ Loaded rooms from API:', data.rooms);
+          if (data.rooms && Array.isArray(data.rooms)) {
+            // Map backend rooms to POS room format
+            const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500'];
+            const mappedRooms = data.rooms.map((r: any, idx: number) => ({
+              id: r.id,
+              name: r.name,
+              capacity: r.capacity || 4,
+              hourlyRate: 50, // TODO: Get from room config
+              status: r.status || 'ACTIVE',
+              color: colors[idx % colors.length]
+            }));
+            setRooms(mappedRooms);
+          }
+        } else {
+          console.warn('[BOOKING_CTX] ❌ Failed to fetch rooms (status:', response.status, ')');
+        }
+      } catch (error) {
+        console.error('[BOOKING_CTX] ❌ Error fetching rooms:', error);
+        console.warn('[BOOKING_CTX] Using mock rooms fallback');
+      }
+    };
+
+    fetchRooms();
+  }, []);
+
   // Fetch global tax rate from API on mount - API value always wins
   useEffect(() => {
     const fetchTaxRate = async () => {
