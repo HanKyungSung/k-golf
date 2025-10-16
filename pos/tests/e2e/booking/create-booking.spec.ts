@@ -34,17 +34,19 @@ test.describe('Booking Creation', () => {
     await page.waitForSelector('[data-testid="dashboard"]', { timeout: 10000 });
 
     // Click Create Booking button
-    await page.click('[data-testid="create-booking-btn"]');
+    await page.click('[data-testid="dashboard-create-booking-btn"]');
 
     // Modal should open
     await expect(page.locator('[data-testid="booking-modal"]')).toBeVisible();
 
     // Step 1: Select Walk-in Source
     await page.click('[data-testid="source-walk-in"]');
+    await page.waitForSelector('[data-testid="continue-btn"]:not([disabled])', { timeout: 5000 });
     await page.click('[data-testid="continue-btn"]');
 
     // Step 2: Select New Customer Mode
     await page.click('[data-testid="mode-new-customer"]');
+    await page.waitForSelector('[data-testid="continue-btn"]:not([disabled])', { timeout: 5000 });
     await page.click('[data-testid="continue-btn"]');
 
     // Step 3: Enter Customer Details
@@ -53,21 +55,29 @@ test.describe('Booking Creation', () => {
     if (bookingData.email) {
       await page.fill('[data-testid="customer-email"]', bookingData.email);
     }
+    await page.fill('[data-testid="customer-password"]', 'testpass123'); // Required for new customer
+    await page.waitForSelector('[data-testid="continue-btn"]:not([disabled])', { timeout: 5000 });
     await page.click('[data-testid="continue-btn"]');
 
     // Step 4: Select Room and Enter Booking Details
-    await page.click('[data-testid="room-card-0"]'); // First available room
+    // The room dropdown is already on the bookingDetails step, so we select it via the select element
+    await expect(page.locator('text=Booking Details')).toBeVisible(); // Wait for step to load
+    
+    // Select first room from dropdown
+    const roomSelect = page.locator('[data-testid="booking-room"]');
+    await roomSelect.selectOption({ index: 1 }); // Index 0 is "Select a room", so select index 1
     
     await page.fill('[data-testid="booking-date"]', bookingData.date);
     await page.fill('[data-testid="booking-time"]', bookingData.time);
     await page.fill('[data-testid="booking-hours"]', String(bookingData.hours));
     await page.fill('[data-testid="booking-players"]', String(bookingData.players));
+    await page.waitForSelector('[data-testid="continue-btn"]:not([disabled])', { timeout: 5000 });
     await page.click('[data-testid="continue-btn"]');
 
     // Step 5: Review and Create
     await expect(page.locator('[data-testid="review-customer-name"]')).toContainText(bookingData.customerName);
-    const formattedPhone = `(${bookingData.phone.slice(0, 3)}) ${bookingData.phone.slice(3, 6)}-${bookingData.phone.slice(6)}`;
-    await expect(page.locator('[data-testid="review-phone"]')).toContainText(formattedPhone);
+    // Phone is displayed in E.164 format (+14165551234) on the review screen
+    await expect(page.locator('[data-testid="review-phone"]')).toContainText(`+1${bookingData.phone}`);
     
     await page.click('[data-testid="create-booking-btn"]');
 
@@ -103,7 +113,7 @@ test.describe('Booking Creation', () => {
 
   test('should validate phone number is exactly 10 digits', async ({ page }) => {
     await page.waitForSelector('[data-testid="dashboard"]');
-    await page.click('[data-testid="create-booking-btn"]');
+    await page.click('[data-testid="dashboard-create-booking-btn"]');
     
     // Navigate to customer details step
     await page.click('[data-testid="source-walk-in"]');
@@ -122,7 +132,7 @@ test.describe('Booking Creation', () => {
 
   test('should disable guest mode for phone bookings', async ({ page }) => {
     await page.waitForSelector('[data-testid="dashboard"]');
-    await page.click('[data-testid="create-booking-btn"]');
+    await page.click('[data-testid="dashboard-create-booking-btn"]');
 
     // Select PHONE source
     await page.click('[data-testid="source-phone"]');

@@ -103,7 +103,7 @@ const DashboardPage: React.FC = () => {
                       <CardDescription>Lifecycle management (mock)</CardDescription>
                     </div>
                     <button 
-                      data-testid="create-booking-btn"
+                      data-testid="dashboard-create-booking-btn"
                       onClick={() => setShowCreateModal(true)}
                       className="px-4 py-2 rounded-md bg-amber-500 text-black font-medium text-sm hover:bg-amber-400 transition-colors"
                     >

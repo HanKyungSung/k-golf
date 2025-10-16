@@ -107,6 +107,7 @@ export const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
         <div className="relative">
           <Input
             id="phone"
+            data-testid="customer-phone"
             ref={ref}
             type="tel"
             value={displayValue}

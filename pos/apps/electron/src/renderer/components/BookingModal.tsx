@@ -122,12 +122,28 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
     }
   };
 
+  const canProceedFromCustomerMode = () => {
+    // Must have selected a customer mode
+    if (!customerMode) {
+      return false;
+    }
+    // Guest mode is only allowed for walk-in bookings
+    if (customerMode === 'guest' && bookingSource === 'PHONE') {
+      return false;
+    }
+    return true;
+  };
+
   const canProceedFromCustomerData = () => {
     if (customerMode === 'existing') {
       return !!selectedCustomer;
     } else if (customerMode === 'new') {
       return newCustomerData.name && newCustomerData.phone && newCustomerData.password;
     } else if (customerMode === 'guest') {
+      // Guest mode only allowed for walk-in bookings
+      if (bookingSource === 'PHONE') {
+        return false;
+      }
       return guestData.name && guestData.phone;
     }
     return false;
@@ -141,7 +157,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={handleClose}>
-      <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div data-testid="booking-modal" className="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 z-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-white">Create Booking</h2>
@@ -183,7 +199,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div onClick={() => setBookingSource('WALK_IN')} className="cursor-pointer">
+                <div data-testid="source-walk-in" onClick={() => setBookingSource('WALK_IN')} className="cursor-pointer">
                   <Card className={`p-6 transition-all ${bookingSource === 'WALK_IN' ? 'bg-amber-500/10 border-amber-500' : 'hover:bg-slate-700/50'}`}>
                     <div className="text-center">
                       <h4 className="font-semibold text-white mb-1">Walk-in</h4>
@@ -192,7 +208,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                   </Card>
                 </div>
                 
-                <div onClick={() => setBookingSource('PHONE')} className="cursor-pointer">
+                <div data-testid="source-phone" onClick={() => setBookingSource('PHONE')} className="cursor-pointer">
                   <Card className={`p-6 transition-all ${bookingSource === 'PHONE' ? 'bg-amber-500/10 border-amber-500' : 'hover:bg-slate-700/50'}`}>
                     <div className="text-center">
                       <h4 className="font-semibold text-white mb-1">Phone</h4>
@@ -213,7 +229,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
               </div>
               
               <div className="grid grid-cols-3 gap-4">
-                <div onClick={() => setCustomerMode('existing')} className="cursor-pointer">
+                <div data-testid="mode-existing" onClick={() => setCustomerMode('existing')} className="cursor-pointer">
                   <Card className={`p-6 transition-all ${customerMode === 'existing' ? 'bg-amber-500/10 border-amber-500' : 'hover:bg-slate-700/50'}`}>
                     <div className="text-center">
                       <h4 className="font-semibold text-white text-sm mb-1">Existing</h4>
@@ -222,7 +238,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                   </Card>
                 </div>
                 
-                <div onClick={() => setCustomerMode('new')} className="cursor-pointer">
+                <div data-testid="mode-new-customer" onClick={() => setCustomerMode('new')} className="cursor-pointer">
                   <Card className={`p-6 transition-all ${customerMode === 'new' ? 'bg-amber-500/10 border-amber-500' : 'hover:bg-slate-700/50'}`}>
                     <div className="text-center">
                       <h4 className="font-semibold text-white text-sm mb-1">New</h4>
@@ -232,6 +248,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                 </div>
                 
                 <div 
+                  data-testid="mode-guest"
                   onClick={() => bookingSource === 'WALK_IN' && setCustomerMode('guest')} 
                   className={bookingSource === 'PHONE' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 >
@@ -272,6 +289,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                     <Label htmlFor="new-name">Full Name *</Label>
                     <Input
                       id="new-name"
+                      data-testid="customer-name"
                       value={newCustomerData.name}
                       onChange={(e) => setNewCustomerData({...newCustomerData, name: e.target.value})}
                       placeholder="John Smith"
@@ -289,6 +307,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                     <Label htmlFor="new-email">Email (optional)</Label>
                     <Input
                       id="new-email"
+                      data-testid="customer-email"
                       type="email"
                       value={newCustomerData.email}
                       onChange={(e) => setNewCustomerData({...newCustomerData, email: e.target.value})}
@@ -300,6 +319,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                     <Label htmlFor="new-password">Password *</Label>
                     <Input
                       id="new-password"
+                      data-testid="customer-password"
                       type="password"
                       value={newCustomerData.password}
                       onChange={(e) => setNewCustomerData({...newCustomerData, password: e.target.value})}
@@ -355,6 +375,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                   <Label htmlFor="room">Room *</Label>
                   <select
                     id="room"
+                    data-testid="booking-room"
                     value={roomId}
                     onChange={(e) => setRoomId(e.target.value)}
                     className="flex h-9 w-full rounded-md border border-slate-600 bg-slate-900/50 px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
@@ -371,6 +392,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                     <Label htmlFor="date">Date *</Label>
                     <Input
                       id="date"
+                      data-testid="booking-date"
                       type="date"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
@@ -381,6 +403,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                     <Label htmlFor="time">Time *</Label>
                     <Input
                       id="time"
+                      data-testid="booking-time"
                       type="time"
                       value={time}
                       onChange={(e) => setTime(e.target.value)}
@@ -393,6 +416,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                     <Label htmlFor="hours">Duration (hours) *</Label>
                     <Input
                       id="hours"
+                      data-testid="booking-hours"
                       type="number"
                       min="1"
                       max="8"
@@ -405,6 +429,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                     <Label htmlFor="players">Players *</Label>
                     <Input
                       id="players"
+                      data-testid="booking-players"
                       type="number"
                       min="1"
                       max="4"
@@ -437,11 +462,11 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                       <>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Name:</span>
-                          <span className="text-white">{selectedCustomer.name}</span>
+                          <span data-testid="review-customer-name" className="text-white">{selectedCustomer.name}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Phone:</span>
-                          <span className="text-white">{selectedCustomer.phone}</span>
+                          <span data-testid="review-phone" className="text-white">{selectedCustomer.phone}</span>
                         </div>
                       </>
                     )}
@@ -449,11 +474,11 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                       <>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Name:</span>
-                          <span className="text-white">{newCustomerData.name}</span>
+                          <span data-testid="review-customer-name" className="text-white">{newCustomerData.name}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Phone:</span>
-                          <span className="text-white">{newCustomerData.phone}</span>
+                          <span data-testid="review-phone" className="text-white">{newCustomerData.phone}</span>
                         </div>
                       </>
                     )}
@@ -461,11 +486,11 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                       <>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Name:</span>
-                          <span className="text-white">{guestData.name}</span>
+                          <span data-testid="review-customer-name" className="text-white">{guestData.name}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Phone:</span>
-                          <span className="text-white">{guestData.phone}</span>
+                          <span data-testid="review-phone" className="text-white">{guestData.phone}</span>
                         </div>
                       </>
                     )}
@@ -519,8 +544,10 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
             
             {currentStep !== 'review' ? (
               <Button
+                data-testid="continue-btn"
                 onClick={nextStep}
                 disabled={
+                  (currentStep === 'customerMode' && !canProceedFromCustomerMode()) ||
                   (currentStep === 'customerData' && !canProceedFromCustomerData()) ||
                   (currentStep === 'bookingDetails' && !canProceedToReview())
                 }
@@ -528,7 +555,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                 Continue
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
+              <Button data-testid="create-booking-btn" onClick={handleSubmit} disabled={isSubmitting}>
                 {isSubmitting ? 'Creating...' : 'Create Booking'}
               </Button>
             )}

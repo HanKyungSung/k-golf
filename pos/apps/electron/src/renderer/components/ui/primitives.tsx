@@ -38,7 +38,7 @@ export const Button: React.FC<{
   disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
   variant?: 'default' | 'outline' | 'ghost';
-}>=({className='', children, onClick, disabled=false, size='md', variant='default'}) => {
+} & React.ButtonHTMLAttributes<HTMLButtonElement>>=({className='', children, onClick, disabled=false, size='md', variant='default', ...rest}) => {
   const sizeClasses = {
     sm: 'text-xs px-2 py-1',
     md: 'text-sm px-3 py-2',
@@ -54,6 +54,7 @@ export const Button: React.FC<{
       onClick={onClick} 
       disabled={disabled}
       className={`rounded font-medium transition-colors ${sizeClasses[size]} ${variantClasses[variant]} disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+      {...rest}
     >
       {children}
     </button>

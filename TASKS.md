@@ -29,6 +29,34 @@
 
 **Decision needed:** Discuss with team/stakeholders
 
+### E2E Test Failures (Data-testid Issue RESOLVED)
+
+**Status:** 3 out of 5 tests passing ✅
+
+**Resolved:**
+- ✅ Fixed Button component to forward `data-testid` prop via `{...rest}` spread operator
+- ✅ All `data-testid` attributes now properly appear in rendered DOM
+- ✅ Playwright can successfully locate and interact with all elements
+
+**Remaining Failures (Functional Issues):**
+
+1. **Test: "should create walk-in booking with new customer"**
+   - **Issue:** Modal doesn't close after successful booking creation
+   - **Error:** `expect(locator).not.toBeVisible()` - Modal still visible after clicking "Create Booking"
+   - **Root Cause:** Backend API/onSuccess callback not triggering modal close
+   - **Location:** `pos/tests/e2e/booking/create-booking.spec.ts:85`
+   - **Next Steps:** Investigate BookingModal `handleSubmit` success flow and `onSuccess` callback
+
+2. **Test: "should disable guest mode for phone bookings"**
+   - **Issue:** Continue button remains enabled when guest mode is selected for phone bookings
+   - **Error:** `expect(continueBtn).toBeDisabled()` - Button is enabled when it should be disabled
+   - **Root Cause:** React state update timing or validation logic not applying correctly
+   - **Location:** `pos/tests/e2e/booking/create-booking.spec.ts:150`
+   - **Implementation:** Added `canProceedFromCustomerMode()` validation but button still enables
+   - **Next Steps:** Debug React rendering cycle and button disabled logic on customerMode step
+
+**Note:** These are functional/business logic issues, not test infrastructure problems.
+
 ---
 
 ## ✅ Completed Tasks

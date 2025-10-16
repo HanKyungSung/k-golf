@@ -20,7 +20,7 @@ test.describe('Dashboard', () => {
     await page.waitForSelector('[data-testid="dashboard"]', { timeout: 10000 });
 
     // Verify key elements are present
-    await expect(page.locator('[data-testid="create-booking-btn"]')).toBeVisible();
+    await expect(page.locator('[data-testid="dashboard-create-booking-btn"]')).toBeVisible();
     
     // Could verify stats, rooms, etc. are visible
     // await expect(page.locator('[data-testid="stats-container"]')).toBeVisible();
@@ -33,7 +33,7 @@ test.describe('Dashboard', () => {
     await expect(page.locator('[data-testid="booking-modal"]')).not.toBeVisible();
     
     // Click create booking
-    await page.click('[data-testid="create-booking-btn"]');
+    await page.click('[data-testid="dashboard-create-booking-btn"]');
     
     // Modal should open
     await expect(page.locator('[data-testid="booking-modal"]')).toBeVisible();
