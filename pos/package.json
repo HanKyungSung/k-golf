@@ -1,4 +1,22 @@
 {
   "name": "pos-root",
-  "private": true
+  "private": true,
+  "scripts": {
+    "prisma:generate": "prisma generate --schema=./prisma-schema-for-tests.prisma",
+    "postinstall": "npm run prisma:generate",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@prisma/client": "^5.22.0",
+    "@types/bcrypt": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "bcrypt": "^5.1.1",
+    "prisma": "^5.22.0",
+    "typescript": "^5.0.0"
+  }
 }

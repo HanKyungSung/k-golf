@@ -69,7 +69,7 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
+    <div data-testid="dashboard" className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
       <AppHeader onTest={()=>{}} onSync={forceSync} />
       <main className="flex-1 px-6 py-8 space-y-8 max-w-7xl mx-auto w-full">
         <header className="space-y-2">
@@ -103,6 +103,7 @@ const DashboardPage: React.FC = () => {
                       <CardDescription>Lifecycle management (mock)</CardDescription>
                     </div>
                     <button 
+                      data-testid="create-booking-btn"
                       onClick={() => setShowCreateModal(true)}
                       className="px-4 py-2 rounded-md bg-amber-500 text-black font-medium text-sm hover:bg-amber-400 transition-colors"
                     >

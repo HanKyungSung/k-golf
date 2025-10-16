@@ -1,0 +1,37 @@
+{
+  "customers": [
+    {
+      "id": "test-customer-1",
+      "name": "John Smith",
+      "phone": "+14165551234",
+      "email": "john.smith@example.com",
+      "role": "CUSTOMER"
+    },
+    {
+      "id": "test-customer-2",
+      "name": "Jane Doe",
+      "phone": "+14165555678",
+      "email": "jane.doe@example.com",
+      "role": "CUSTOMER"
+    },
+    {
+      "id": "test-customer-3",
+      "name": "Bob Johnson",
+      "phone": "+14165559999",
+      "email": null,
+      "role": "CUSTOMER"
+    }
+  ],
+  "newCustomers": [
+    {
+      "name": "Test Walker",
+      "phone": "4165551111",
+      "email": "test.walker@example.com"
+    },
+    {
+      "name": "Guest User",
+      "phone": "4165552222",
+      "email": ""
+    }
+  ]
+}

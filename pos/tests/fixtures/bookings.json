@@ -1,0 +1,42 @@
+{
+  "bookings": [
+    {
+      "customerName": "Test Booking",
+      "phone": "4165551234",
+      "email": "test@example.com",
+      "date": "2025-10-20",
+      "time": "14:00",
+      "hours": 2,
+      "players": 4,
+      "roomIndex": 0
+    },
+    {
+      "customerName": "Evening Session",
+      "phone": "4165555678",
+      "email": "",
+      "date": "2025-10-21",
+      "time": "18:00",
+      "hours": 1,
+      "players": 2,
+      "roomIndex": 1
+    }
+  ],
+  "invalidBookings": [
+    {
+      "description": "Past date",
+      "date": "2020-01-01",
+      "time": "14:00"
+    },
+    {
+      "description": "Invalid time",
+      "date": "2025-10-20",
+      "time": "25:00"
+    },
+    {
+      "description": "Zero players",
+      "date": "2025-10-20",
+      "time": "14:00",
+      "players": 0
+    }
+  ]
+}

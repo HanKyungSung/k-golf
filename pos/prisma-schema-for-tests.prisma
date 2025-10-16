@@ -1,0 +1,151 @@
+// K-Golf Booking Platform Prisma Schema (Phase 1.2)
+// NOTE: Overlap constraint added via a raw SQL migration after initial migrate.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+// Booking status moved to String for flexibility; enforce allowed values in app code
+
+model User {
+  id                     String                  @id @default(uuid())
+  email                  String?                 @unique // Made nullable for phone-only registrations
+  name                   String
+  phone                  String                  @unique // Made unique and required (primary identifier)
+  phoneVerifiedAt        DateTime?               @db.Timestamptz // For future SMS verification (Phase 2)
+  emailVerifiedAt        DateTime?               @db.Timestamptz // retained but unused in password-only flow (can drop later)
+  passwordHash           String?
+  passwordUpdatedAt      DateTime?               @db.Timestamptz
+  role                   UserRole                @default(CUSTOMER)
+  registrationSource     String                  @default("ONLINE") @db.VarChar(50) // "ONLINE" | "WALK_IN" | "PHONE"
+  registeredBy           String?                 // FK to User.id (admin who registered this user)
+  createdAt              DateTime                @default(now()) @db.Timestamptz
+  updatedAt              DateTime                @updatedAt @db.Timestamptz
+  bookings               Booking[]
+  authProviders          AuthProvider[]
+  sessions               Session[]
+  emailVerificationToken EmailVerificationToken?
+  settingsUpdates        Setting[]
+  registeredByUser       User?                   @relation("UserRegistrations", fields: [registeredBy], references: [id], onDelete: SetNull)
+  usersRegistered        User[]                  @relation("UserRegistrations") // Users this admin registered
+  bookingsCreated        Booking[]               @relation("AdminCreatedBookings") // Bookings this admin created
+}
+
+model Room {
+  id           String     @id @default(uuid())
+  name         String     @unique
+  capacity     Int        @default(4)
+  active       Boolean    @default(true) // legacy; prefer status
+  openMinutes  Int        @default(540) // 09:00 local
+  closeMinutes Int        @default(1140) // 19:00 local
+  status       RoomStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @db.Timestamptz
+  updatedAt    DateTime   @updatedAt @db.Timestamptz
+  bookings     Booking[]
+}
+
+enum RoomStatus {
+  ACTIVE
+  MAINTENANCE
+  CLOSED
+}
+
+model Booking {
+  id            String   @id @default(uuid())
+  room          Room     @relation(fields: [roomId], references: [id])
+  roomId        String
+  user          User?    @relation(fields: [userId], references: [id]) // Made optional for guest bookings
+  userId        String?  // Made nullable for guest bookings
+  customerName  String   // Denormalized for display
+  customerPhone String   // Denormalized for contact
+  customerEmail String?  // Optional email for guest bookings
+  startTime     DateTime @db.Timestamptz
+  endTime       DateTime @db.Timestamptz
+  players       Int
+  price         Decimal  @db.Decimal(10, 2)
+  status        String   @default("CONFIRMED")
+  isGuestBooking Boolean @default(false) // True if booking has no user account
+  bookingSource String   @default("ONLINE") @db.VarChar(50) // "ONLINE" | "WALK_IN" | "PHONE"
+  createdBy     String?  // FK to User.id (admin who created this booking)
+  createdByUser User?    @relation("AdminCreatedBookings", fields: [createdBy], references: [id], onDelete: SetNull)
+  internalNotes String?  @db.Text // Admin-only notes
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  updatedAt     DateTime @updatedAt @db.Timestamptz
+
+  @@index([roomId, startTime])
+  @@index([userId, startTime])
+  @@index([customerPhone]) // For fast guest booking lookups
+  @@index([bookingSource]) // For analytics queries
+}
+
+model AuthProvider {
+  id             String   @id @default(uuid())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
+  provider       String
+  providerUserId String?
+  createdAt      DateTime @default(now()) @db.Timestamptz
+
+  @@unique([provider, providerUserId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+  sessionToken String   @unique
+  expiresAt    DateTime @db.Timestamptz
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  updatedAt    DateTime @updatedAt @db.Timestamptz
+}
+
+// Stores single active email verification token per user
+model EmailVerificationToken {
+  id         String    @id @default(uuid())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String    @unique
+  tokenHash  String    @unique
+  expiresAt  DateTime  @db.Timestamptz
+  consumedAt DateTime? @db.Timestamptz
+  createdAt  DateTime  @default(now()) @db.Timestamptz
+
+  @@index([expiresAt])
+}
+
+// Phone verification tokens for SMS OTP (Phase 2 - not used in v1.0)
+model PhoneVerificationToken {
+  id        String   @id @default(uuid())
+  phone     String   @unique // E.164 format phone number
+  tokenHash String   // Hashed OTP code
+  expiresAt DateTime @db.Timestamptz
+  attempts  Int      @default(0) // Failed verification attempts
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  @@index([expiresAt])
+  @@index([phone, expiresAt])
+}
+
+model Setting {
+  id            Int      @id @default(autoincrement())
+  key           String   @unique @db.VarChar(255)
+  value         String   @db.Text
+  valueType     String   @map("value_type") @db.VarChar(50)
+  description   String?  @db.Text
+  category      String?  @db.VarChar(100)
+  isPublic      Boolean  @default(false) @map("is_public")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy     String?  @map("updated_by")
+  updatedByUser User?    @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
+}
