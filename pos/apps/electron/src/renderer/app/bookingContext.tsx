@@ -32,6 +32,7 @@ interface BookingContextValue {
   updateRoomStatus: (id: string, status: Room['status']) => void;
   updateGlobalTaxRate: (rate: number) => void;
   getBookingById: (id: string) => Booking | undefined;
+  refreshBookings: () => Promise<void>;
 }
 
 const BookingContext = createContext<BookingContextValue | null>(null);
@@ -85,6 +86,60 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     fetchRooms();
   }, []);
+
+  // Fetch bookings helper function
+  const fetchBookings = useCallback(async () => {
+    console.log('[BOOKING_CTX] Fetching bookings from API...');
+    try {
+      const response = await fetch('http://localhost:8080/api/bookings', {
+        credentials: 'include', // Include cookies for auth
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[BOOKING_CTX] ✅ Loaded bookings from API:', data.bookings);
+        if (data.bookings && Array.isArray(data.bookings)) {
+          // Map backend bookings to POS booking format
+          const mappedBookings = data.bookings.map((b: any) => {
+            // Find room name from rooms state
+            const room = rooms.find(r => r.id === b.roomId);
+            const startTime = new Date(b.startTime);
+            const endTime = new Date(b.endTime);
+            const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+            
+            return {
+              id: b.id,
+              customerName: b.customerName || 'Unknown',
+              customerEmail: b.customerEmail || '',
+              customerPhone: b.customerPhone || '',
+              roomName: room?.name || `Room ${b.roomId}`,
+              roomId: b.roomId,
+              date: startTime.toISOString().split('T')[0], // YYYY-MM-DD
+              time: startTime.toTimeString().slice(0, 5), // HH:MM
+              duration: durationHours,
+              players: b.players,
+              price: b.price,
+              status: b.status === 'canceled' ? 'cancelled' : b.status,
+              notes: b.internalNotes || '',
+              createdAt: b.createdAt,
+            };
+          });
+          setBookings(mappedBookings);
+        }
+      } else {
+        console.warn('[BOOKING_CTX] ❌ Failed to fetch bookings (status:', response.status, ')');
+        console.warn('[BOOKING_CTX] Using mock bookings fallback');
+      }
+    } catch (error) {
+      console.error('[BOOKING_CTX] ❌ Error fetching bookings:', error);
+      console.warn('[BOOKING_CTX] Using mock bookings fallback');
+    }
+  }, [rooms]); // Depend on rooms so we can map room names
+
+  // Fetch real bookings from API on mount
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
 
   // Fetch global tax rate from API on mount - API value always wins
   useEffect(() => {
@@ -184,8 +239,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const getBookingById = useCallback((id: string) => bookings.find(b => b.id === id), [bookings]);
 
+  const refreshBookings = useCallback(async () => {
+    await fetchBookings();
+  }, [fetchBookings]);
+
   return (
-    <BookingContext.Provider value={{ rooms, bookings, globalTaxRate, updateBookingStatus, updateRoomStatus, updateGlobalTaxRate, getBookingById }}>
+    <BookingContext.Provider value={{ rooms, bookings, globalTaxRate, updateBookingStatus, updateRoomStatus, updateGlobalTaxRate, getBookingById, refreshBookings }}>
       {children}
     </BookingContext.Provider>
   );

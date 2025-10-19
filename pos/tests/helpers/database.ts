@@ -1,5 +1,23 @@
 import { PrismaClient, UserRole, RoomStatus } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import crypto from 'crypto';
+
+/**
+ * Password hashing using scrypt (same as backend authService)
+ */
+const SCRYPT_N = 16384; // 2^14
+const SCRYPT_r = 8;
+const SCRYPT_p = 1;
+const KEY_LEN = 64;
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.randomBytes(16);
+  const derived = await new Promise<Buffer>((resolve, reject) => {
+    crypto.scrypt(password, salt, KEY_LEN, { N: SCRYPT_N, r: SCRYPT_r, p: SCRYPT_p }, (err, buf) => {
+      if (err) reject(err); else resolve(buf);
+    });
+  });
+  return `scrypt:N=${SCRYPT_N},r=${SCRYPT_r},p=${SCRYPT_p}:${salt.toString('base64')}:${derived.toString('base64')}`;
+}
 
 /**
  * Prisma client for test database
@@ -41,17 +59,24 @@ export async function seedTestData() {
   console.log('🌱 Seeding test database...');
   
   // Create admin user (same as in seed.ts)
-  const passwordHash = await bcrypt.hash('admin123', 10);
+  const passwordHash = await hashPassword('admin123');
   
   const admin = await prisma.user.upsert({
     where: { email: 'admin@kgolf.com' },
-    update: {},
+    update: {
+      passwordHash, // Update password hash to match expected password
+      emailVerifiedAt: new Date(), // Ensure it's verified even if user already exists
+      passwordUpdatedAt: new Date(),
+    },
     create: {
       email: 'admin@kgolf.com',
       name: 'Admin User',
       phone: '+14165551000',
       passwordHash,
+      emailVerifiedAt: new Date(), // Required for login
+      passwordUpdatedAt: new Date(),
       role: UserRole.ADMIN,
+      registrationSource: 'ONLINE',
     },
   });
   

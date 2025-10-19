@@ -571,16 +571,31 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
       const normalizedPhone = normalizePhone(newCustomer!.phone);
 
       // Check for duplicate phone
-      const existingUser = await prisma.user.findUnique({
+      const existingUserByPhone = await prisma.user.findUnique({
         where: { phone: normalizedPhone },
       });
 
-      if (existingUser) {
+      if (existingUserByPhone) {
         return res.status(409).json({
           error: 'Phone number already registered',
           phone: normalizedPhone,
-          userId: existingUser.id,
+          userId: existingUserByPhone.id,
         });
+      }
+
+      // Check for duplicate email (if email is provided)
+      if (newCustomer!.email) {
+        const existingUserByEmail = await prisma.user.findUnique({
+          where: { email: newCustomer!.email.toLowerCase() },
+        });
+
+        if (existingUserByEmail) {
+          return res.status(409).json({
+            error: 'Email already registered',
+            email: newCustomer!.email,
+            userId: existingUserByEmail.id,
+          });
+        }
       }
 
       // Create user + booking in transaction
@@ -690,7 +705,16 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
     
     // Handle Prisma errors
     if (error.code === 'P2002') {
-      return res.status(409).json({ error: 'Duplicate constraint violation' });
+      // Log detailed information about which field caused the duplicate
+      console.error('[ADMIN CREATE BOOKING] P2002 Duplicate constraint violation');
+      console.error('[ADMIN CREATE BOOKING] Target fields:', error.meta?.target);
+      console.error('[ADMIN CREATE BOOKING] Request payload:', JSON.stringify(req.body, null, 2));
+      
+      return res.status(409).json({ 
+        error: 'Duplicate constraint violation',
+        field: error.meta?.target,
+        details: `A record with this ${error.meta?.target?.join(', ')} already exists`
+      });
     }
     
     res.status(500).json({ 

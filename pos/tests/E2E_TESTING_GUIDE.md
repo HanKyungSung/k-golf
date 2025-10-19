@@ -38,9 +38,9 @@ cd ../pos
 npm install
 npx playwright install
 
-# 3. Start backend
+# 3. Start backend in TEST mode (⚠️ IMPORTANT - uses test database)
 cd ../backend
-npm run dev
+npm run dev:test
 
 # 4. Run tests (in new terminal)
 cd ../pos
@@ -48,6 +48,37 @@ npm run test:e2e:ui
 ```
 
 **That's it!** No environment configuration needed - everything is hardcoded.
+
+---
+
+## ⚠️ IMPORTANT: Running Backend in Test Mode
+
+**Always use `npm run dev:test` when running E2E tests!**
+
+```bash
+# ✅ CORRECT - Backend uses TEST database (k_golf_test)
+npm run dev:test
+
+# ❌ WRONG - Backend uses PRODUCTION database (kgolf_app)
+npm run dev
+```
+
+**Why this matters:**
+- `npm run dev` connects to `kgolf_app` (production database)
+- `npm run dev:test` connects to `k_golf_test` (test database)
+- Tests reset the database before each run
+- Using production DB would **delete your production data!** 🚨
+
+**Quick check - which database is backend using?**
+
+Backend logs will show on startup:
+```bash
+# Test mode ✅
+DATABASE_URL=postgresql://kgolf:kgolf_password@localhost:5432/k_golf_test
+
+# Production mode ❌ (don't use for tests!)
+DATABASE_URL=postgresql://kgolf:kgolf_password@localhost:5432/kgolf_app
+```
 
 ---
 
@@ -81,11 +112,36 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/k_golf_test" \
 
 ### 2. Environment Configuration
 
-**No configuration needed!** ✅
+**No .env files needed!** ✅
 
-Test configuration is hardcoded in:
-- **Database**: `postgresql://kgolf:kgolf_password@localhost:5432/k_golf_test`
-- **Backend**: `http://localhost:8080`
+**Backend has two modes:**
+
+```bash
+# Development mode - Production database (kgolf_app)
+cd backend
+npm run dev
+
+# Test mode - Test database (k_golf_test)  
+cd backend
+npm run dev:test  # ← Use this for E2E tests!
+```
+
+**What's the difference?**
+
+| Command | Database | Use For |
+|---------|----------|---------|
+| `npm run dev` | `kgolf_app` (production) | Normal development, manual testing |
+| `npm run dev:test` | `k_golf_test` (test DB) | **E2E tests only!** |
+
+The `dev:test` script overrides `DATABASE_URL` to point to the test database:
+```bash
+DATABASE_URL=postgresql://kgolf:kgolf_password@localhost:5432/k_golf_test
+```
+
+**Test configuration is hardcoded in:**
+- **Backend (test mode)**: `k_golf_test` database  
+- **Backend API**: `http://localhost:8080`
+- **Test helpers**: Hardcoded connection string
 
 These match your `docker-compose.yml` settings, so everything works out of the box.
 
@@ -456,16 +512,38 @@ The `initializeTestDatabase()` function in `beforeAll` creates the admin. Check:
 **Problem:** Backend not running
 
 **Solution:**
-1. Start backend:
+1. Start backend in **TEST mode**:
    ```bash
    cd backend
-   npm run dev
+   npm run dev:test  # ← Uses test database, not production!
    ```
 2. Verify health:
    ```bash
    curl http://localhost:8080/health
    ```
-3. Check backend is using **development** database (not test DB)
+3. Verify backend is connected to TEST database (check logs on startup)
+
+### "Email/Phone already exists" errors
+
+**Problem:** Backend is connected to production database instead of test database
+
+**Solution:**
+1. **Stop backend** (Ctrl+C)
+2. **Restart with test mode:**
+   ```bash
+   cd backend
+   npm run dev:test  # ← This is crucial!
+   ```
+3. Verify logs show:
+   ```
+   DATABASE_URL=postgresql://...@localhost:5432/k_golf_test
+   ```
+4. **NOT** `kgolf_app` - that's the production database!
+
+**Why this happens:**
+- Production database has seed data (test@example.com, etc.)
+- Tests try to create users with same emails → conflict!
+- Test mode connects to separate `k_golf_test` database
 
 ### "Tests are slow"
 

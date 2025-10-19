@@ -3,7 +3,7 @@
     {
       "customerName": "Test Booking",
       "phone": "4165551234",
-      "email": "test@example.com",
+      "email": "e2e-test@kgolf-test.local",
       "date": "2025-10-20",
       "time": "14:00",
       "hours": 2,

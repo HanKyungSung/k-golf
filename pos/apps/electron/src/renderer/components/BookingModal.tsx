@@ -38,6 +38,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
   
   const [error, setError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isSubmittingRef = React.useRef(false);
 
   const resetForm = () => {
     setCurrentStep('source');
@@ -78,6 +79,17 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
   };
 
   const handleSubmit = async () => {
+    // Prevent double submissions using ref (synchronous check)
+    if (isSubmittingRef.current) {
+      return;
+    }
+    
+    // Also check state for extra safety
+    if (isSubmitting) {
+      return;
+    }
+    
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setError('');
     
@@ -118,6 +130,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create booking');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

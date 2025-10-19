@@ -34,7 +34,7 @@ const TabsContent: React.FC<{ when: string; children: React.ReactNode }> = ({ wh
 const DashboardPage: React.FC = () => {
   const { state, forceSync, rooms: realRooms } = useAuth();
   const user = state.user || {}; const isAdmin = user.role === 'ADMIN';
-  const { bookings, updateBookingStatus, updateRoomStatus, rooms: mockRooms, globalTaxRate, updateGlobalTaxRate } = useBookingData();
+  const { bookings, updateBookingStatus, updateRoomStatus, rooms: mockRooms, globalTaxRate, updateGlobalTaxRate, refreshBookings } = useBookingData();
   const rooms = mockRooms; // Use mock rooms for now (TODO: sync with real backend data)
   const navigate = useNavigate();
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => new Date('2024-01-15T00:00:00Z'));
@@ -294,9 +294,8 @@ const DashboardPage: React.FC = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         rooms={rooms}
-        onSuccess={() => {
-          alert('Booking created successfully!');
-          // TODO: Refresh bookings list
+        onSuccess={async () => {
+          await refreshBookings();
         }}
       />
     </div>
