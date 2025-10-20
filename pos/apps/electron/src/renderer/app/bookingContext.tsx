@@ -118,7 +118,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
               time: startTime.toTimeString().slice(0, 5), // HH:MM
               duration: durationHours,
               players: b.players,
-              price: b.price,
+              price: typeof b.price === 'string' ? parseFloat(b.price) : b.price, // Convert Decimal string to number
               status: b.status === 'canceled' ? 'cancelled' : b.status,
               notes: b.internalNotes || '',
               createdAt: b.createdAt,
