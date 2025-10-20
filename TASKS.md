@@ -1,5 +1,23 @@
 # Tasks & Open Questions
 
+## Specification
+- 4번 룸만 left hand & right hand both 가능
+- 1 -3번 룸들은 오른쪽만
+- 메뉴에 시간을 넣는거. 1h, 4h etc
+- add menu not working also split functionality.
+- guest -> name / phone 
+- 20 분오면 1시간 무료 
+- score system on account.
+  - manually entering by admin. Total hits etc,
+    - golf field plance name, finaly score.
+  - 18 hole 72 hits 0
+  - under 72: -2 score
+- phone number only for now. login/register
+  - online login with phone number
+
+- printing bill
+
+
 ## 🤔 Open Questions
 
 ### Guest Mode vs Auto-Registration for Walk-ins
