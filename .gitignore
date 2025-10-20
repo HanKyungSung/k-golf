@@ -58,6 +58,11 @@ logs/
 # Coverage
 coverage/
 
+# Playwright test results and reports
+test-results/
+playwright-report/
+playwright/.cache/
+
 # Editor / OS noise
 .DS_Store
 Thumbs.db
