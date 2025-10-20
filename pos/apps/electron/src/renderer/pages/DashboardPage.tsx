@@ -37,7 +37,18 @@ const DashboardPage: React.FC = () => {
   const { bookings, updateBookingStatus, updateRoomStatus, rooms: mockRooms, globalTaxRate, updateGlobalTaxRate, refreshBookings } = useBookingData();
   const rooms = mockRooms; // Use mock rooms for now (TODO: sync with real backend data)
   const navigate = useNavigate();
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => new Date('2024-01-15T00:00:00Z'));
+  
+  // Initialize to the start of the current week (Monday)
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // If Sunday, go back 6 days; otherwise go to Monday
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + daysToMonday);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  });
+  
   const weekDays = useMemo(()=>dayRange(currentWeekStart), [currentWeekStart]);
   
   // Create booking modal state
