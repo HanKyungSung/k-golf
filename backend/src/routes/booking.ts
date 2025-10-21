@@ -154,8 +154,8 @@ router.post('/', requireAuth, async (req, res) => {
     const booking = await createBooking({
       roomId,
       userId: req.user!.id,
-      customerName: (req.user as any).name || 'Unknown',
-      customerPhone: (req.user as any).phone || 'N/A',
+      customerName: (req.user as any).name || 'Guest',
+      customerPhone: (req.user as any).phone || '111-111-1111',
       startTime: start,
       players,
       hours,
