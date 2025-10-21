@@ -115,10 +115,9 @@ const DashboardPage: React.FC = () => {
 
         {isAdmin ? (
           <Tabs defaultValue="bookings" className="space-y-6">
-            <TabsTriggersRow className="grid-cols-6">
+            <TabsTriggersRow className="grid-cols-5">
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="rooms">Rooms</TabsTrigger>
-              <TabsTrigger value="calendar">Weekly Calendar</TabsTrigger>
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
               <TabsTrigger value="menu">Menu</TabsTrigger>
               <TabsTrigger value="tax">Tax Settings</TabsTrigger>
@@ -262,9 +261,6 @@ const DashboardPage: React.FC = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent when="calendar">
-              <WeeklyCalendar weekDays={weekDays} rooms={rooms} bookings={bookings} navigateWeek={navigateWeek} />
-            </TabsContent>
             <TabsContent when="timeline">
               <TimelineView weekDays={weekDays} rooms={rooms} bookings={bookings} navigateWeek={navigateWeek} />
             </TabsContent>
@@ -400,63 +396,6 @@ function StatCard({ title, value, accent }: { title: string; value: string | num
         <CardTitle className="text-[11px] font-medium tracking-wide uppercase text-slate-400">{title}</CardTitle>
       </CardHeader>
       <CardContent className="pt-1"><div className={`text-3xl font-bold ${accent}`}>{value}</div></CardContent>
-    </Card>
-  );
-}
-
-interface CalendarProps { weekDays: Date[]; rooms: import('../app/bookingContext').Room[]; bookings: import('../app/bookingContext').Booking[]; navigateWeek: (d:'prev'|'next')=>void }
-function WeeklyCalendar({ weekDays, rooms, bookings, navigateWeek }: CalendarProps) {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Weekly Calendar</CardTitle>
-            <CardDescription>Grid view by day/time slot (mock)</CardDescription>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button size="sm" variant="outline" onClick={()=>navigateWeek('prev')}>Prev</Button>
-            <span className="text-white text-sm font-medium min-w-[200px] text-center">{weekDays[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})} – {weekDays[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</span>
-            <Button size="sm" variant="outline" onClick={()=>navigateWeek('next')}>Next</Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex gap-4 mb-4 flex-wrap">
-          {rooms.map(r => <div key={r.id} className="flex items-center gap-2 text-xs text-slate-300"><div className={`w-4 h-4 rounded ${r.color}`}></div><span>{r.name}</span></div>)}
-        </div>
-        <div className="overflow-x-auto">
-          <div className="min-w-[1200px]">
-            <div className="grid grid-cols-8 gap-2 mb-2">
-              <div className="text-sm font-medium text-slate-400 p-2">Time</div>
-              {weekDays.map((d,i)=>(
-                <div key={i} className="text-center p-2 bg-slate-700/50 rounded-lg">
-                  <div className="text-xs font-medium text-white">{d.toLocaleDateString('en-US',{weekday:'short'})}</div>
-                  <div className="text-[10px] text-slate-400">{d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-1">
-              {timeSlots.map(ts => (
-                <div key={ts} className="grid grid-cols-8 gap-2">
-                  <div className="text-[11px] text-slate-500 p-2 flex items-start pt-3">{ts}</div>
-                  {weekDays.map((day, dayIdx) => (
-                    <div key={dayIdx} className="h-[70px] bg-slate-700/30 rounded-lg p-1 relative overflow-hidden">
-                      {rooms.map(room => {
-                        const dayBookings = bookings.filter(b => b.date === dateKey(day) && b.roomId === room.id);
-                        const relevant = dayBookings.filter(b => isBookingInSlot(b, ts));
-                        return relevant.map(b => (
-                          <div key={b.id} className={`${room.color} absolute inset-0 rounded-md flex items-center justify-center text-[10px] text-white font-semibold shadow-sm`}>{b.roomName}:{b.customerName}</div>
-                        ))
-                      })}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </CardContent>
     </Card>
   );
 }
