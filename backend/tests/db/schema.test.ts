@@ -235,61 +235,78 @@ describe('Phase 1.1: Database Schema Migration', () => {
       });
     });
 
-    it('should create booking with userId = null (guest booking)', async () => {
-      // Acceptance Criteria: Can create booking with userId = null (guest booking)
+    it('should create booking with customer profile (walk-in without login)', async () => {
+      // Acceptance Criteria: All bookings require userId (customer profile)
+      // Customer profiles can be created without passwordHash (can't login)
+      const customerProfile = await prisma.user.create({
+        data: {
+          name: 'Walk-in Customer',
+          phone: '+14165556666',
+          email: null, // Email optional
+          role: 'CUSTOMER',
+          passwordHash: null, // Customer profile (no login credentials)
+          registrationSource: 'WALK_IN',
+        },
+      });
+
       const booking = await prisma.booking.create({
         data: {
           roomId: testRoom.id,
-          userId: null, // ✅ Guest booking (no user account)
-          customerName: 'Guest Customer',
-          customerPhone: '+14165556666',
-          customerEmail: null, // Email optional for guests
+          userId: customerProfile.id, // ✅ Required: Links to customer profile
+          customerName: 'Walk-in Customer', // Snapshot at booking time
+          customerPhone: '+14165556666',    // Snapshot at booking time
+          customerEmail: null,
           startTime: new Date('2025-10-20T14:00:00Z'),
           endTime: new Date('2025-10-20T16:00:00Z'),
           players: 2,
           price: 100,
           status: 'CONFIRMED',
-          isGuestBooking: true,
           bookingSource: 'WALK_IN',
         },
       });
 
-      expect(booking.userId).toBeNull();
-      expect(booking.isGuestBooking).toBe(true);
-      expect(booking.customerName).toBe('Guest Customer');
+      expect(booking.userId).toBe(customerProfile.id);
+      expect(booking.customerName).toBe('Walk-in Customer');
       expect(booking.customerPhone).toBe('+14165556666');
       expect(booking.bookingSource).toBe('WALK_IN');
+      
+      // Verify customer profile has no login credentials
+      expect(customerProfile.passwordHash).toBeNull();
+
+      // Cleanup
+      await prisma.booking.delete({ where: { id: booking.id } });
+      await prisma.user.delete({ where: { id: customerProfile.id } });
     });
 
-    it('should create booking with userId (registered user)', async () => {
+    it('should create booking with registered user (full account)', async () => {
       const user = await prisma.user.create({
         data: {
           name: 'Registered User',
           phone: '+14165557777',
           email: 'user@test.com',
           role: 'CUSTOMER',
+          passwordHash: 'hashed_password', // Full account with login
         },
       });
 
       const booking = await prisma.booking.create({
         data: {
           roomId: testRoom.id,
-          userId: user.id, // ✅ Registered user booking
-          customerName: user.name,
-          customerPhone: user.phone,
-          customerEmail: user.email,
+          userId: user.id, // ✅ Required: Links to user account
+          customerName: user.name,   // Snapshot at booking time
+          customerPhone: user.phone, // Snapshot at booking time
+          customerEmail: user.email, // Snapshot at booking time
           startTime: new Date('2025-10-21T10:00:00Z'),
           endTime: new Date('2025-10-21T12:00:00Z'),
           players: 3,
           price: 100,
           status: 'CONFIRMED',
-          isGuestBooking: false,
           bookingSource: 'ONLINE',
         },
       });
 
       expect(booking.userId).toBe(user.id);
-      expect(booking.isGuestBooking).toBe(false);
+      expect(booking.customerName).toBe('Registered User');
 
       // Cleanup
       await prisma.booking.delete({ where: { id: booking.id } });
@@ -324,10 +341,21 @@ describe('Phase 1.1: Database Schema Migration', () => {
 
     it('should support createdBy foreign key', async () => {
       // Acceptance Criteria: Foreign keys (createdBy) validate correctly
+      const customerProfile = await prisma.user.create({
+        data: {
+          name: 'Walk-in Customer',
+          phone: '+14165559999',
+          role: 'CUSTOMER',
+          passwordHash: null,
+          registrationSource: 'WALK_IN',
+          registeredBy: adminUser.id,
+        },
+      });
+
       const booking = await prisma.booking.create({
         data: {
           roomId: testRoom.id,
-          userId: null,
+          userId: customerProfile.id, // Required: customer profile
           customerName: 'Walk-in Customer',
           customerPhone: '+14165559999',
           customerEmail: null,
@@ -336,7 +364,6 @@ describe('Phase 1.1: Database Schema Migration', () => {
           players: 2,
           price: 100,
           status: 'CONFIRMED',
-          isGuestBooking: true,
           bookingSource: 'WALK_IN',
           createdBy: adminUser.id, // ✅ Admin who created this booking
         },
@@ -345,11 +372,15 @@ describe('Phase 1.1: Database Schema Migration', () => {
       // Fetch with relation
       const bookingWithAdmin = await prisma.booking.findUnique({
         where: { id: booking.id },
-        include: { createdByUser: true },
+        include: { createdByUser: true, user: true },
       });
 
       expect(bookingWithAdmin?.createdBy).toBe(adminUser.id);
       expect(bookingWithAdmin?.createdByUser?.name).toBe('Admin Creator');
+      expect(bookingWithAdmin?.user?.id).toBe(customerProfile.id);
+
+      // Cleanup
+      await prisma.user.delete({ where: { id: customerProfile.id } });
 
       // Cleanup
       await prisma.booking.delete({ where: { id: booking.id } });
@@ -374,10 +405,21 @@ describe('Phase 1.1: Database Schema Migration', () => {
       const sources = ['ONLINE', 'WALK_IN', 'PHONE'];
 
       for (const source of sources) {
+        // Create customer profile for each source
+        const customerProfile = await prisma.user.create({
+          data: {
+            name: `Customer ${source}`,
+            phone: `+14165551${sources.indexOf(source)}`,
+            role: 'CUSTOMER',
+            passwordHash: null,
+            registrationSource: source,
+          },
+        });
+
         const booking = await prisma.booking.create({
           data: {
             roomId: testRoom.id,
-            userId: null,
+            userId: customerProfile.id,
             customerName: `Customer ${source}`,
             customerPhone: `+14165551${sources.indexOf(source)}`,
             startTime: new Date(`2025-10-23T${10 + sources.indexOf(source) * 2}:00:00Z`),
@@ -389,14 +431,26 @@ describe('Phase 1.1: Database Schema Migration', () => {
         });
 
         expect(booking.bookingSource).toBe(source);
+
+        // Cleanup
+        await prisma.user.delete({ where: { id: customerProfile.id } });
       }
     });
 
     it('should store internalNotes field', async () => {
+      const customerProfile = await prisma.user.create({
+        data: {
+          name: 'Customer with Notes',
+          phone: '+14165551234',
+          role: 'CUSTOMER',
+          passwordHash: null,
+        },
+      });
+
       const booking = await prisma.booking.create({
         data: {
           roomId: testRoom.id,
-          userId: null,
+          userId: customerProfile.id,
           customerName: 'Customer with Notes',
           customerPhone: '+14165551234',
           startTime: new Date('2025-10-24T14:00:00Z'),
