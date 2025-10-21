@@ -65,17 +65,16 @@ model Booking {
   id            String   @id @default(uuid())
   room          Room     @relation(fields: [roomId], references: [id])
   roomId        String
-  user          User?    @relation(fields: [userId], references: [id]) // Made optional for guest bookings
-  userId        String?  // Made nullable for guest bookings
-  customerName  String   // Denormalized for display
-  customerPhone String   // Denormalized for contact
-  customerEmail String?  // Optional email for guest bookings
+  user          User     @relation(fields: [userId], references: [id]) // Always required (customer profile)
+  userId        String   // Always required - links to User (customer profile or account)
+  customerName  String   // Denormalized snapshot: name at booking time
+  customerPhone String   // Denormalized snapshot: phone at booking time
+  customerEmail String?  // Denormalized snapshot: email at booking time (optional)
   startTime     DateTime @db.Timestamptz
   endTime       DateTime @db.Timestamptz
   players       Int
   price         Decimal  @db.Decimal(10, 2)
   status        String   @default("CONFIRMED")
-  isGuestBooking Boolean @default(false) // True if booking has no user account
   bookingSource String   @default("ONLINE") @db.VarChar(50) // "ONLINE" | "WALK_IN" | "PHONE"
   createdBy     String?  // FK to User.id (admin who created this booking)
   createdByUser User?    @relation("AdminCreatedBookings", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -85,7 +84,7 @@ model Booking {
 
   @@index([roomId, startTime])
   @@index([userId, startTime])
-  @@index([customerPhone]) // For fast guest booking lookups
+  @@index([customerPhone]) // For fast customer lookup and history
   @@index([bookingSource]) // For analytics queries
 }
 

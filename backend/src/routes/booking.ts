@@ -27,7 +27,6 @@ function presentBooking(b: any) {
     players: b.players,
     price: b.price,
     status: presentStatus(b.status, new Date(b.endTime)),
-    isGuestBooking: b.isGuestBooking,
     bookingSource: b.bookingSource,
     internalNotes: b.internalNotes,
     createdAt: b.createdAt,
@@ -409,31 +408,27 @@ router.post('/admin/create-OLD', requireAuth, async (req, res) => {
  * Phase 1.4: Admin Manual Booking Creation
  * POST /api/bookings/admin/create
  * 
- * Supports three customer modes:
- * 1. existing - Lookup existing customer by phone
- * 2. new - Create new customer account + booking in transaction
- * 3. guest - Create booking without user account (walk-in only)
+ * Supports two customer modes:
+ * 1. existing - Lookup existing customer by phone (returns customer profile)
+ * 2. new - Create new customer profile + booking in transaction
+ * 
+ * NOTE: All bookings now require a User (customer profile). "Guest" bookings
+ * are now customer profiles without login credentials (passwordHash: null).
+ * This allows tracking customer history while maintaining flexibility.
  */
 
 // Zod schemas for admin booking creation
-const newCustomerSchema = z.object({
-  name: z.string().min(1),
-  phone: z.string().min(1),
-  email: z.string().email().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
-});
-
-const guestSchema = z.object({
-  name: z.string().min(1),
-  phone: z.string().min(1),
+const customerDataSchema = z.object({
+  name: z.string().min(1, 'Customer name is required'),
+  phone: z.string().min(1, 'Customer phone is required'),
   email: z.string().email().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
 });
 
 const adminBookingSchema = z.object({
   // Customer mode
-  customerMode: z.enum(['existing', 'new', 'guest']),
+  customerMode: z.enum(['existing', 'new']),
   customerPhone: z.string().optional(), // For existing mode
-  newCustomer: newCustomerSchema.optional(), // For new mode
-  guest: guestSchema.optional(), // For guest mode
+  newCustomer: customerDataSchema.optional(), // For new mode
   
   // Booking details
   roomId: z.string().uuid().or(z.string()), // Accept UUID or simple string for mock rooms
@@ -493,7 +488,6 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
       customerMode,
       customerPhone,
       newCustomer,
-      guest,
       roomId,
       startTimeIso,
       hours,
@@ -510,16 +504,6 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
     }
     if (customerMode === 'new' && !newCustomer) {
       return res.status(400).json({ error: 'newCustomer data required for new mode' });
-    }
-    if (customerMode === 'guest' && !guest) {
-      return res.status(400).json({ error: 'guest data required for guest mode' });
-    }
-
-    // Validate guest mode constraints
-    if (customerMode === 'guest' && bookingSource === 'PHONE') {
-      return res.status(400).json({ 
-        error: 'Guest bookings only allowed for walk-in (not phone bookings)' 
-      });
     }
 
     // Validate room exists and is active
@@ -560,7 +544,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
     // Import phone utilities
     const { normalizePhone } = await import('../utils/phoneUtils');
 
-    let userId: string | null = null;
+    let userId: string;
     let customerName: string;
     let customerPhoneNormalized: string;
     let customerEmail: string | undefined;
@@ -568,7 +552,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
 
     // Handle customer modes
     if (customerMode === 'existing') {
-      // Lookup existing customer
+      // Lookup existing customer profile
       const normalizedPhone = normalizePhone(customerPhone!);
       const user = await prisma.user.findUnique({
         where: { phone: normalizedPhone },
@@ -581,6 +565,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
         });
       }
 
+      // Take snapshot of current user data for this booking
       userId = user.id;
       customerName = user.name;
       customerPhoneNormalized = user.phone;
@@ -636,15 +621,14 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
           data: {
             roomId,
             userId: newUser.id,
-            customerName: newUser.name,
-            customerPhone: newUser.phone,
-            customerEmail: newUser.email,
+            customerName: newUser.name,     // Snapshot at booking time
+            customerPhone: newUser.phone,   // Snapshot at booking time
+            customerEmail: newUser.email,   // Snapshot at booking time
             startTime,
             endTime,
             players,
             price: pricing.totalPrice,
             status: 'CONFIRMED',
-            isGuestBooking: false,
             bookingSource,
             createdBy: req.user!.id,
             internalNotes,
@@ -653,12 +637,6 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
 
         return { user: newUser, booking };
       });
-
-      userId = result.user.id;
-      customerName = result.user.name;
-      customerPhoneNormalized = result.user.phone;
-      customerEmail = result.user.email || undefined;
-      userCreated = true;
 
       return res.status(201).json({
         booking: presentBooking(result.booking),
@@ -677,31 +655,24 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
         },
         emailSent: false, // Placeholder for future feature
       });
-
     } else {
-      // Guest mode
-      const normalizedPhone = normalizePhone(guest!.phone);
-      
-      userId = null;
-      customerName = guest!.name;
-      customerPhoneNormalized = normalizedPhone;
-      customerEmail = guest!.email;
+      // This should never happen due to Zod validation, but TypeScript needs this
+      return res.status(400).json({ error: 'Invalid customer mode' });
     }
 
-    // Create booking (for existing and guest modes)
+    // Create booking for existing customer (customerMode === 'existing')
     const booking = await prisma.booking.create({
       data: {
         roomId,
         userId,
-        customerName,
-        customerPhone: customerPhoneNormalized,
-        customerEmail,
+        customerName,                      // Snapshot from current User data
+        customerPhone: customerPhoneNormalized,  // Snapshot from current User data
+        customerEmail,                     // Snapshot from current User data
         startTime,
         endTime,
         players,
         price: pricing.totalPrice,
         status: 'CONFIRMED',
-        isGuestBooking: customerMode === 'guest',
         bookingSource,
         createdBy: req.user!.id,
         internalNotes,
@@ -710,7 +681,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
 
     res.status(201).json({
       booking: presentBooking(booking),
-      userCreated,
+      userCreated: false,
       pricing: {
         basePrice: pricing.basePrice,
         taxRate: pricing.taxRate,
