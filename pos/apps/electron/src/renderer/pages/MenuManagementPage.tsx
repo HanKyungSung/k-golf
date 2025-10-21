@@ -41,6 +41,15 @@ const MenuManagementPage: React.FC = () => {
   const [draft, setDraft] = useState<DraftItem>(emptyDraft);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // Safe back navigation handler
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   const filtered = useMemo(()=> items.filter(i => (filterCategory==='all' || i.category===filterCategory) && (search.trim()==='' || i.name.toLowerCase().includes(search.toLowerCase()) || i.description.toLowerCase().includes(search.toLowerCase()))), [items, filterCategory, search]);
 
   const startCreate = () => { setEditingId(null); setDraft(emptyDraft); setShowForm(true); };
@@ -72,7 +81,7 @@ const MenuManagementPage: React.FC = () => {
             <p className="text-slate-400 text-sm">Add, edit, and organize items (local mock)</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={()=>navigate(-1)} className="px-3 py-2 rounded bg-slate-700 text-slate-200 text-xs font-medium hover:bg-slate-600 border border-slate-600">Back</button>
+            <button onClick={handleGoBack} className="px-3 py-2 rounded bg-slate-700 text-slate-200 text-xs font-medium hover:bg-slate-600 border border-slate-600">Back</button>
             <button onClick={startCreate} className="px-4 py-2 rounded bg-amber-500 text-black text-xs font-semibold hover:bg-amber-600">Add Item</button>
           </div>
         </div>

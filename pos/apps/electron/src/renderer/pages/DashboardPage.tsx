@@ -17,7 +17,7 @@ function isBookingInSlot(b: import('../app/bookingContext').Booking, slot: strin
 }
 
 // UI primitives centralized
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from '../components/ui/primitives';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, Button } from '../components/ui/primitives';
 import { BookingModal } from '../components/BookingModal';
 
 interface TabsContextValue { value: string; setValue: (v:string)=>void }
@@ -113,13 +113,14 @@ const DashboardPage: React.FC = () => {
                       <CardTitle>Bookings</CardTitle>
                       <CardDescription>Lifecycle management (mock)</CardDescription>
                     </div>
-                    <button 
+                    <Button 
                       data-testid="dashboard-create-booking-btn"
                       onClick={() => setShowCreateModal(true)}
-                      className="px-4 py-2 rounded-md bg-amber-500 text-black font-medium text-sm hover:bg-amber-400 transition-colors"
+                      size="lg"
+                      className="text-base px-6"
                     >
                       + Create Booking
-                    </button>
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -138,12 +139,12 @@ const DashboardPage: React.FC = () => {
                           <div className="w-16 text-white font-semibold text-sm">${b.price}</div>
                           {b.status === 'confirmed' && (
                             <div className="flex gap-2" onClick={e=>e.stopPropagation()}>
-                              <button className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30" onClick={()=>updateBookingStatus(b.id,'completed')}>Complete</button>
-                              <button className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30" onClick={()=>updateBookingStatus(b.id,'cancelled')}>Cancel</button>
+                              <Button size="sm" className="bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30" onClick={()=>updateBookingStatus(b.id,'completed')}>Complete</Button>
+                              <Button size="sm" className="bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30" onClick={()=>updateBookingStatus(b.id,'cancelled')}>Cancel</Button>
                             </div>
                           )}
                           {b.status !== 'confirmed' && (
-                            <button className="text-xs px-2 py-1 rounded bg-slate-600/40 text-slate-200 border border-slate-600 hover:bg-slate-600/60" onClick={(e)=>{e.stopPropagation(); updateBookingStatus(b.id,'confirmed')}}>Reset</button>
+                            <Button size="sm" variant="outline" onClick={(e)=>{e.stopPropagation(); updateBookingStatus(b.id,'confirmed')}}>Reset</Button>
                           )}
                         </div>
                       </div>
@@ -202,8 +203,8 @@ const DashboardPage: React.FC = () => {
                   <div className="space-y-4 text-sm">
                     <p className="text-slate-300">Open the full menu management workspace to add, edit, archive, and re-order menu items. This operates on local mock data until persistence is wired.</p>
                     <div className="flex gap-3">
-                      <button onClick={()=>navigate('/menu')} className="px-4 py-2 rounded bg-amber-500 text-black font-medium text-xs hover:bg-amber-600">Open Menu Management</button>
-                      <button onClick={()=>navigate('/menu')} className="px-4 py-2 rounded bg-slate-700 text-slate-200 font-medium text-xs hover:bg-slate-600 border border-slate-600">Quick Edit</button>
+                      <Button size="sm" onClick={()=>navigate('/menu')}>Open Menu Management</Button>
+                      <Button size="sm" variant="outline" onClick={()=>navigate('/menu')}>Quick Edit</Button>
                     </div>
                     <p className="text-[11px] text-slate-500">Future enhancements: category CRUD, bulk availability toggles, price history, cost-of-goods, printing labels.</p>
                   </div>
@@ -240,7 +241,8 @@ const DashboardPage: React.FC = () => {
                             className="flex-1 bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
                             placeholder="Enter tax rate (0-100)"
                           />
-                          <button
+                          <Button
+                            size="md"
                             onClick={() => {
                               const rate = parseFloat(taxRateInput);
                               if (isNaN(rate) || rate < 0 || rate > 100) {
@@ -252,10 +254,10 @@ const DashboardPage: React.FC = () => {
                               setTaxSaveMessage('✅ Tax rate updated successfully!');
                               setTimeout(() => setTaxSaveMessage(''), 3000);
                             }}
-                            className="px-6 py-2 rounded-md bg-amber-500 text-black font-medium text-sm hover:bg-amber-400 transition-colors"
+                            className="px-6"
                           >
                             Save
-                          </button>
+                          </Button>
                         </div>
                         <p className="text-xs text-slate-500 mt-2">Enter a value between 0 and 100. Decimals are supported (e.g., 8.5 for 8.5%)</p>
                       </div>
@@ -274,18 +276,20 @@ const DashboardPage: React.FC = () => {
                         <h4 className="text-sm font-medium text-slate-300 mb-2">Common Tax Rates</h4>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                           {[0, 5, 8, 10, 13, 15, 20, 25].map((rate) => (
-                            <button
+                            <Button
                               key={rate}
+                              size="sm"
+                              variant="outline"
                               onClick={() => {
                                 setTaxRateInput(rate.toString());
                                 updateGlobalTaxRate(rate);
                                 setTaxSaveMessage(`✅ Tax rate set to ${rate}%`);
                                 setTimeout(() => setTaxSaveMessage(''), 3000);
                               }}
-                              className="px-3 py-2 rounded-md bg-slate-700/50 border border-slate-600 text-slate-200 text-sm hover:bg-slate-600/60 hover:border-amber-500/30 transition-colors"
+                              className="hover:border-amber-500/30"
                             >
                               {rate}%
-                            </button>
+                            </Button>
                           ))}
                         </div>
                       </div>
@@ -336,9 +340,9 @@ function WeeklyCalendar({ weekDays, rooms, bookings, navigateWeek }: CalendarPro
             <CardDescription>Grid view by day/time slot (mock)</CardDescription>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={()=>navigateWeek('prev')} className="px-2 py-1 rounded bg-slate-700 text-slate-300 text-xs hover:bg-slate-600">Prev</button>
+            <Button size="sm" variant="outline" onClick={()=>navigateWeek('prev')}>Prev</Button>
             <span className="text-white text-sm font-medium min-w-[200px] text-center">{weekDays[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})} – {weekDays[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</span>
-            <button onClick={()=>navigateWeek('next')} className="px-2 py-1 rounded bg-slate-700 text-slate-300 text-xs hover:bg-slate-600">Next</button>
+            <Button size="sm" variant="outline" onClick={()=>navigateWeek('next')}>Next</Button>
           </div>
         </div>
       </CardHeader>
@@ -394,9 +398,9 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek }: CalendarProps
             <CardDescription>Horizontal timeline (mock)</CardDescription>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={()=>navigateWeek('prev')} className="px-2 py-1 rounded bg-slate-700 text-slate-300 text-xs hover:bg-slate-600">Prev</button>
+            <Button size="sm" variant="outline" onClick={()=>navigateWeek('prev')}>Prev</Button>
             <span className="text-white text-sm font-medium min-w-[200px] text-center">{weekDays[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})} – {weekDays[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</span>
-            <button onClick={()=>navigateWeek('next')} className="px-2 py-1 rounded bg-slate-700 text-slate-300 text-xs hover:bg-slate-600">Next</button>
+            <Button size="sm" variant="outline" onClick={()=>navigateWeek('next')}>Next</Button>
           </div>
         </div>
       </CardHeader>

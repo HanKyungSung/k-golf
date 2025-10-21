@@ -87,6 +87,17 @@ export default function BookingDetailPage() {
   const { getBookingById, updateBookingStatus, rooms, globalTaxRate, updateGlobalTaxRate } = useBookingData();
   const booking = getBookingById(id!);
 
+  // Safe back navigation handler
+  const handleGoBack = () => {
+    // Check if there's history to go back to
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      // Fallback to dashboard if no history (e.g., direct link or refresh)
+      navigate('/');
+    }
+  };
+
   // Seat and order management state
   const [numberOfSeats, setNumberOfSeats] = useState<number>(1);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -372,8 +383,8 @@ export default function BookingDetailPage() {
             <p className="text-slate-400 text-sm mt-1">ID: {booking.id}</p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge className={`${statusStyles[booking.status]} capitalize`}>{booking.status}</Badge>
-            <Button size="sm" variant="outline" onClick={() => navigate(-1)}>
+            <Badge className={`${statusStyles[booking.status]} capitalize text-lg px-4 py-2`}>{booking.status}</Badge>
+            <Button size="lg" variant="outline" onClick={handleGoBack} className="text-base px-6">
               Back
             </Button>
           </div>

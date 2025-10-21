@@ -14,8 +14,8 @@
   - under 72: -2 score
 - phone number only for now. login/register
   - online login with phone number
-
 - printing bill
+- Admin dashboard should be able to edit all the bookings.
 
 
 ## 🤔 Open Questions
@@ -116,3 +116,30 @@
 - [ ] Run E2E tests
   - Run: `cd pos && export $(cat .env.test | xargs) && npm run test:e2e:ui`
   - First test verifies booking creation + database records
+
+## 🧹 Code Cleanup Tasks
+
+### UI Component Unification
+- [ ] **Unify Button components across all pages**
+  - ✅ DashboardPage: All buttons converted to unified Button component (completed 2025-10-20)
+  - ✅ BookingDetailPage: Already using unified Button component
+  - ✅ MenuManagementPage: Back button using unified Button, but other buttons still raw `<button>` elements
+  - [ ] AdminPage: Check and convert any raw buttons to unified Button component
+  - [ ] BookingModal: Check button consistency
+  - [ ] Other components: Audit all remaining components for raw `<button>` usage
+  
+- [ ] **Unify Tabs components**
+  - DashboardPage has local Tabs implementation (TabsContext, TabsTrigger, etc.)
+  - primitives.tsx has a different Tabs implementation
+  - Should consolidate into single reusable Tabs component
+
+- [ ] **Create shared design tokens**
+  - Extract common colors (amber-500, slate-700, etc.) into constants
+  - Define standard spacing and sizing scales
+  - Create typography variants
+  - Consider moving to CSS variables or Tailwind theme extension
+
+- [ ] **Component documentation**
+  - Document Button component props and variants
+  - Add usage examples for all UI primitives
+  - Create Storybook or similar component gallery (optional)
