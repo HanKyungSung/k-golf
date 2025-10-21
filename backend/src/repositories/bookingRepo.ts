@@ -50,8 +50,47 @@ export async function createBooking(data: CreateBookingInput): Promise<Booking> 
   });
 }
 
-export async function listBookings(): Promise<Booking[]> {
-  return prisma.booking.findMany({ orderBy: { startTime: 'asc' } });
+export interface PaginatedBookings {
+  bookings: Booking[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ListBookingsOptions {
+  page?: number;
+  limit?: number;
+  sortBy?: 'startTime' | 'createdAt';
+  order?: 'asc' | 'desc';
+}
+
+export async function listBookings(options?: ListBookingsOptions): Promise<PaginatedBookings> {
+  const page = options?.page || 1;
+  const limit = options?.limit || 10;
+  const sortBy = options?.sortBy || 'startTime';
+  const order = options?.order || 'desc';
+
+  const skip = (page - 1) * limit;
+
+  const [bookings, total] = await Promise.all([
+    prisma.booking.findMany({
+      skip,
+      take: limit,
+      orderBy: { [sortBy]: order },
+    }),
+    prisma.booking.count(),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    bookings,
+    total,
+    page,
+    limit,
+    totalPages,
+  };
 }
 
 export async function listUserBookings(userId: string): Promise<Booking[]> {

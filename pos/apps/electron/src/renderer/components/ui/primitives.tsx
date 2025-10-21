@@ -34,7 +34,7 @@ export const Separator: React.FC<{ className?: string }>=({className=''}) => (
 export const Button: React.FC<{ 
   className?: string; 
   children: React.ReactNode; 
-  onClick?: () => void; 
+  onClick?: React.MouseEventHandler<HTMLButtonElement>; 
   disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
   variant?: 'default' | 'outline' | 'ghost';

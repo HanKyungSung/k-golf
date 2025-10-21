@@ -19,6 +19,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:dev": "DATABASE_URL=postgresql://kgolf:kgolf_password@localhost:5432/kgolf_app tsx prisma/seed.ts",
+    "db:seed:test": "DATABASE_URL=postgresql://kgolf:kgolf_password@localhost:5432/k_golf_test tsx prisma/seed.ts",
     "db:setup-test": "chmod +x scripts/setup_test_db.sh && ./scripts/setup_test_db.sh"
   },
   "dependencies": {

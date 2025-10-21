@@ -34,7 +34,17 @@ const TabsContent: React.FC<{ when: string; children: React.ReactNode }> = ({ wh
 const DashboardPage: React.FC = () => {
   const { state, forceSync, rooms: realRooms } = useAuth();
   const user = state.user || {}; const isAdmin = user.role === 'ADMIN';
-  const { bookings, updateBookingStatus, updateRoomStatus, rooms: mockRooms, globalTaxRate, updateGlobalTaxRate, refreshBookings } = useBookingData();
+  const { 
+    bookings, 
+    bookingsPagination,
+    updateBookingStatus, 
+    updateRoomStatus, 
+    rooms: mockRooms, 
+    globalTaxRate, 
+    updateGlobalTaxRate, 
+    refreshBookings,
+    fetchBookingsPage 
+  } = useBookingData();
   const rooms = mockRooms; // Use mock rooms for now (TODO: sync with real backend data)
   const navigate = useNavigate();
   
@@ -53,6 +63,14 @@ const DashboardPage: React.FC = () => {
   
   // Create booking modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Pagination state for bookings - track current page
+  const [bookingsPage, setBookingsPage] = useState(1);
+
+  // Fetch bookings when page changes (server-side pagination)
+  React.useEffect(() => {
+    fetchBookingsPage(bookingsPage, 10, 'startTime', 'desc');
+  }, [bookingsPage, fetchBookingsPage]);
 
   // Tax settings state
   const [taxRateInput, setTaxRateInput] = useState<string>(globalTaxRate.toString());
@@ -125,7 +143,12 @@ const DashboardPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {bookings.map(b => (
+                    {bookings.length === 0 && (
+                      <div className="text-center py-12 text-slate-400">
+                        <p>No bookings found</p>
+                      </div>
+                    )}
+                    {bookings.map((b: import('../app/bookingContext').Booking) => (
                       <div key={b.id} className="flex items-center justify-between p-4 border border-slate-700 rounded-lg hover:bg-slate-700/30 bg-slate-800/30 cursor-pointer" onClick={()=>navigate(`/booking/${b.id}`)}>
                         <div className="flex-1 min-w-0 pr-4">
                           <div className="flex items-center gap-3 mb-1">
@@ -144,12 +167,64 @@ const DashboardPage: React.FC = () => {
                             </div>
                           )}
                           {b.status !== 'confirmed' && (
-                            <Button size="sm" variant="outline" onClick={(e)=>{e.stopPropagation(); updateBookingStatus(b.id,'confirmed')}}>Reset</Button>
+                            <Button size="sm" variant="outline" onClick={(e: React.MouseEvent)=>{e.stopPropagation(); updateBookingStatus(b.id,'confirmed')}}>Reset</Button>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
+                  
+                  {/* Pagination Controls */}
+                  {bookingsPagination && bookingsPagination.totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-6 border-t border-slate-700 mt-6">
+                      <div className="text-sm text-slate-400">
+                        Showing {((bookingsPagination.page - 1) * bookingsPagination.limit) + 1}-{Math.min(bookingsPagination.page * bookingsPagination.limit, bookingsPagination.total)} of {bookingsPagination.total} bookings
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => setBookingsPage(p => Math.max(1, p - 1))}
+                          disabled={bookingsPagination.page === 1}
+                        >
+                          Previous
+                        </Button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, bookingsPagination.totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (bookingsPagination.totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (bookingsPagination.page <= 3) {
+                              pageNum = i + 1;
+                            } else if (bookingsPagination.page >= bookingsPagination.totalPages - 2) {
+                              pageNum = bookingsPagination.totalPages - 4 + i;
+                            } else {
+                              pageNum = bookingsPagination.page - 2 + i;
+                            }
+                            return (
+                              <Button
+                                key={pageNum}
+                                size="sm"
+                                variant={bookingsPagination.page === pageNum ? 'default' : 'outline'}
+                                onClick={() => setBookingsPage(pageNum)}
+                                className="w-8 h-8 p-0"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => setBookingsPage(p => Math.min(bookingsPagination!.totalPages, p + 1))}
+                          disabled={bookingsPagination.page === bookingsPagination.totalPages}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

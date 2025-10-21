@@ -28,11 +28,18 @@ interface BookingContextValue {
   rooms: Room[];
   bookings: Booking[];
   globalTaxRate: number; // Global default tax rate (0-100)
+  bookingsPagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  } | null;
   updateBookingStatus: (id: string, status: Booking['status']) => void;
   updateRoomStatus: (id: string, status: Room['status']) => void;
   updateGlobalTaxRate: (rate: number) => void;
   getBookingById: (id: string) => Booking | undefined;
   refreshBookings: () => Promise<void>;
+  fetchBookingsPage: (page: number, limit?: number, sortBy?: 'startTime' | 'createdAt', order?: 'asc' | 'desc') => Promise<void>;
 }
 
 const BookingContext = createContext<BookingContextValue | null>(null);
@@ -40,6 +47,12 @@ const BookingContext = createContext<BookingContextValue | null>(null);
 export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
+  const [bookingsPagination, setBookingsPagination] = useState<{
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  } | null>(null);
   
   // Initialize global tax rate from localStorage or default to 8%
   // This will be overwritten by API value when it loads
@@ -87,17 +100,30 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     fetchRooms();
   }, []);
 
-  // Fetch bookings helper function
-  const fetchBookings = useCallback(async () => {
-    console.log('[BOOKING_CTX] Fetching bookings from API...');
+  // Fetch bookings helper function with pagination support
+  const fetchBookingsPage = useCallback(async (
+    page: number = 1,
+    limit: number = 10,
+    sortBy: 'startTime' | 'createdAt' = 'startTime',
+    order: 'asc' | 'desc' = 'desc'
+  ) => {
+    console.log('[BOOKING_CTX] Fetching bookings from API...', { page, limit, sortBy, order });
     try {
-      const response = await fetch('http://localhost:8080/api/bookings', {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sortBy,
+        order,
+      });
+      
+      const response = await fetch(`http://localhost:8080/api/bookings?${params}`, {
         credentials: 'include', // Include cookies for auth
       });
       
       if (response.ok) {
         const data = await response.json();
-        console.log('[BOOKING_CTX] ✅ Loaded bookings from API:', data.bookings);
+        console.log('[BOOKING_CTX] ✅ Loaded bookings from API:', data);
+        
         if (data.bookings && Array.isArray(data.bookings)) {
           // Map backend bookings to POS booking format
           const mappedBookings = data.bookings.map((b: any) => {
@@ -125,6 +151,11 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             };
           });
           setBookings(mappedBookings);
+          
+          // Store pagination metadata
+          if (data.pagination) {
+            setBookingsPagination(data.pagination);
+          }
         }
       } else {
         console.warn('[BOOKING_CTX] ❌ Failed to fetch bookings (status:', response.status, ')');
@@ -135,6 +166,11 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.warn('[BOOKING_CTX] Using mock bookings fallback');
     }
   }, [rooms]); // Depend on rooms so we can map room names
+
+  // Legacy fetchBookings for backward compatibility - now uses pagination
+  const fetchBookings = useCallback(async () => {
+    await fetchBookingsPage(1, 10, 'startTime', 'desc');
+  }, [fetchBookingsPage]);
 
   // Fetch real bookings from API on mount
   useEffect(() => {
@@ -244,7 +280,18 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [fetchBookings]);
 
   return (
-    <BookingContext.Provider value={{ rooms, bookings, globalTaxRate, updateBookingStatus, updateRoomStatus, updateGlobalTaxRate, getBookingById, refreshBookings }}>
+    <BookingContext.Provider value={{ 
+      rooms, 
+      bookings, 
+      bookingsPagination,
+      globalTaxRate, 
+      updateBookingStatus, 
+      updateRoomStatus, 
+      updateGlobalTaxRate, 
+      getBookingById, 
+      refreshBookings,
+      fetchBookingsPage 
+    }}>
       {children}
     </BookingContext.Provider>
   );

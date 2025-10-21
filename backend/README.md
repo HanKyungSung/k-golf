@@ -71,6 +71,21 @@ EMAIL_FROM="noreply@kgolf.com"
 
 ### 3. Database Setup
 
+We use **two separate databases** for different purposes:
+
+| Database | Purpose | Seeding |
+|----------|---------|---------|
+| `kgolf_app` | Local development, manual testing | Mock data (133 bookings) |
+| `k_golf_test` | Automated unit/E2E tests | Mock data (isolated) |
+
+**Why separate databases?**
+- ✅ **Isolation**: Tests don't interfere with dev data
+- ✅ **Safety**: Can reset test DB anytime without losing dev work
+- ✅ **Speed**: Tests run against optimized test fixtures
+- ✅ **Realism**: Dev DB has realistic volume of data for UX testing
+
+#### Initial Setup
+
 ```bash
 # Start PostgreSQL (Docker)
 docker-compose up -d db
@@ -79,11 +94,40 @@ docker-compose up -d db
 # brew install postgresql@15
 # brew services start postgresql@15
 
-# Run migrations
-npm run prisma:migrate
+# Create databases (one-time)
+createdb kgolf_app     # Development database
+createdb k_golf_test   # Test database
 
-# Seed test data (creates Room 1-4)
-npm run db:seed
+# Run migrations on BOTH databases
+DATABASE_URL=postgresql://kgolf:kgolf_password@localhost:5432/kgolf_app npm run prisma:migrate
+DATABASE_URL=postgresql://kgolf:kgolf_password@localhost:5432/k_golf_test npm run prisma:migrate
+
+# Seed both databases with mock data
+npm run db:seed:dev    # Seeds kgolf_app (development)
+npm run db:seed:test   # Seeds k_golf_test (testing)
+```
+
+#### Daily Development Workflow
+
+```bash
+# Start dev server (uses kgolf_app by default)
+npm run dev
+
+# Or run with test database (for test scenario debugging)
+npm run dev:test
+```
+
+#### Resetting Databases
+
+```bash
+# Reset dev database (when you want fresh data)
+npm run db:seed:dev
+
+# Reset test database (before running tests)
+npm run db:seed:test
+
+# Or reset schema + data (destructive!)
+DATABASE_URL=postgresql://kgolf:kgolf_password@localhost:5432/kgolf_app npx prisma migrate reset
 ```
 
 ### 4. Run Development Server
@@ -106,7 +150,9 @@ npm start                # Run compiled production build
 npm run prisma:generate  # Generate Prisma Client
 npm run prisma:migrate   # Run migrations (dev)
 npm run prisma:studio    # Open Prisma Studio GUI
-npm run db:seed          # Seed database with test data
+npm run db:seed          # Seed using DATABASE_URL from .env
+npm run db:seed:dev      # Seed kgolf_app (development database)
+npm run db:seed:test     # Seed k_golf_test (test database)
 
 # Testing (see Testing section below)
 npm test                 # Run all tests

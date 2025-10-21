@@ -38,9 +38,23 @@ const createBookingSchema = z.object({
   hours: z.number().int().min(1).max(4),
 });
 
-router.get('/', async (_req, res) => {
-  const bookings = await listBookings();
-  res.json({ bookings: bookings.map(presentBooking) });
+router.get('/', async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const sortBy = (req.query.sortBy as 'startTime' | 'createdAt') || 'startTime';
+  const order = (req.query.order as 'asc' | 'desc') || 'desc';
+
+  const result = await listBookings({ page, limit, sortBy, order });
+  
+  res.json({
+    bookings: result.bookings.map(presentBooking),
+    pagination: {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    },
+  });
 });
 
 // Optional helper to fetch rooms (basic list)
