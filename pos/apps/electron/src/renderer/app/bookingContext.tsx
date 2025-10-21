@@ -135,9 +135,9 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             
             return {
               id: b.id,
-              customerName: b.customerName || 'Unknown',
+              customerName: b.customerName || 'Guest',
               customerEmail: b.customerEmail || '',
-              customerPhone: b.customerPhone || '',
+              customerPhone: b.customerPhone || '111-111-1111',
               roomName: room?.name || `Room ${b.roomId}`,
               roomId: b.roomId,
               date: startTime.toISOString().split('T')[0], // YYYY-MM-DD
