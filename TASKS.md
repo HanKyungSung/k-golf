@@ -70,6 +70,55 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ---
 
+### 2. Denormalized Customer Data in Bookings
+
+**Question:** Should we keep customer info (name/phone/email) denormalized in Booking table or normalize via userId reference?
+
+**Current Implementation:**
+```prisma
+model Booking {
+  userId        String?  // FK to User (nullable for guest bookings)
+  customerName  String   // Denormalized for display
+  customerPhone String   // Denormalized for contact
+  customerEmail String?  // Denormalized (optional)
+}
+```
+
+**Considerations:**
+
+| Pro Denormalization (Current) | Pro Normalization (Join to User) |
+|-------------------------------|-----------------------------------|
+| ✅ Guest bookings supported (`userId: null`) | ❌ Complex handling for guest bookings |
+| ✅ Fast queries (no JOIN needed) | ❌ Slower queries (JOIN required) |
+| ✅ Historical accuracy (snapshot at booking time) | ❌ Data changes affect past bookings |
+| ✅ Customer data immutable after booking | ❌ User.name change → all bookings show new name |
+| ✅ Simple API responses | ❌ Additional query complexity |
+| ✅ Point-in-time records (audit trail) | ❌ Lost historical context |
+| ✅ Works offline (POS use case) | ❌ Requires user data sync |
+| ❌ Data duplication | ✅ Single source of truth |
+| ❌ Update complexity if customer changes info | ✅ Updates propagate automatically |
+
+**Business Context:**
+- **Bookings are historical records** (like invoices/receipts)
+- Customer info should reflect what was known **at booking time**
+- Guest bookings (`userId: null`) need customer data without User account
+- POS app needs offline-first design (denormalized = no JOIN, faster)
+
+**Recommendation:** **Keep denormalized** for this domain because:
+1. Bookings are immutable historical records (like financial transactions)
+2. Guest bookings are a core feature (can't reference User if no account)
+3. Performance-critical (admin dashboard lists 100+ bookings)
+4. Offline-first POS requirements (minimize JOINs)
+
+**Alternative:** If normalization needed, consider:
+- Keep denormalized fields for guest bookings only (`userId IS NULL`)
+- Add computed fields: `displayName` = `User.name ?? customerName`
+- Hybrid approach with versioning/snapshots
+
+**Status:** ⏸️ Open for discussion
+
+---
+
 ## 🖥️ POS Electron App - Phase 0
 
 > **Goal:** Offline-first POS system for front desk operations
@@ -149,7 +198,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### 0.6g Server-Side Pagination & Database Seeding – ✅ Completed
 <details>
-<summary>View tasks (36 completed)</summary>
+<summary>View tasks (42 completed)</summary>
 
 **Backend Pagination:**
 [x] Add pagination to listBookings() (page, limit, sortBy, order)
@@ -162,6 +211,8 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 [x] Add bookingsPagination state to BookingContext
 [x] Update DashboardPage to fetch on page change
 [x] Pagination UI with server-side metadata
+[x] Remove Weekly Calendar tab from admin dashboard (redundant with Timeline)
+[x] Update grid layout from 6 to 5 tabs
 
 **Database Seeding:**
 [x] Generate 133 mock bookings (44 days range)
@@ -170,11 +221,21 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 [x] Dual-database setup (kgolf_app dev + k_golf_test)
 [x] NPM scripts: db:seed:dev, db:seed:test
 
+**Data Consistency & API Response:**
+[x] Update default customer fallback values ('Guest' vs 'Unknown')
+[x] Update default phone fallback values ('111-111-1111' vs 'N/A')
+[x] Fix presentBooking() to include customer info in API response
+[x] Add customerName, customerPhone, customerEmail to response
+[x] Add isGuestBooking, bookingSource, internalNotes to response
+[x] Update frontend bookingContext fallback values to match backend
+[x] Reset dev database with new seed data
+
 **Implementation:**
 - Page Size: 10 bookings per page
 - API: GET /api/bookings?page=1&limit=10&sortBy=startTime&order=desc
 - Response: { bookings: [...], pagination: { total, page, limit, totalPages } }
 - Databases: kgolf_app (142 bookings), k_golf_test (133 bookings)
+- Default Values: 'Guest' / '111-111-1111' for missing customer data
 
 </details>
 
