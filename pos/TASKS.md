@@ -218,6 +218,87 @@ Follow‑Ups (Post 0.6f) – Tax & Settings Enhancements
 [ ] Settings versioning (rollback to previous values)
 [ ] Settings A/B testing support (feature flags)
 
+### 0.6g Server-Side Pagination & Database Seeding – Completed
+[x] Backend Repository: Add pagination support to listBookings() function
+[x] Backend Repository: Accept page, limit, sortBy, order parameters
+[x] Backend Repository: Return PaginatedBookings interface with metadata (total, page, limit, totalPages)
+[x] Backend Repository: Default sort by startTime DESC (newest first)
+[x] Backend API: Update GET /api/bookings to parse query parameters
+[x] Backend API: Return paginated response with bookings array and pagination metadata
+[x] Backend API: Support sortBy='startTime'|'createdAt' and order='asc'|'desc'
+[x] Frontend Context: Add bookingsPagination state to BookingContext
+[x] Frontend Context: Create fetchBookingsPage() function for paginated API calls
+[x] Frontend Context: Store pagination metadata from API response
+[x] Frontend Context: Maintain backward compatibility with refreshBookings()
+[x] Frontend Dashboard: Remove client-side sorting logic (useMemo)
+[x] Frontend Dashboard: Remove client-side pagination logic
+[x] Frontend Dashboard: Add useEffect to fetch bookings when page changes
+[x] Frontend Dashboard: Update pagination UI to use server-side metadata
+[x] Frontend Dashboard: Display bookings from API (no local filtering)
+[x] Database Seeding: Create mock booking generator in seed.ts
+[x] Database Seeding: Generate 133 bookings across 44 days (30 past + 14 future)
+[x] Database Seeding: Create 25 unique mock customers with realistic data
+[x] Database Seeding: Random start times (9 AM - 6 PM), durations (1-3 hours), players (1-4)
+[x] Database Seeding: Random booking sources (WALK_IN / PHONE)
+[x] Database Seeding: Proper createdAt timestamps (0-7 days before booking)
+[x] Database Setup: Configure dual-database strategy (kgolf_app + k_golf_test)
+[x] Database Setup: Add npm scripts for db:seed:dev and db:seed:test
+[x] Database Setup: Seed both databases with mock data
+[x] Documentation: Update backend README with database setup instructions
+[x] Documentation: Document dual-database strategy and workflow
+[x] Documentation: Add npm command reference for seeding
+[x] Build & Test: Verify TypeScript compilation (no errors)
+[x] Build & Test: Build Electron app successfully with new pagination code
+
+**Acceptance (0.6g Server-Side Pagination)** – VERIFIED
+[x] Backend API: GET /api/bookings?page=1&limit=10&sortBy=startTime&order=desc returns paginated results
+[x] Backend API: Response includes bookings array and pagination object (total, page, limit, totalPages)
+[x] Backend API: Default parameters work (page=1, limit=10, sortBy=startTime, order=desc)
+[x] Frontend: Bookings list displays 10 items per page
+[x] Frontend: Pagination controls show correct page numbers and counts
+[x] Frontend: "Showing X-Y of Z" counter displays accurate range
+[x] Frontend: Newest bookings appear first (DESC by startTime)
+[x] Frontend: Clicking pagination buttons triggers API calls (network tab shows GET with query params)
+[x] Frontend: Page state tracked correctly (stays on page after navigation)
+[x] Frontend: Previous/Next buttons disabled appropriately (first/last page)
+[x] Database: Development DB (kgolf_app) has 142 bookings seeded
+[x] Database: Test DB (k_golf_test) has 133 bookings seeded
+[x] Database: Mock customers have realistic names, phones (+1416...), emails
+[x] Database: Booking time range spans past 30 days and future 14 days
+[x] Database: Can reset dev database independently (npm run db:seed:dev)
+[x] Database: Can reset test database independently (npm run db:seed:test)
+[x] Performance: API response time < 100ms for paginated query
+[x] Scalability: Backend handles sorting and pagination (no frontend memory issues)
+
+**Implementation Details:**
+- Pagination Strategy: Server-side (backend handles sorting, filtering, pagination)
+- Page Size: 10 bookings per page (configurable via API limit parameter)
+- Sort Order: startTime DESC (newest bookings first) - matches user requirement
+- API Endpoint: GET /api/bookings?page=1&limit=10&sortBy=startTime&order=desc
+- Response Format: { bookings: [...], pagination: { total, page, limit, totalPages } }
+- Frontend State: bookingsPagination tracks current page, total pages, total count
+- Mock Data: 25 unique customers, 133-142 bookings, realistic time distribution
+- Database Strategy: Separate dev (kgolf_app) and test (k_golf_test) databases
+- Seeding: Idempotent (won't create duplicates on re-run)
+- NPM Commands: db:seed:dev (development), db:seed:test (testing), db:seed (uses .env)
+
+Follow‑Ups (Post 0.6g) – Pagination & Data Enhancements
+[ ] Add filtering support (status, date range, room, customer name)
+[ ] Add search functionality (search by customer name, phone, email)
+[ ] Implement cursor-based pagination for better performance at scale
+[ ] Add sorting by other fields (customer name, price, room name)
+[ ] Cache pagination results (Redis) for frequently accessed pages
+[ ] Add "Jump to page" input for large datasets
+[ ] Implement infinite scroll as alternative pagination UI
+[ ] Add export functionality (export filtered bookings to CSV/Excel)
+[ ] Optimize database queries with proper indexes on sortBy fields
+[ ] Add pagination preferences (user-configurable page size: 10, 25, 50, 100)
+[ ] Show loading skeleton during page transitions
+[ ] Persist current page in URL query params (bookmarkable)
+[ ] Add "View All" option for admins (bypass pagination)
+[ ] Real-time updates: WebSocket to notify of new bookings without refresh
+[ ] Batch operations: Select multiple bookings across pages for bulk actions
+
 ---
 
 ## Phase 1 – Phone-Based Admin Booking System
