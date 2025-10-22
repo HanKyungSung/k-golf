@@ -47,8 +47,9 @@ interface MenuItem {
   name: string;
   description: string;
   price: number;
-  category: 'food' | 'drinks' | 'appetizers' | 'desserts';
+  category: 'food' | 'drinks' | 'appetizers' | 'desserts' | 'hours';
   available: boolean;
+  hours?: number; // For tracking hour-based items
 }
 
 interface OrderItem {
@@ -60,6 +61,12 @@ interface OrderItem {
 }
 
 const mockMenu: MenuItem[] = [
+  // Hours (Room booking time)
+  { id: 'hour-1', name: '1 Hour', description: 'Screen golf room for 1 hour', price: 30.00, category: 'hours', available: true, hours: 1 },
+  { id: 'hour-2', name: '2 Hours', description: 'Screen golf room for 2 hours', price: 60.00, category: 'hours', available: true, hours: 2 },
+  { id: 'hour-3', name: '3 Hours', description: 'Screen golf room for 3 hours', price: 90.00, category: 'hours', available: true, hours: 3 },
+  { id: 'hour-4', name: '4 Hours', description: 'Screen golf room for 4 hours', price: 120.00, category: 'hours', available: true, hours: 4 },
+  { id: 'hour-5', name: '5 Hours', description: 'Screen golf room for 5 hours', price: 150.00, category: 'hours', available: true, hours: 5 },
   // Food
   { id: '1', name: 'Club Sandwich', description: 'Triple-decker with turkey, bacon, lettuce, and tomato', price: 12.99, category: 'food', available: true },
   { id: '2', name: 'Korean Fried Chicken', description: 'Crispy chicken with sweet and spicy sauce', price: 15.99, category: 'food', available: true },
@@ -175,6 +182,7 @@ export default function BookingDetailPage() {
   useEffect(() => {
     if (booking && !seatsInitialized.current) {
       const savedSeats = localStorage.getItem(`booking-${id}-seats`);
+      const savedOrders = localStorage.getItem(`booking-${id}-orders`);
       
       // Load saved seats if available, otherwise default to 1
       if (savedSeats) {
@@ -184,7 +192,23 @@ export default function BookingDetailPage() {
           console.error('[BookingDetail] Failed to parse saved seats:', e);
         }
       }
-      // No else - default state is already 1
+      
+      // Add booking hours as a menu item to seat 1 if no saved orders
+      if (!savedOrders || JSON.parse(savedOrders).length === 0) {
+        const hoursMenuItem = mockMenu.find(item => 
+          item.category === 'hours' && item.hours === booking.duration
+        );
+        
+        if (hoursMenuItem) {
+          const hourOrderItem: OrderItem = {
+            id: `hours-${booking.id}-${Date.now()}`,
+            menuItem: hoursMenuItem,
+            quantity: 1,
+            seat: 1,
+          };
+          setOrderItems([hourOrderItem]);
+        }
+      }
       
       seatsInitialized.current = true;
     }
@@ -627,7 +651,7 @@ export default function BookingDetailPage() {
                     {/* Grand Total */}
                     <div className="space-y-2 pt-4 border-t-2 border-amber-500/30">
                       <div className="flex justify-between text-slate-300">
-                        <span>Food & Drinks Subtotal</span>
+                        <span>Subtotal</span>
                         <span>${calculateSubtotal().toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center text-slate-300">
@@ -651,18 +675,9 @@ export default function BookingDetailPage() {
                         </div>
                         <span>${calculateTax().toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between text-white font-bold text-lg">
-                        <span>Food & Drinks Total</span>
-                        <span className="text-amber-400">${calculateTotal().toFixed(2)}</span>
-                      </div>
-                      <Separator className="bg-slate-700" />
-                      <div className="flex justify-between text-slate-300">
-                        <span>Room Booking ({booking.duration}h)</span>
-                        <span>${booking.price.toFixed(2)}</span>
-                      </div>
                       <div className="flex justify-between text-white font-bold text-xl pt-2">
-                        <span>Grand Total</span>
-                        <span className="text-amber-400">${(booking.price + calculateTotal()).toFixed(2)}</span>
+                        <span>Total</span>
+                        <span className="text-amber-400">${calculateTotal().toFixed(2)}</span>
                       </div>
                     </div>
                   </>
@@ -712,7 +727,6 @@ export default function BookingDetailPage() {
                   <InfoBlock label="Start Time" value={booking.time} />
                   <InfoBlock label="Duration" value={`${booking.duration} hour(s)`} />
                   <InfoBlock label="Players" value={`${booking.players}`} />
-                  <InfoBlock label="Price" value={`$${booking.price}`} />
                 </div>
                 {booking.notes && (
                   <div className="pt-4 border-t border-slate-700 mt-4">
@@ -730,8 +744,9 @@ export default function BookingDetailPage() {
                 <CardDescription>Click items to add to order</CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="food" className="space-y-4">
-                  <TabsList className="grid-cols-2 w-full">
+                <Tabs defaultValue="hours" className="space-y-4">
+                  <TabsList className="grid-cols-3 w-full">
+                    <TabsTrigger value="hours">Hours</TabsTrigger>
                     <TabsTrigger value="food">Food</TabsTrigger>
                     <TabsTrigger value="drinks">Drinks</TabsTrigger>
                   </TabsList>
@@ -740,7 +755,7 @@ export default function BookingDetailPage() {
                     <TabsTrigger value="desserts">Desserts</TabsTrigger>
                   </TabsList>
 
-                  {(['food', 'drinks', 'appetizers', 'desserts'] as const).map((category) => (
+                  {(['hours', 'food', 'drinks', 'appetizers', 'desserts'] as const).map((category) => (
                     <TabsContent key={category} value={category}>
                       <div className="space-y-2 max-h-[500px] overflow-y-auto">
                         {getItemsByCategory(category).map((item) => (
