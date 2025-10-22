@@ -22,6 +22,14 @@ contextBridge.exposeInMainWorld('kgolf', {
 	getAuthStatus: () => ipcRenderer.invoke('auth:getStatus'),
 	debugListOutbox: () => ipcRenderer.invoke('debug:outbox:list'),
 	updateRoom: (id: number, patch: { openMinutes?: number; closeMinutes?: number; status?: string }) => ipcRenderer.invoke('rooms:update', { id, patch }),
+	// Menu operations
+	menuGetAll: () => ipcRenderer.invoke('menu:getAll'),
+	menuGetByCategory: (category: string) => ipcRenderer.invoke('menu:getByCategory', category),
+	menuGetById: (id: string) => ipcRenderer.invoke('menu:getById', id),
+	menuCreate: (item: any) => ipcRenderer.invoke('menu:create', item),
+	menuUpdate: (id: string, updates: any) => ipcRenderer.invoke('menu:update', id, updates),
+	menuDelete: (id: string) => ipcRenderer.invoke('menu:delete', id),
+	menuToggleAvailability: (id: string) => ipcRenderer.invoke('menu:toggleAvailability', id),
 	onAuthState: (cb: (s: any) => void) => {
 		ipcRenderer.removeAllListeners('auth:state');
 		ipcRenderer.on('auth:state', (_e, payload) => cb(payload));

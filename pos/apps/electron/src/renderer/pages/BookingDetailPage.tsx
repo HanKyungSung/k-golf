@@ -50,6 +50,9 @@ interface MenuItem {
   category: 'food' | 'drinks' | 'appetizers' | 'desserts' | 'hours';
   available: boolean;
   hours?: number; // For tracking hour-based items
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface OrderItem {
@@ -59,31 +62,6 @@ interface OrderItem {
   seat?: number;
   splitPrice?: number; // For cost-split items
 }
-
-const mockMenu: MenuItem[] = [
-  // Hours (Room booking time)
-  { id: 'hour-1', name: '1 Hour', description: 'Screen golf room for 1 hour', price: 30.00, category: 'hours', available: true, hours: 1 },
-  { id: 'hour-2', name: '2 Hours', description: 'Screen golf room for 2 hours', price: 60.00, category: 'hours', available: true, hours: 2 },
-  { id: 'hour-3', name: '3 Hours', description: 'Screen golf room for 3 hours', price: 90.00, category: 'hours', available: true, hours: 3 },
-  { id: 'hour-4', name: '4 Hours', description: 'Screen golf room for 4 hours', price: 120.00, category: 'hours', available: true, hours: 4 },
-  { id: 'hour-5', name: '5 Hours', description: 'Screen golf room for 5 hours', price: 150.00, category: 'hours', available: true, hours: 5 },
-  // Food
-  { id: '1', name: 'Club Sandwich', description: 'Triple-decker with turkey, bacon, lettuce, and tomato', price: 12.99, category: 'food', available: true },
-  { id: '2', name: 'Korean Fried Chicken', description: 'Crispy chicken with sweet and spicy sauce', price: 15.99, category: 'food', available: true },
-  { id: '3', name: 'Bulgogi Burger', description: 'Korean-style marinated beef burger with kimchi', price: 14.99, category: 'food', available: true },
-  { id: '4', name: 'Caesar Salad', description: 'Fresh romaine with parmesan and croutons', price: 9.99, category: 'food', available: true },
-  // Drinks
-  { id: '5', name: 'Soju', description: 'Korean distilled spirit (Original/Peach/Grape)', price: 8.99, category: 'drinks', available: true },
-  { id: '6', name: 'Beer', description: 'Domestic and imported selection', price: 6.99, category: 'drinks', available: true },
-  { id: '7', name: 'Soft Drinks', description: 'Coke, Sprite, Fanta, etc.', price: 2.99, category: 'drinks', available: true },
-  { id: '8', name: 'Iced Coffee', description: 'Cold brew coffee with ice', price: 4.99, category: 'drinks', available: true },
-  // Appetizers
-  { id: '9', name: 'Chicken Wings', description: '6 pieces with choice of sauce', price: 10.99, category: 'appetizers', available: true },
-  { id: '10', name: 'French Fries', description: 'Crispy golden fries with ketchup', price: 5.99, category: 'appetizers', available: true },
-  { id: '11', name: 'Mozzarella Sticks', description: '6 pieces with marinara sauce', price: 8.99, category: 'appetizers', available: true },
-  // Desserts
-  { id: '12', name: 'Ice Cream', description: 'Vanilla, chocolate, or strawberry', price: 5.99, category: 'desserts', available: true },
-];
 
 const seatColors = [
   'bg-blue-500',    // Seat 1
@@ -129,6 +107,10 @@ export default function BookingDetailPage() {
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [printingSeat, setPrintingSeat] = useState<number | null>(null);
 
+  // Menu state loaded from SQLite
+  const [menu, setMenu] = useState<MenuItem[]>([]);
+  const [menuLoading, setMenuLoading] = useState(true);
+
   // Tax rate override state
   const [bookingTaxRate, setBookingTaxRate] = useState<number | null>(null); // null means use global rate
   const [showTaxEditDialog, setShowTaxEditDialog] = useState(false);
@@ -136,6 +118,25 @@ export default function BookingDetailPage() {
 
   // Track if seats have been initialized to prevent re-initialization
   const seatsInitialized = React.useRef(false);
+
+  // Load menu from SQLite on component mount
+  useEffect(() => {
+    const loadMenu = async () => {
+      try {
+        const result = await window.kgolf.menuGetAll();
+        if (result.success && result.data) {
+          setMenu(result.data);
+        } else {
+          console.error('[BookingDetail] Failed to load menu:', result.error);
+        }
+      } catch (error) {
+        console.error('[BookingDetail] Error loading menu:', error);
+      } finally {
+        setMenuLoading(false);
+      }
+    };
+    loadMenu();
+  }, []);
 
   // Load saved orders and seats from localStorage
   useEffect(() => {
@@ -195,7 +196,7 @@ export default function BookingDetailPage() {
       
       // Add booking hours as a menu item to seat 1 if no saved orders
       if (!savedOrders || JSON.parse(savedOrders).length === 0) {
-        const hoursMenuItem = mockMenu.find(item => 
+        const hoursMenuItem = menu.find((item: MenuItem) => 
           item.category === 'hours' && item.hours === booking.duration
         );
         
@@ -212,7 +213,7 @@ export default function BookingDetailPage() {
       
       seatsInitialized.current = true;
     }
-  }, [booking, id]);
+  }, [booking, id, menu]); // Add menu to dependencies
 
   useEffect(() => {
     if (!booking) navigate('/', { replace: true });
@@ -344,7 +345,7 @@ export default function BookingDetailPage() {
   const effectiveTaxRate = bookingTaxRate !== null ? bookingTaxRate : globalTaxRate;
 
   const getItemsByCategory = (category: MenuItem['category']) => {
-    return mockMenu.filter((item) => item.category === category && item.available);
+    return menu.filter((item: MenuItem) => item.category === category && item.available);
   };
 
   const getItemsForSeat = (seat: number) => {

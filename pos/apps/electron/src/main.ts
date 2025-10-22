@@ -36,6 +36,7 @@ import { enqueueBooking } from './core/bookings';
 import { getQueueSize, listOutbox, enqueue } from './core/outbox';
 import { processSyncCycle } from './core/sync';
 import { setAccessToken, saveRefreshToken, loadRefreshToken, setAuthenticatedUser, getAuthenticatedUser, setSessionCookies, getSessionCookieHeader, clearAuthState, clearRefreshToken } from './core/auth';
+import { registerMenuHandlers } from './main/handlers/menu-handlers';
 import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
@@ -195,6 +196,10 @@ async function createWindow() {
 app.whenReady().then(async () => {
   const { path: dbPath, newlyCreated } = initDb();
   console.log('[MAIN] DB initialized at', dbPath, 'new?', newlyCreated);
+  
+  // Register menu IPC handlers
+  registerMenuHandlers();
+  
   // React DevTools approach priority:
   // 1. If ELECTRON_DEV and electron-chrome-web-store available and DEV_REACT_EXT_INSTALL=1, attempt install by store ID (MV3 safe path for v35+)
   // 2. Else fallback to manual path env variable REACT_DEVTOOLS_PATH (legacy unpacked loading)
