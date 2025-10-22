@@ -78,7 +78,20 @@ const mockMenu: MenuItem[] = [
   { id: '12', name: 'Ice Cream', description: 'Vanilla, chocolate, or strawberry', price: 5.99, category: 'desserts', available: true },
 ];
 
-const seatColors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500'];
+const seatColors = [
+  'bg-blue-500',    // Seat 1
+  'bg-green-500',   // Seat 2
+  'bg-purple-500',  // Seat 3
+  'bg-orange-500',  // Seat 4
+  'bg-pink-500',    // Seat 5
+  'bg-cyan-500',    // Seat 6
+  'bg-yellow-500',  // Seat 7
+  'bg-red-500',     // Seat 8
+  'bg-indigo-500',  // Seat 9
+  'bg-teal-500'     // Seat 10
+];
+
+const MAX_SEATS = 10;
 
 export default function BookingDetailPage() {
   const { id } = useParams();
@@ -113,6 +126,9 @@ export default function BookingDetailPage() {
   const [bookingTaxRate, setBookingTaxRate] = useState<number | null>(null); // null means use global rate
   const [showTaxEditDialog, setShowTaxEditDialog] = useState(false);
   const [taxRateInput, setTaxRateInput] = useState<string>('');
+
+  // Track if seats have been initialized to prevent re-initialization
+  const seatsInitialized = React.useRef(false);
 
   // Load saved orders and seats from localStorage
   useEffect(() => {
@@ -155,12 +171,24 @@ export default function BookingDetailPage() {
     }
   }, [orderItems, numberOfSeats, id]);
 
-  // Initialize seats based on booking players
+  // Initialize seats based on saved value (only once on first load)
   useEffect(() => {
-    if (booking && numberOfSeats === 1) {
-      setNumberOfSeats(Math.min(booking.players, 4));
+    if (booking && !seatsInitialized.current) {
+      const savedSeats = localStorage.getItem(`booking-${id}-seats`);
+      
+      // Load saved seats if available, otherwise default to 1
+      if (savedSeats) {
+        try {
+          setNumberOfSeats(JSON.parse(savedSeats));
+        } catch (e) {
+          console.error('[BookingDetail] Failed to parse saved seats:', e);
+        }
+      }
+      // No else - default state is already 1
+      
+      seatsInitialized.current = true;
     }
-  }, [booking, numberOfSeats]);
+  }, [booking, id]);
 
   useEffect(() => {
     if (!booking) navigate('/', { replace: true });
@@ -262,6 +290,30 @@ export default function BookingDetailPage() {
 
   const handlePrintReceipt = () => {
     window.print();
+  };
+
+  // Check if we can safely reduce the number of seats
+  const canReduceSeats = () => {
+    if (numberOfSeats <= 1) return false;
+    
+    // Check if there are any items assigned to the seat that would be removed
+    const newSeatCount = numberOfSeats - 1;
+    const itemsInRemovedSeat = orderItems.some(item => item.seat && item.seat > newSeatCount);
+    
+    return !itemsInRemovedSeat;
+  };
+
+  const handleReduceSeats = () => {
+    const newSeatCount = numberOfSeats - 1;
+    const itemsInRemovedSeats = orderItems.filter(item => item.seat && item.seat > newSeatCount);
+    
+    if (itemsInRemovedSeats.length > 0) {
+      const seatNumbers = [...new Set(itemsInRemovedSeats.map(item => item.seat))].sort().join(', ');
+      alert(`Cannot reduce seats: ${itemsInRemovedSeats.length} item(s) are assigned to Seat ${seatNumbers}. Please move or remove these items first.`);
+      return;
+    }
+    
+    setNumberOfSeats(Math.max(1, newSeatCount));
   };
 
   // Calculation functions
@@ -399,7 +451,9 @@ export default function BookingDetailPage() {
                   <Users className="h-5 w-5 text-amber-400" />
                   Seat Management
                 </CardTitle>
-                <CardDescription>Adjust number of seats for bill splitting</CardDescription>
+                <CardDescription>
+                  Adjust number of seats for bill splitting (Booking has {booking.players} player{booking.players !== 1 ? 's' : ''})
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
@@ -407,17 +461,18 @@ export default function BookingDetailPage() {
                   <div className="flex items-center gap-3">
                     <Button
                       size="sm"
-                      onClick={() => setNumberOfSeats(Math.max(1, numberOfSeats - 1))}
-                      disabled={numberOfSeats <= 1}
+                      onClick={handleReduceSeats}
+                      disabled={!canReduceSeats()}
                       className="h-10 w-10 p-0"
+                      title={!canReduceSeats() && numberOfSeats > 1 ? "Cannot reduce: items assigned to higher seats" : ""}
                     >
                       <Minus className="h-5 w-5" />
                     </Button>
                     <span className="text-2xl font-bold text-amber-400 w-12 text-center">{numberOfSeats}</span>
                     <Button
                       size="sm"
-                      onClick={() => setNumberOfSeats(Math.min(4, numberOfSeats + 1))}
-                      disabled={numberOfSeats >= 4}
+                      onClick={() => setNumberOfSeats(Math.min(MAX_SEATS, numberOfSeats + 1))}
+                      disabled={numberOfSeats >= MAX_SEATS}
                       className="h-10 w-10 p-0"
                     >
                       <Plus className="h-5 w-5" />
