@@ -422,13 +422,21 @@ const customerDataSchema = z.object({
   name: z.string().min(1, 'Customer name is required'),
   phone: z.string().min(1, 'Customer phone is required'),
   email: z.string().email().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+  password: z.string().min(1, 'Password is required'),
+});
+
+const guestDataSchema = z.object({
+  name: z.string().min(1, 'Guest name is required'),
+  phone: z.string().min(1, 'Guest phone is required'),
+  email: z.string().email().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
 });
 
 const adminBookingSchema = z.object({
   // Customer mode
-  customerMode: z.enum(['existing', 'new']),
+  customerMode: z.enum(['existing', 'new', 'guest']),
   customerPhone: z.string().optional(), // For existing mode
   newCustomer: customerDataSchema.optional(), // For new mode
+  guest: guestDataSchema.optional(), // For guest mode
   
   // Booking details
   roomId: z.string().uuid().or(z.string()), // Accept UUID or simple string for mock rooms
@@ -488,6 +496,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
       customerMode,
       customerPhone,
       newCustomer,
+      guest,
       roomId,
       startTimeIso,
       hours,
@@ -504,6 +513,9 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
     }
     if (customerMode === 'new' && !newCustomer) {
       return res.status(400).json({ error: 'newCustomer data required for new mode' });
+    }
+    if (customerMode === 'guest' && !guest) {
+      return res.status(400).json({ error: 'guest data required for guest mode' });
     }
 
     // Validate room exists and is active
@@ -655,6 +667,75 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
         },
         emailSent: false, // Placeholder for future feature
       });
+    } else if (customerMode === 'guest') {
+      // Create guest profile (no password, walk-in only)
+      const normalizedPhone = normalizePhone(guest!.phone);
+
+      // Check if user with this phone already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { phone: normalizedPhone },
+      });
+
+      if (existingUser) {
+        // Use existing profile for the booking
+        userId = existingUser.id;
+        customerName = existingUser.name;
+        customerPhoneNormalized = existingUser.phone;
+        customerEmail = existingUser.email || undefined;
+      } else {
+        // Create guest profile + booking in transaction
+        const result = await prisma.$transaction(async (tx) => {
+          const newUser = await tx.user.create({
+            data: {
+              name: guest!.name,
+              phone: normalizedPhone,
+              email: guest!.email || null,
+              role: UserRole.CUSTOMER,
+              registrationSource: bookingSource,
+              registeredBy: req.user!.id,
+              passwordHash: null, // Guest - no login
+            },
+          });
+
+          const booking = await tx.booking.create({
+            data: {
+              roomId,
+              userId: newUser.id,
+              customerName: newUser.name,
+              customerPhone: newUser.phone,
+              customerEmail: newUser.email,
+              startTime,
+              endTime,
+              players,
+              price: pricing.totalPrice,
+              status: 'CONFIRMED',
+              bookingSource,
+              createdBy: req.user!.id,
+              internalNotes,
+            },
+          });
+
+          return { user: newUser, booking };
+        });
+
+        return res.status(201).json({
+          booking: presentBooking(result.booking),
+          userCreated: true,
+          user: {
+            id: result.user.id,
+            name: result.user.name,
+            phone: result.user.phone,
+            email: result.user.email,
+          },
+          pricing: {
+            basePrice: pricing.basePrice,
+            taxRate: pricing.taxRate,
+            tax: pricing.tax,
+            totalPrice: pricing.totalPrice,
+          },
+          emailSent: false,
+        });
+      }
     } else {
       // This should never happen due to Zod validation, but TypeScript needs this
       return res.status(400).json({ error: 'Invalid customer mode' });
