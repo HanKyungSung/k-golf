@@ -86,6 +86,20 @@ export function initDb(baseDir = path.join(process.cwd(), 'data')): InitResult {
            CREATE INDEX IF NOT EXISTS idx_MenuItem_category ON MenuItem(category, sortOrder);
            CREATE INDEX IF NOT EXISTS idx_MenuItem_available ON MenuItem(available);
            
+           CREATE TABLE IF NOT EXISTS Room (
+             id TEXT PRIMARY KEY,
+             name TEXT NOT NULL,
+             capacity INTEGER DEFAULT 4,
+             active INTEGER DEFAULT 1,
+             openMinutes INTEGER DEFAULT 540,
+             closeMinutes INTEGER DEFAULT 1140,
+             status TEXT DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'MAINTENANCE', 'CLOSED')),
+             createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+             updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+           );
+           CREATE INDEX IF NOT EXISTS idx_Room_status ON Room(status);
+           CREATE INDEX IF NOT EXISTS idx_Room_active ON Room(active);
+           
            CREATE TABLE IF NOT EXISTS OrderItem (
              id TEXT PRIMARY KEY,
              bookingId TEXT NOT NULL,

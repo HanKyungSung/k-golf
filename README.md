@@ -19,6 +19,58 @@ This monorepo contains:
         |-- Embedded Express server (LAN access)
 ```
 
+### POS Sync Architecture (Offline-First)
+
+The POS system follows a **queue-based bidirectional sync** pattern where local SQLite is a cached subset of backend PostgreSQL:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        BACKEND (PostgreSQL)                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │  Users   │  │  Rooms   │  │ MenuItem │  │ Bookings │   │
+│  │ (10,000) │  │   (4)    │  │   (17)   │  │  (1000s) │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+│       │              │              │              │         │
+│       └──────────────┴──────────────┴──────────────┘        │
+│                          │                                   │
+│                   ┌──────▼──────┐                           │
+│                   │  REST API   │                           │
+│                   └──────┬──────┘                           │
+└──────────────────────────┼──────────────────────────────────┘
+                           │
+                    ┌──────▼──────┐
+                    │ SyncQueue   │ ◄─── Only communication bridge
+                    │ (15 sec)    │
+                    └──────┬──────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                      POS (SQLite)                            │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │  Users*  │  │  Rooms*  │  │ MenuItem │  │ Bookings │   │
+│  │ (recent) │  │   (4)    │  │   (17)   │  │ (local)  │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+│       ▲              ▲              ▲              │         │
+│       │              │              │              │         │
+│  ┌────┴──────────────┴──────────────┴──────────────▼────┐  │
+│  │           POS Application Logic                       │  │
+│  │  - All reads from local SQLite (FAST!)               │  │
+│  │  - All writes to local SQLite (OFFLINE OK!)          │  │
+│  │  - Sync handles backend communication                │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+
+* Synced periodically from backend (read-only cached subset)
+```
+
+**Design Principles:**
+- **Offline-First**: All reads from local SQLite (instant), all writes go local first (optimistic)
+- **Sync as Bridge**: SyncQueue (15-sec cycle) is the only communication channel with backend
+- **Cached Subset**: POS stores only what it needs, backend is source of truth
+- **Periodic Pull**: Menu (5 min), Rooms (5 min), Bookings (2 min) - upcoming
+- **Optimistic Push**: Booking creation, room updates queued and synced
+
+See [pos/apps/electron/README.md](pos/apps/electron/README.md) for detailed POS architecture.
+
 ### Booking (Existing)
 - Pricing: $50 per player per hour (players 1–4, hours 1–4 independently).
 - ~~Planned persistence: PostgreSQL (docker-compose `db` service) with overlap constraints.~~

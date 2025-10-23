@@ -33,7 +33,7 @@ try {
 } catch {/* ignore dotenv load errors */}
 import { initDb } from './core/db';
 import { enqueueBooking } from './core/bookings';
-import { getQueueSize, listQueue, enqueue } from './core/sync-queue';
+import { getQueueSize, listQueue, enqueue, enqueuePullIfNotExists } from './core/sync-queue';
 import { processSyncCycle } from './core/sync';
 import { setAccessToken, saveRefreshToken, loadRefreshToken, setAuthenticatedUser, getAuthenticatedUser, setSessionCookies, getSessionCookieHeader, clearAuthState, clearRefreshToken } from './core/auth';
 import { registerMenuHandlers } from './main/handlers/menu-handlers';
@@ -240,6 +240,62 @@ app.whenReady().then(async () => {
     }
   }, SYNC_INTERVAL_MS);
   
+  // Start periodic menu pull sync (5 minutes)
+  const MENU_PULL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+  console.log('[MAIN] Starting periodic menu pull, interval:', MENU_PULL_INTERVAL_MS, 'ms');
+  setInterval(() => {
+    const user = getAuthenticatedUser();
+    if (!user) return; // Only pull when authenticated
+    
+    const syncQueueId = enqueuePullIfNotExists('menu:pull');
+    if (syncQueueId) {
+      console.log('[MAIN][MENU_PULL] Enqueued menu:pull, syncQueueId:', syncQueueId);
+      emitToAll('queue:update', { queueSize: getQueueSize() });
+    } else {
+      console.log('[MAIN][MENU_PULL] menu:pull already queued, skipping');
+    }
+  }, MENU_PULL_INTERVAL_MS);
+  
+  // Start periodic rooms pull sync (5 minutes)
+  const ROOMS_PULL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+  console.log('[MAIN] Starting periodic rooms pull, interval:', ROOMS_PULL_INTERVAL_MS, 'ms');
+  setInterval(() => {
+    const user = getAuthenticatedUser();
+    if (!user) return; // Only pull when authenticated
+    
+    const syncQueueId = enqueuePullIfNotExists('rooms:pull');
+    if (syncQueueId) {
+      console.log('[MAIN][ROOMS_PULL] Enqueued rooms:pull, syncQueueId:', syncQueueId);
+      emitToAll('queue:update', { queueSize: getQueueSize() });
+    } else {
+      console.log('[MAIN][ROOMS_PULL] rooms:pull already queued, skipping');
+    }
+  }, ROOMS_PULL_INTERVAL_MS);
+  
+  // Also trigger menu pull on app startup (after auth)
+  ipcMain.on('auth:ready', () => {
+    console.log('[MAIN] Auth ready, triggering initial menu pull');
+    const syncQueueId = enqueuePullIfNotExists('menu:pull');
+    if (syncQueueId) {
+      console.log('[MAIN] Initial menu:pull enqueued, syncQueueId:', syncQueueId);
+      emitToAll('queue:update', { queueSize: getQueueSize() });
+    }
+  });
+  
+  // Manual trigger for menu sync (for testing/debugging)
+  ipcMain.handle('sync:triggerMenuPull', () => {
+    console.log('[MAIN] Manual menu:pull trigger requested');
+    const syncQueueId = enqueuePullIfNotExists('menu:pull');
+    if (syncQueueId) {
+      console.log('[MAIN] menu:pull enqueued, syncQueueId:', syncQueueId);
+      emitToAll('queue:update', { queueSize: getQueueSize() });
+      return { ok: true, syncQueueId, queueSize: getQueueSize() };
+    } else {
+      console.log('[MAIN] menu:pull already queued');
+      return { ok: true, alreadyQueued: true, queueSize: getQueueSize() };
+    }
+  });
+  
   // IPC handlers (Phase 0.4 temporary minimal wiring)
   function userHasStaffRole() {
     const u = getAuthenticatedUser();
@@ -331,6 +387,23 @@ app.whenReady().then(async () => {
       try { console.log('[AUTH][LOGIN] user object', user); } catch {/* ignore */}
       // Placeholder: no access token yet (session cookie used). If future endpoint returns tokens, setAccessToken(...)
       emitToAll('auth:state', { authenticated: true, user });
+      
+      // Trigger initial menu pull after successful login
+      console.log('[AUTH][LOGIN] Triggering initial menu pull');
+      const menuSyncId = enqueuePullIfNotExists('menu:pull');
+      if (menuSyncId) {
+        console.log('[AUTH][LOGIN] menu:pull enqueued, syncQueueId:', menuSyncId);
+      }
+      
+      // Trigger initial rooms pull after successful login
+      console.log('[AUTH][LOGIN] Triggering initial rooms pull');
+      const roomsSyncId = enqueuePullIfNotExists('rooms:pull');
+      if (roomsSyncId) {
+        console.log('[AUTH][LOGIN] rooms:pull enqueued, syncQueueId:', roomsSyncId);
+      }
+      
+      emitToAll('queue:update', { queueSize: getQueueSize() });
+      
       return { ok: true, user };
     } catch (e: any) {
       return { ok: false, error: e?.response?.data?.message || e?.message || 'Login failed' };
@@ -354,12 +427,13 @@ app.whenReady().then(async () => {
       return { ok: false, error: 'FORBIDDEN_ROLE' };
     }
     try {
-      const apiBase = process.env.API_BASE_URL || 'http://localhost:8080';
-      const cookieHeader = getSessionCookieHeader();
-      const res = await axios.get(`${apiBase}/api/bookings/rooms`, { withCredentials: true, headers: cookieHeader ? { Cookie: cookieHeader } : {} });
-      return { ok: true, rooms: res.data.rooms || [] };
+      // Read from local SQLite (synced by rooms:pull)
+      const db = require('./core/db').getDb();
+      const rooms = db.prepare('SELECT * FROM Room WHERE active = 1 ORDER BY name').all();
+      return { ok: true, rooms };
     } catch (e: any) {
-      return { ok: false, error: e?.response?.data?.error || e?.message || 'ROOMS_FETCH_FAILED' };
+      console.error('[ROOMS][ERROR] Failed to read from SQLite:', e);
+      return { ok: false, error: e?.message || 'ROOMS_FETCH_FAILED' };
     }
   });
   ipcMain.handle('rooms:update', async (_evt: any, payload: { id: number; patch: { openMinutes?: number; closeMinutes?: number; status?: string } }) => {

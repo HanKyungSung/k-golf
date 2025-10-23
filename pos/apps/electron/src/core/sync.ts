@@ -79,6 +79,25 @@ export async function processSyncCycle(apiBase: string): Promise<SyncCycleResult
         deleteItem(item.id); // shouldn't happen if collapse worked, but defensive
         continue;
       }
+      
+      // Handle pull operations (menu:pull, bookings:pull, etc.)
+      if (item.type.endsWith(':pull')) {
+        const pullOutcome = await handlePullOperation(apiBase, item);
+        if (pullOutcome === 'success') {
+          pushed++; // count as successful sync operation
+          continue;
+        }
+        if (pullOutcome === 'auth-expired') {
+          authExpired = true;
+          failures++;
+          break;
+        }
+        failures++;
+        if (!lastError) lastError = pendingErrorInfo;
+        break;
+      }
+      
+      // Handle push operations (booking:create, etc.)
       const outcome = await pushSingle(apiBase, item.payloadJson, item.id);
       if (outcome === 'success') {
         pushed++;
@@ -324,6 +343,240 @@ async function pushRoomUpdate(apiBase: string, item: SyncQueueItem): Promise<Pus
       deleteItem(item.id);
       pendingErrorInfo = { code: 'VALIDATION_DROPPED', status, message: body?.error || 'Validation error', outboxId: item.id };
       return 'success'; // treat as success to continue draining
+    }
+    
+    incrementAttempt(item.id);
+    pendingErrorInfo = { 
+      code: status >= 500 ? 'SERVER_ERROR' : 'NETWORK_ERROR', 
+      status, 
+      message: body?.error || e?.message,
+      outboxId: item.id 
+    };
+    return 'failure';
+  }
+}
+
+/**
+ * Handle pull operations (menu:pull, bookings:pull, etc.)
+ * Fetches data from backend and updates local SQLite
+ */
+async function handlePullOperation(apiBase: string, item: SyncQueueItem): Promise<PushOutcome> {
+  try {
+    console.log('[SYNC][PULL] Processing', item.type);
+    
+    if (item.type === 'menu:pull') {
+      return await pullMenuItems(apiBase, item);
+    }
+    
+    if (item.type === 'rooms:pull') {
+      return await pullRooms(apiBase, item);
+    }
+    
+    // Future pull operations can be added here:
+    // if (item.type === 'bookings:pull') return await pullBookings(apiBase, item);
+    
+    console.warn('[SYNC][PULL] Unknown pull type:', item.type);
+    deleteItem(item.id); // drop unknown type
+    return 'success';
+  } catch (e: any) {
+    console.error('[SYNC][PULL] Unexpected error:', e);
+    incrementAttempt(item.id);
+    pendingErrorInfo = { 
+      code: 'PULL_ERROR', 
+      message: e?.message,
+      outboxId: item.id 
+    };
+    return 'failure';
+  }
+}
+
+/**
+ * Pull menu items from backend and sync to local SQLite
+ */
+async function pullMenuItems(apiBase: string, item: SyncQueueItem): Promise<PushOutcome> {
+  try {
+    const headers: Record<string,string> = {};
+    const token = getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const cookieHeader = getSessionCookieHeader();
+    if (cookieHeader) headers.Cookie = cookieHeader;
+    
+    const url = `${apiBase}/api/menu/items`;
+    console.log('[SYNC][MENU] GET', url);
+    
+    const response = await axios.get(url, { 
+      headers, 
+      timeout: 10000, 
+      withCredentials: true 
+    });
+    
+    const { success, items } = response.data;
+    
+    if (!success || !Array.isArray(items)) {
+      console.error('[SYNC][MENU] Invalid response format:', response.data);
+      incrementAttempt(item.id);
+      pendingErrorInfo = { 
+        code: 'INVALID_RESPONSE', 
+        message: 'Invalid menu response format',
+        outboxId: item.id 
+      };
+      return 'failure';
+    }
+    
+    console.log('[SYNC][MENU] Received', items.length, 'menu items from backend');
+    
+    // Update local SQLite with backend menu items
+    const db = getDb();
+    
+    // Use a transaction for atomic update
+    const updateTransaction = db.transaction(() => {
+      // Clear existing menu items
+      db.prepare('DELETE FROM MenuItem').run();
+      
+      // Insert all items from backend
+      const insertStmt = db.prepare(`
+        INSERT INTO MenuItem (id, name, description, price, category, hours, available, sortOrder, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      for (const item of items) {
+        insertStmt.run(
+          item.id,
+          item.name,
+          item.description,
+          item.price,
+          item.category,
+          item.hours,
+          item.available,
+          item.sortOrder,
+          item.createdAt || new Date().toISOString(),
+          item.updatedAt || new Date().toISOString()
+        );
+      }
+    });
+    
+    updateTransaction();
+    
+    console.log('[SYNC][MENU] Successfully synced', items.length, 'menu items to local SQLite');
+    
+    // Remove from queue
+    deleteItem(item.id);
+    return 'success';
+    
+  } catch (e: any) {
+    const status = e?.response?.status;
+    const body = e?.response?.data;
+    console.error('[SYNC][MENU] Pull failed', status, body || e?.message);
+    
+    if (status === 401) {
+      console.warn('[SYNC][MENU] Auth expired (401)');
+      pendingErrorInfo = { 
+        code: 'AUTH_EXPIRED', 
+        status: 401, 
+        message: 'Authentication expired (401)', 
+        outboxId: item.id 
+      };
+      return 'auth-expired';
+    }
+    
+    incrementAttempt(item.id);
+    pendingErrorInfo = { 
+      code: status >= 500 ? 'SERVER_ERROR' : 'NETWORK_ERROR', 
+      status, 
+      message: body?.error || e?.message,
+      outboxId: item.id 
+    };
+    return 'failure';
+  }
+}
+
+
+/**
+ * Pull rooms from backend and sync to local SQLite
+ */
+async function pullRooms(apiBase: string, item: SyncQueueItem): Promise<PushOutcome> {
+  try {
+    const headers: Record<string,string> = {};
+    const token = getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const cookieHeader = getSessionCookieHeader();
+    if (cookieHeader) headers.Cookie = cookieHeader;
+    
+    const url = `${apiBase}/api/bookings/rooms`;
+    console.log('[SYNC][ROOMS] GET', url);
+    
+    const response = await axios.get(url, { 
+      headers, 
+      timeout: 10000, 
+      withCredentials: true 
+    });
+    
+    const { rooms } = response.data;
+    
+    if (!Array.isArray(rooms)) {
+      console.error('[SYNC][ROOMS] Invalid response format:', response.data);
+      incrementAttempt(item.id);
+      pendingErrorInfo = { 
+        code: 'INVALID_RESPONSE', 
+        message: 'Invalid rooms response format',
+        outboxId: item.id 
+      };
+      return 'failure';
+    }
+    
+    console.log('[SYNC][ROOMS] Received', rooms.length, 'rooms from backend');
+    
+    // Update local SQLite with backend rooms
+    const db = getDb();
+    
+    // Use a transaction for atomic update
+    const updateTransaction = db.transaction(() => {
+      // Clear existing rooms
+      db.prepare('DELETE FROM Room').run();
+      
+      // Insert all rooms from backend
+      const insertStmt = db.prepare(`
+        INSERT INTO Room (id, name, capacity, active, openMinutes, closeMinutes, status, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      for (const room of rooms) {
+        insertStmt.run(
+          room.id,
+          room.name,
+          room.capacity || 4,
+          room.active ? 1 : 0,
+          room.openMinutes || 540,
+          room.closeMinutes || 1140,
+          room.status || 'ACTIVE',
+          room.createdAt || new Date().toISOString(),
+          room.updatedAt || new Date().toISOString()
+        );
+      }
+    });
+    
+    updateTransaction();
+    
+    console.log('[SYNC][ROOMS] Successfully synced', rooms.length, 'rooms to local SQLite');
+    
+    // Remove from queue
+    deleteItem(item.id);
+    return 'success';
+    
+  } catch (e: any) {
+    const status = e?.response?.status;
+    const body = e?.response?.data;
+    console.error('[SYNC][ROOMS] Pull failed', status, body || e?.message);
+    
+    if (status === 401) {
+      console.warn('[SYNC][ROOMS] Auth expired (401)');
+      pendingErrorInfo = { 
+        code: 'AUTH_EXPIRED', 
+        status: 401, 
+        message: 'Authentication expired (401)', 
+        outboxId: item.id 
+      };
+      return 'auth-expired';
     }
     
     incrementAttempt(item.id);

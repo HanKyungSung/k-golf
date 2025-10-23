@@ -54,6 +54,49 @@ async function main() {
 	}
 	console.log('Seeded default settings: global_tax_rate');
 
+	// Seed menu items (idempotent by ID)
+	const defaultMenuItems = [
+		// Hours (Room booking time)
+		{ id: 'hour-1', name: '1 Hour', description: 'Screen golf room for 1 hour', price: 30.00, category: 'HOURS', hours: 1, available: true, sortOrder: 1 },
+		{ id: 'hour-2', name: '2 Hours', description: 'Screen golf room for 2 hours', price: 60.00, category: 'HOURS', hours: 2, available: true, sortOrder: 2 },
+		{ id: 'hour-3', name: '3 Hours', description: 'Screen golf room for 3 hours', price: 90.00, category: 'HOURS', hours: 3, available: true, sortOrder: 3 },
+		{ id: 'hour-4', name: '4 Hours', description: 'Screen golf room for 4 hours', price: 120.00, category: 'HOURS', hours: 4, available: true, sortOrder: 4 },
+		{ id: 'hour-5', name: '5 Hours', description: 'Screen golf room for 5 hours', price: 150.00, category: 'HOURS', hours: 5, available: true, sortOrder: 5 },
+		// Food
+		{ id: '1', name: 'Club Sandwich', description: 'Triple-decker with turkey, bacon, lettuce, and tomato', price: 12.99, category: 'FOOD', hours: null, available: true, sortOrder: 1 },
+		{ id: '2', name: 'Korean Fried Chicken', description: 'Crispy chicken with sweet and spicy sauce', price: 15.99, category: 'FOOD', hours: null, available: true, sortOrder: 2 },
+		{ id: '3', name: 'Bulgogi Burger', description: 'Korean-style marinated beef burger with kimchi', price: 14.99, category: 'FOOD', hours: null, available: true, sortOrder: 3 },
+		{ id: '4', name: 'Caesar Salad', description: 'Fresh romaine with parmesan and croutons', price: 9.99, category: 'FOOD', hours: null, available: true, sortOrder: 4 },
+		// Drinks
+		{ id: '5', name: 'Soju', description: 'Korean distilled spirit (Original/Peach/Grape)', price: 8.99, category: 'DRINKS', hours: null, available: true, sortOrder: 1 },
+		{ id: '6', name: 'Beer', description: 'Domestic and imported selection', price: 6.99, category: 'DRINKS', hours: null, available: true, sortOrder: 2 },
+		{ id: '7', name: 'Soft Drinks', description: 'Coke, Sprite, Fanta, etc.', price: 2.99, category: 'DRINKS', hours: null, available: true, sortOrder: 3 },
+		{ id: '8', name: 'Iced Coffee', description: 'Cold brew coffee with ice', price: 4.99, category: 'DRINKS', hours: null, available: true, sortOrder: 4 },
+		// Appetizers
+		{ id: '9', name: 'Chicken Wings', description: '6 pieces with choice of sauce', price: 10.99, category: 'APPETIZERS', hours: null, available: true, sortOrder: 1 },
+		{ id: '10', name: 'French Fries', description: 'Crispy golden fries with ketchup', price: 5.99, category: 'APPETIZERS', hours: null, available: true, sortOrder: 2 },
+		{ id: '11', name: 'Mozzarella Sticks', description: '6 pieces with marinara sauce', price: 8.99, category: 'APPETIZERS', hours: null, available: true, sortOrder: 3 },
+		// Desserts
+		{ id: '12', name: 'Ice Cream', description: 'Vanilla, chocolate, or strawberry', price: 5.99, category: 'DESSERTS', hours: null, available: true, sortOrder: 1 },
+	];
+
+	for (const menuItem of defaultMenuItems) {
+		await prisma.menuItem.upsert({
+			where: { id: menuItem.id },
+			update: {
+				name: menuItem.name,
+				description: menuItem.description,
+				price: menuItem.price,
+				category: menuItem.category as any,
+				hours: menuItem.hours,
+				available: menuItem.available,
+				sortOrder: menuItem.sortOrder,
+			},
+			create: menuItem as any,
+		});
+	}
+	console.log(`Seeded ${defaultMenuItems.length} menu items`);
+
 	// Create admin user (idempotent by email)
 	// This admin user is used for both web login and POS API authentication
 	const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@kgolf.com';

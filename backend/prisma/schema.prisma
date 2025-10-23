@@ -148,3 +148,27 @@ model Setting {
   updatedBy     String?  @map("updated_by")
   updatedByUser User?    @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
 }
+
+enum MenuCategory {
+  HOURS
+  FOOD
+  DRINKS
+  APPETIZERS
+  DESSERTS
+}
+
+model MenuItem {
+  id          String       @id @default(uuid())
+  name        String       @db.VarChar(255)
+  description String?      @db.Text
+  price       Decimal      @db.Decimal(10, 2)
+  category    MenuCategory
+  hours       Int?         // Only for 'HOURS' category items
+  available   Boolean      @default(true)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now()) @db.Timestamptz
+  updatedAt   DateTime     @updatedAt @db.Timestamptz
+
+  @@index([category, sortOrder])
+  @@index([available])
+}
