@@ -371,6 +371,134 @@ Rules:
 
 Migration added enum `RoomStatus` + columns with defaults; existing rooms inherit ACTIVE 09:00–19:00.
 
+### Room Status Update Flow
+
+When an admin updates a room's status in the POS:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         ROOM STATUS UPDATE FLOW                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+1. USER INTERACTION (RoomsTable.tsx)
+   ┌──────────────────────┐
+   │  Admin clicks "Edit" │ → setEditing(roomId)
+   └──────────┬───────────┘
+              │
+              ▼
+   ┌──────────────────────────────────────┐
+   │  User selects status from dropdown:  │
+   │  • ACTIVE (green badge)              │
+   │  • MAINTENANCE (amber badge)         │
+   │  • CLOSED (gray badge)               │
+   └──────────┬───────────────────────────┘
+              │
+              ▼
+   ┌──────────────────────┐
+   │  User clicks "Save"  │
+   └──────────┬───────────┘
+              │
+              ▼
+
+2. API CALL (bridge.ts)
+   ┌─────────────────────────────────────────────────┐
+   │ api().updateRoom(id, { status: 'MAINTENANCE' })│
+   └──────────┬──────────────────────────────────────┘
+              │
+              ▼
+
+3. IPC BRIDGE (preload.ts)
+   ┌────────────────────────────────────────────────┐
+   │ ipcRenderer.invoke('rooms:update', {          │
+   │   id: roomId,                                 │
+   │   patch: { status: 'MAINTENANCE' }            │
+   │ })                                            │
+   └──────────┬─────────────────────────────────────┘
+              │
+              ▼
+
+4. MAIN PROCESS IPC HANDLER (main.ts:439)
+   ┌────────────────────────────────────┐
+   │ ipcMain.handle('rooms:update')    │
+   │ • Check auth (admin only)         │
+   │ • Validate patch data             │
+   └──────────┬─────────────────────────┘
+              │
+              ▼
+   ┌─────────────────────────────────────────────────────┐
+   │ axios.patch(                                        │
+   │   'http://localhost:8080/api/bookings/rooms/:id',  │
+   │   { status: 'MAINTENANCE' },                       │
+   │   { withCredentials: true, cookies }               │
+   │ )                                                   │
+   └──────────┬──────────────────────────────────────────┘
+              │
+              ▼
+
+5. BACKEND API (backend/src/routes/booking.ts:255)
+   ┌────────────────────────────────────┐
+   │ router.patch('/rooms/:id')        │
+   │ • requireAuth middleware          │
+   │ • Check ADMIN role                │
+   │ • Validate with zod schema        │
+   └──────────┬─────────────────────────┘
+              │
+              ▼
+   ┌─────────────────────────────────────────────────┐
+   │ prisma.room.update({                            │
+   │   where: { id },                                │
+   │   data: { status: 'MAINTENANCE' }               │
+   │ })                                              │
+   └──────────┬──────────────────────────────────────┘
+              │
+              ▼
+   ┌─────────────────────────────────────┐
+   │ PostgreSQL: Room table updated      │
+   │ status: 'ACTIVE' → 'MAINTENANCE'    │
+   └──────────┬──────────────────────────┘
+              │
+              ▼
+
+6. RESPONSE BACK TO POS
+   ┌────────────────────────────────┐
+   │ Backend returns: { room: {...}}│
+   └──────────┬───────────────────────┘
+              │
+              ▼
+   ┌────────────────────────────────────┐
+   │ RoomsTable: onUpdated() callback  │
+   │ • Clear editing state             │
+   │ • Refresh room list               │
+   └──────────┬────────────────────────┘
+              │
+              ▼
+
+7. SYNC PROPAGATION (5 min later)
+   ┌─────────────────────────────────────┐
+   │ Periodic rooms:pull triggers        │
+   │ • pullRooms() runs                  │
+   │ • DELETE all from Room table        │
+   │ • INSERT fresh data from backend    │
+   │ • Status now in SQLite cache        │
+   └──────────┬──────────────────────────┘
+              │
+              ▼
+   ┌──────────────────────────────────────────┐
+   │ Other POS terminals sync within 5 min   │
+   │ • See updated status                    │
+   │ • Badge color changes automatically     │
+   └─────────────────────────────────────────┘
+```
+
+**Key Points:**
+- **Direct API Update**: Status changes bypass sync queue, go straight to backend
+- **No Immediate Local Update**: The change doesn't immediately update local Room table in SQLite
+- **Eventual Consistency**: Status syncs back via periodic `rooms:pull` (every 5 minutes)
+- **Booking Validation**: Backend rejects bookings for non-ACTIVE rooms
+- **Multi-Terminal Support**: Other terminals see the change within 5 minutes via sync
+
+**Current Limitation**: The updating terminal sees the change immediately (from API response), but the local SQLite cache remains stale until the next `rooms:pull`. This could cause inconsistencies if other parts of the UI read directly from SQLite.
+
 ---
 This README will expand as the POS hub and persistence layers are implemented.
 
