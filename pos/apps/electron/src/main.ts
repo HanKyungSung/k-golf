@@ -33,7 +33,7 @@ try {
 } catch {/* ignore dotenv load errors */}
 import { initDb } from './core/db';
 import { enqueueBooking } from './core/bookings';
-import { getQueueSize, listOutbox, enqueue } from './core/outbox';
+import { getQueueSize, listQueue, enqueue } from './core/sync-queue';
 import { processSyncCycle } from './core/sync';
 import { setAccessToken, saveRefreshToken, loadRefreshToken, setAuthenticatedUser, getAuthenticatedUser, setSessionCookies, getSessionCookieHeader, clearAuthState, clearRefreshToken } from './core/auth';
 import { registerMenuHandlers } from './main/handlers/menu-handlers';
@@ -276,10 +276,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('queue:enqueue', (_evt: any, params: { type: string; payload: any }) => {
     try {
       console.log('[MAIN] queue:enqueue called with type:', params.type, 'payload:', params.payload);
-      const outboxId = enqueue(params.type, params.payload);
-      console.log('[MAIN] Enqueued successfully, outboxId:', outboxId, 'new queue size:', getQueueSize());
+      const syncQueueId = enqueue(params.type, params.payload);
+      console.log('[MAIN] Enqueued successfully, syncQueueId:', syncQueueId, 'new queue size:', getQueueSize());
       emitToAll('queue:update', { queueSize: getQueueSize() });
-      return { ok: true, outboxId };
+      return { ok: true, syncQueueId };
     } catch (e: any) {
       console.error('[MAIN] queue:enqueue failed:', e.message);
       return { ok: false, error: e.message };
@@ -312,9 +312,9 @@ app.whenReady().then(async () => {
     emitToAll('queue:update', { queueSize: getQueueSize(), sync: res });
     return res;
   });
-  ipcMain.handle('debug:outbox:list', () => {
+  ipcMain.handle('debug:syncQueue:list', () => {
     try {
-      const items = listOutbox();
+      const items = listQueue();
       return { ok: true, items };
     } catch (e: any) {
       return { ok: false, error: e?.message };

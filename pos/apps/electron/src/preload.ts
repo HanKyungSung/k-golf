@@ -20,7 +20,7 @@ contextBridge.exposeInMainWorld('kgolf', {
 	login: (email: string, password: string) => ipcRenderer.invoke('auth:login', { email, password }),
 	logout: () => ipcRenderer.invoke('auth:logout'),
 	getAuthStatus: () => ipcRenderer.invoke('auth:getStatus'),
-	debugListOutbox: () => ipcRenderer.invoke('debug:outbox:list'),
+	debugListSyncQueue: () => ipcRenderer.invoke('debug:syncQueue:list'),
 	updateRoom: (id: number, patch: { openMinutes?: number; closeMinutes?: number; status?: string }) => ipcRenderer.invoke('rooms:update', { id, patch }),
 	// Menu operations
 	menuGetAll: () => ipcRenderer.invoke('menu:getAll'),

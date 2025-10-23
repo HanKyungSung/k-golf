@@ -1,25 +1,24 @@
 /**
  * sync.ts
  * -----------------------------------------
- * Push-only synchronization logic.
+ * Bidirectional synchronization logic (push and pull).
  * Phase 0.6 enhancements implemented here:
  *  - Classify 401 responses as auth-expired (do NOT increment attempt)
  *  - Drain queue until empty or a non-auth failure occurs (previously stopped on first failure)
  *  - Accurate remaining count (full COUNT instead of 0/1 heuristic)
  *  - Return authExpired flag so caller can clear auth state & notify renderer
  * Strategy:
- *  - Pop (peek) oldest mutation from outbox
- *  - POST to backend (currently placeholder booking create endpoint)
- *  - On success: remove from outbox & (optionally) mark related booking clean
+ *  - Pop (peek) oldest operation from sync queue
+ *  - Execute operation (POST/PATCH for push, GET for pull)
+ *  - On success: remove from queue & (optionally) mark related records clean
  *  - On failure: increment attempt count for diagnostics / backoff logic
  *
  * Future Extensions (Phase 1+):
- *  - Pull cycle (delta fetch) based on meta.last_sync_ts
  *  - Exponential / jitter backoff + classification of permanent errors
  *  - Batch push to reduce HTTP round trips
  */
 import axios from 'axios';
-import { peekOldest, deleteItem, incrementAttempt, getQueueSize, type OutboxItem } from './outbox';
+import { peekOldest, deleteItem, incrementAttempt, getQueueSize, type SyncQueueItem } from './sync-queue';
 import { getAccessToken, getSessionCookieHeader } from './auth';
 import { getDb } from './db';
 
@@ -222,7 +221,7 @@ async function processRoomUpdates(apiBase: string): Promise<{ pushed: number; fa
 
   // Gather all room:update items
   const db = getDb();
-  const allRoomUpdates = db.prepare('SELECT * FROM Outbox WHERE type = ? ORDER BY createdAt ASC').all('room:update') as OutboxItem[];
+  const allRoomUpdates = db.prepare('SELECT * FROM SyncQueue WHERE type = ? ORDER BY createdAt ASC').all('room:update') as SyncQueueItem[];
   
   console.log('[SYNC][ROOM] Found', allRoomUpdates.length, 'room:update mutations in queue');
   
@@ -231,7 +230,7 @@ async function processRoomUpdates(apiBase: string): Promise<{ pushed: number; fa
   }
 
   // Collapse: keep only the latest mutation per roomId
-  const byRoomId = new Map<string, OutboxItem>();
+  const byRoomId = new Map<string, SyncQueueItem>();
   for (const item of allRoomUpdates) {
     try {
       const payload = JSON.parse(item.payloadJson);
@@ -282,7 +281,7 @@ async function processRoomUpdates(apiBase: string): Promise<{ pushed: number; fa
 /**
  * Push a single room:update mutation to the backend.
  */
-async function pushRoomUpdate(apiBase: string, item: OutboxItem): Promise<PushOutcome> {
+async function pushRoomUpdate(apiBase: string, item: SyncQueueItem): Promise<PushOutcome> {
   try {
     const payload = JSON.parse(item.payloadJson);
     const { roomId, status } = payload;

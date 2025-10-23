@@ -5,13 +5,13 @@
  * Responsibilities:
  *  - Create / open the local POS database (pos.sqlite) under ./data
  *  - Ensure Write-Ahead Logging (WAL) for durability + concurrent reads
- *  - Create foundational tables (meta, bookings, outbox, menu_items, order_items)
- *  - Expose a singleton `getDb()` for other core modules (outbox, sync, menu, etc.)
+ *  - Create foundational tables (meta, bookings, sync_queue, menu_items, order_items)
+ *  - Expose a singleton `getDb()` for other core modules (sync-queue, sync, menu, etc.)
  *
  * Tables:
  *  Meta(key PRIMARY KEY, value TEXT)         -> generic key/value (last_sync_ts, device_id, etc.)
  *  Booking(..., dirty INTEGER)               -> local snapshot + dirty flag for unsynced entries
- *  Outbox(id, type, payload_json, attempt..) -> queued mutations waiting to be pushed to backend
+ *  SyncQueue(id, type, payload_json, attempt..) -> queued operations (push/pull) waiting to be synced
  *  MenuItem(id, name, price, category, ...)  -> menu items (hours, food, drinks, etc.)
  *  OrderItem(id, booking_id, menu_item_id...) -> order line items with snapshots
  *
@@ -62,14 +62,14 @@ export function initDb(baseDir = path.join(process.cwd(), 'data')): InitResult {
              updatedAt INTEGER,
              dirty INTEGER DEFAULT 1
            );
-           CREATE TABLE IF NOT EXISTS Outbox (
+           CREATE TABLE IF NOT EXISTS SyncQueue (
              id TEXT PRIMARY KEY,
              type TEXT NOT NULL,
              payloadJson TEXT NOT NULL,
              createdAt INTEGER NOT NULL,
              attemptCount INTEGER DEFAULT 0
            );
-           CREATE INDEX IF NOT EXISTS idx_Outbox_createdAt ON Outbox(createdAt);
+           CREATE INDEX IF NOT EXISTS idx_SyncQueue_createdAt ON SyncQueue(createdAt);
            
            CREATE TABLE IF NOT EXISTS MenuItem (
              id TEXT PRIMARY KEY,
