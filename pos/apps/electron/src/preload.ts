@@ -13,7 +13,22 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('kgolf', {
 	ping: () => 'pong',
-	createBooking: (data: { customerName: string; startsAt: string; endsAt: string }) => ipcRenderer.invoke('booking:create', data),
+	createBooking: (data: { 
+		roomId: string; 
+		userId: string; 
+		customerName: string; 
+		customerPhone: string; 
+		customerEmail?: string;
+		startsAt: string; 
+		endsAt: string;
+		players: number;
+		price: number;
+		bookingSource?: string;
+		internalNotes?: string;
+	}) => ipcRenderer.invoke('booking:create', data),
+	listBookings: (options?: { date?: string; roomId?: string }) => ipcRenderer.invoke('bookings:list', options),
+	getBooking: (id: string) => ipcRenderer.invoke('bookings:getById', id),
+	updateBookingStatus: (id: string, status: string) => ipcRenderer.invoke('bookings:updateStatus', { id, status }),
 	getQueueSize: () => ipcRenderer.invoke('queue:getSize'),
 	enqueue: (type: string, payload: any) => ipcRenderer.invoke('queue:enqueue', { type, payload }),
 	forceSync: () => ipcRenderer.invoke('sync:force'),

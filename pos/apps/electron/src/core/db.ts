@@ -52,14 +52,31 @@ export function initDb(baseDir = path.join(process.cwd(), 'data')): InitResult {
 
   // Capitalized tables to mirror Prisma model naming style
   db.exec(`CREATE TABLE IF NOT EXISTS Meta (key TEXT PRIMARY KEY, value TEXT);
+           
+           CREATE TABLE IF NOT EXISTS Metadata (
+             key TEXT PRIMARY KEY,
+             value TEXT NOT NULL,
+             updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+           );
+           
            CREATE TABLE IF NOT EXISTS Booking (
              id TEXT PRIMARY KEY,
              serverId TEXT,
-             customerName TEXT,
-             startTime TEXT,
-             endTime TEXT,
-             status TEXT DEFAULT 'PENDING',
-             updatedAt INTEGER,
+             roomId TEXT NOT NULL,
+             userId TEXT NOT NULL,
+             customerName TEXT NOT NULL,
+             customerPhone TEXT NOT NULL,
+             customerEmail TEXT,
+             startTime TEXT NOT NULL,
+             endTime TEXT NOT NULL,
+             players INTEGER NOT NULL,
+             price REAL NOT NULL,
+             status TEXT DEFAULT 'CONFIRMED',
+             bookingSource TEXT DEFAULT 'WALK_IN',
+             createdBy TEXT,
+             internalNotes TEXT,
+             createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+             updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
              dirty INTEGER DEFAULT 1
            );
            CREATE TABLE IF NOT EXISTS SyncQueue (
@@ -171,4 +188,29 @@ function seedMenuIfEmpty() {
   
   insertMany(initialMenu);
   console.log(`[DB] Seeded ${initialMenu.length} menu items`);
+}
+
+/**
+ * Get a value from the Metadata table (used for sync timestamps).
+ * Returns null if key doesn't exist.
+ */
+export function getMetadata(key: string): string | null {
+  const db = getDb();
+  const row = db.prepare('SELECT value FROM Metadata WHERE key = ?').get(key);
+  return row?.value || null;
+}
+
+/**
+ * Set or update a value in the Metadata table.
+ * Used to track lastSyncedAt timestamps for incremental sync.
+ */
+export function setMetadata(key: string, value: string): void {
+  const db = getDb();
+  db.prepare(`
+    INSERT INTO Metadata (key, value, updatedAt) 
+    VALUES (?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET 
+      value = excluded.value,
+      updatedAt = CURRENT_TIMESTAMP
+  `).run(key, value);
 }

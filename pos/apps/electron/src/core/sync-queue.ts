@@ -62,6 +62,15 @@ export function enqueuePullIfNotExists(type: string, payload: Record<string, unk
 }
 
 /**
+ * Enqueue a full pull of all bookings (used on login/startup).
+ * This fetches complete history instead of just recent bookings.
+ */
+export function enqueueFullPullBookings(): string {
+  console.log('[SYNC_QUEUE] Enqueuing FULL bookings pull (all history)');
+  return enqueue('bookings:pull', { fullSync: true });
+}
+
+/**
  * Count queued operations.
  */
 export function getQueueSize(): number {

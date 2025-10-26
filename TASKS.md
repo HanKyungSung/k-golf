@@ -24,7 +24,10 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - **Room Configuration:**
   - Room 4: Supports both left-hand and right-hand players
   - Rooms 1-3: Right-hand players only
-- **Booking Duration:** Menu should include time options (1h, 2h, 3h, 4h, etc.)
+- **Booking Duration & Menu:**
+  - [x] Hours added as menu category (1-5 hours, $30-$150)
+  - [x] Auto-add booking hours to seat 1 on new bookings
+  - [x] Menu data migrated to SQLite for persistence
 - **Late Arrival Promotion:** Customers arriving 20+ minutes late get 1 hour free
 - **Score System:**
   - Admin can manually enter player scores
@@ -34,11 +37,27 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - **Authentication:** Phone number only (login/register for both online and POS)
 - **Billing:** Printing bill functionality required
 - **Admin Dashboard:** Must be able to edit all bookings
+- Need to fix the print
+- **Need pulling (Sync up)**
+- Way to handle transactions (billing)
+  - saves into the db. Need schema and others.
+- Maybe UI changes for current order page instead of vertical scroll we need tab but this can be handle later.
+- Seat management:
+  - [x] Seats decoupled from player count
+  - [x] Max 10 seats with color coding
+  - [x] Validation prevents orphaning items when reducing seats
+- **menu pos** 
+  - will need to have check list of what it was served or not.
+
+### Open questions
+- [x] ~~When the number of seats changes, does number of players also should changes?~~ → Decoupled: seats and players are independent
+- [x] ~~How can we handle the "cached" data? for instance, menu added to the running booking etc in case of the restart the app.~~ → Menu now persists in SQLite, orders saved in localStorage
 
 ### Known Issues
-- [ ] Add menu functionality not working
-- [ ] Split functionality needs fixing
+- [ ] Print functionality needs refinement
+- [ ] Split functionality needs fixing, when delete one of the splited item, it doesn't merge back (not sure if we want this) 
 - [ ] Guest checkout: Should collect name and phone number
+- [ ] when add menu, it doesn't update sqlite table.
 
 ---
 
@@ -255,7 +274,7 @@ model Booking {
 </details>
 
 ### 0.7 Queue Size Indicator
-[x] IPC getQueueSize returns COUNT(*) from Outbox
+[x] IPC getQueueSize returns COUNT(*) from SyncQueue
 [x] Renderer displays Queue badge
 [ ] Verify: Badge updates without restart after sync
 
@@ -275,6 +294,55 @@ model Booking {
 [x] IPC channel: main-log with log levels
 [x] Guard with ELECTRON_DEV check (dev only)
 [x] [MAIN] prefix for main process logs
+
+### 0.9.2 SyncQueue Refactoring – ✅ Completed
+[x] Renamed Outbox → SyncQueue (table, files, interfaces)
+[x] Updated all 6 files (db, sync-queue, sync, bookings, main, preload)
+[x] Added enqueuePullIfNotExists() for duplicate prevention
+[x] Renamed IPC handler: debug:outbox:list → debug:syncQueue:list
+[x] Updated comments to reflect bidirectional sync (push + pull)
+[x] Verified build and fresh database creation
+
+**Rationale:** "SyncQueue" better represents bidirectional operations (push/pull) vs "Outbox" (unidirectional)
+
+### 0.9.3 Menu Backend Integration & Sync – ✅ Completed
+[x] Added MenuItem model to backend Prisma schema (PostgreSQL)
+[x] Created migration: 20251023060719_add_menu_item_table
+[x] Added 17 menu items to backend seed script (matching POS)
+[x] Created backend API: GET /api/menu/items (with POS-compatible format)
+[x] Implemented menu:pull handler in POS sync.ts
+[x] Added pullMenuItems() with atomic SQLite transaction
+[x] Periodic menu pull: every 5 minutes + on auth ready
+[x] Duplicate prevention: enqueuePullIfNotExists('menu:pull')
+[x] Build verification successful
+
+**Implementation:**
+- Backend syncs menu to POS automatically
+- Menu changes in backend propagate to POS within 5 minutes
+- Full replace strategy (DELETE + INSERT for atomic consistency)
+- Category enum: HOURS, FOOD, DRINKS, APPETIZERS, DESSERTS
+- Price stored as DECIMAL(10,2) in PostgreSQL, converted to REAL for SQLite
+
+### 0.9.4 Incremental Booking Sync with Timestamps – ✅ Completed
+[x] Added Metadata table to SQLite for timestamp tracking
+[x] Created getMetadata/setMetadata helper functions in db.ts
+[x] Added ?updatedAfter query parameter to GET /api/bookings (backend)
+[x] Added ?limit parameter to bypass default pagination (limit=9999)
+[x] Updated pullBookings() to detect full vs incremental sync
+[x] Full sync on login: Fetches all bookings with ?limit=9999
+[x] Incremental sync (15s): Uses ?updatedAfter={lastSyncedAt}&limit=9999
+[x] Store/update bookings_lastSyncedAt in Metadata after sync
+[x] Removed 30-day booking cleanup logic (retain all historical data)
+[x] Removed default date filter from bookings:list IPC handler
+[x] Added sync event listener to BookingContext for auto-refresh
+[x] UI auto-updates within 2 seconds when sync completes
+
+**Implementation:**
+- Full sync: Fetches all bookings on fresh install/login
+- Incremental sync: Only fetches changed bookings since last sync
+- Auto-refresh: Dashboard updates automatically when new bookings arrive
+- Data retention: All historical bookings preserved (no automatic cleanup)
+- Pagination: Client-side pagination shows 10 bookings per page with navigation
 
 ### Follow-Ups (Post 0.6g) – Pagination Enhancements
 [ ] Add filtering (status, date range, room, customer name)
@@ -717,6 +785,34 @@ model Booking {
 [x] Phone input component (Canada +1 only)
 [x] Customer search component
 [x] Bug fix: Phone uniqueness & email setup
+
+</details>
+
+<details>
+<summary>POS Menu System & Seat Management (2025-10-22)</summary>
+
+**Seat Management Fixes:**
+[x] Fixed seat reduction bug (React useEffect loop)
+[x] Decoupled seat count from player count (max 10 seats)
+[x] Added seat validation (prevents orphaning items)
+[x] Extended color palette to 10 seats
+
+**Menu Migration (Phase 1 - SQLite):**
+[x] Added MenuItem and OrderItem tables to pos.sqlite
+[x] Implemented menu CRUD operations (core/menu.ts)
+[x] Created IPC handlers for 7 menu operations
+[x] Integrated menu loading in BookingDetailPage
+[x] Added hours as menu category (1-5h, $30-$150)
+[x] Auto-add booking hours to seat 1 on new bookings
+[x] Consolidated menu tables with existing sync database
+[x] Seed function for 17 initial menu items
+
+**Documentation:**
+[x] Created MENU_MIGRATION_PLAN.md (Phase 1 & 2 strategy)
+[x] Created phase_1_menu_migration_complete.md
+
+**Backend:**
+[x] Added guest mode support for bookings (backend/src/routes/booking.ts)
 
 </details>
 

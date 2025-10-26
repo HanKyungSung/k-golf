@@ -48,8 +48,9 @@ router.get('/', async (req, res) => {
   const limit = parseInt(req.query.limit as string) || 10;
   const sortBy = (req.query.sortBy as 'startTime' | 'createdAt') || 'startTime';
   const order = (req.query.order as 'asc' | 'desc') || 'desc';
+  const updatedAfter = req.query.updatedAfter as string | undefined;
 
-  const result = await listBookings({ page, limit, sortBy, order });
+  const result = await listBookings({ page, limit, sortBy, order, updatedAfter });
   
   res.json({
     bookings: result.bookings.map(presentBooking),

@@ -63,6 +63,7 @@ export interface ListBookingsOptions {
   limit?: number;
   sortBy?: 'startTime' | 'createdAt';
   order?: 'asc' | 'desc';
+  updatedAfter?: string; // ISO timestamp for incremental sync
 }
 
 export async function listBookings(options?: ListBookingsOptions): Promise<PaginatedBookings> {
@@ -70,16 +71,24 @@ export async function listBookings(options?: ListBookingsOptions): Promise<Pagin
   const limit = options?.limit || 10;
   const sortBy = options?.sortBy || 'startTime';
   const order = options?.order || 'desc';
+  const updatedAfter = options?.updatedAfter;
 
   const skip = (page - 1) * limit;
+  
+  // Build where clause for incremental sync
+  const where: any = {};
+  if (updatedAfter) {
+    where.updatedAt = { gt: new Date(updatedAfter) };
+  }
 
   const [bookings, total] = await Promise.all([
     prisma.booking.findMany({
+      where,
       skip,
       take: limit,
       orderBy: { [sortBy]: order },
     }),
-    prisma.booking.count(),
+    prisma.booking.count({ where }),
   ]);
 
   const totalPages = Math.ceil(total / limit);

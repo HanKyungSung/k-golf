@@ -2,7 +2,7 @@ import React, { useMemo, useState, createContext, useContext } from 'react';
 import { useAuth } from '../app/authState';
 import { AppHeader } from '../components/layout/AppHeader';
 import { useNavigate } from 'react-router-dom';
-import { useBookingData } from '../app/bookingContext';
+import { useBookingData } from '../app/BookingContext';
 
 // Types now provided by context (imported through hook). Keeping utility code local.
 
@@ -12,7 +12,7 @@ const timeSlots = Array.from({ length: (22 - 9) * 2 + 1 }, (_, i) => {
 });
 const dayRange = (startISO: Date) => Array.from({ length: 7 }, (_, i) => new Date(startISO.getTime() + i * 86400000));
 const dateKey = (d: Date) => d.toISOString().split('T')[0];
-function isBookingInSlot(b: import('../app/bookingContext').Booking, slot: string) {
+function isBookingInSlot(b: import('../app/BookingContext').Booking, slot: string) {
   const [sh, sm] = b.time.split(':').map(Number); const startMinutes = sh*60+sm; const [slh, slm] = slot.split(':').map(Number); const slotMinutes = slh*60+slm; const endMinutes = startMinutes + b.duration*60; return slotMinutes >= startMinutes && slotMinutes < endMinutes;
 }
 
@@ -147,7 +147,7 @@ const DashboardPage: React.FC = () => {
                         <p>No bookings found</p>
                       </div>
                     )}
-                    {bookings.map((b: import('../app/bookingContext').Booking) => (
+                    {bookings.map((b: import('../app/BookingContext').Booking) => (
                       <div key={b.id} className="flex items-center justify-between p-4 border border-slate-700 rounded-lg hover:bg-slate-700/30 bg-slate-800/30 cursor-pointer" onClick={()=>navigate(`/booking/${b.id}`)}>
                         <div className="flex-1 min-w-0 pr-4">
                           <div className="flex items-center gap-3 mb-1">

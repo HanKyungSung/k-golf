@@ -5,7 +5,7 @@ import DashboardPage from '../pages/DashboardPage';
 import BookingDetailPage from '../pages/BookingDetailPage';
 import MenuManagementPage from '../pages/MenuManagementPage';
 import { useAuth } from './authState';
-import { BookingProvider } from './bookingContext';
+import { BookingProvider } from './BookingContext';
 
 function Protected({ children }: { children: React.ReactElement }) {
   const { state } = useAuth();

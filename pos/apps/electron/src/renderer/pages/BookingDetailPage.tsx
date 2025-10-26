@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useBookingData } from '../app/bookingContext';
+import { useBookingData } from '../app/BookingContext';
 import { useAuth } from '../app/authState';
 import { AppHeader } from '../components/layout/AppHeader';
 import { 

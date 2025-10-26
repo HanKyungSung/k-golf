@@ -21,6 +21,7 @@ import axios from 'axios';
 import { peekOldest, deleteItem, incrementAttempt, getQueueSize, type SyncQueueItem } from './sync-queue';
 import { getAccessToken, getSessionCookieHeader } from './auth';
 import { getDb } from './db';
+import { getMetadata, setMetadata } from './db';
 
 let syncing = false;
 
@@ -97,6 +98,23 @@ export async function processSyncCycle(apiBase: string): Promise<SyncCycleResult
         break;
       }
       
+      // Handle booking status updates
+      if (item.type === 'booking:updateStatus') {
+        const statusOutcome = await pushBookingStatusUpdate(apiBase, item);
+        if (statusOutcome === 'success') {
+          pushed++;
+          continue;
+        }
+        if (statusOutcome === 'auth-expired') {
+          authExpired = true;
+          failures++;
+          break;
+        }
+        failures++;
+        if (!lastError) lastError = pendingErrorInfo;
+        break;
+      }
+      
       // Handle push operations (booking:create, etc.)
       const outcome = await pushSingle(apiBase, item.payloadJson, item.id);
       if (outcome === 'success') {
@@ -146,29 +164,45 @@ let pendingErrorInfo: { code: string; status?: number; message?: string; outboxI
 
 async function pushSingle(apiBase: string, payloadJson: string, outboxId: string): Promise<PushOutcome> {
   const raw = JSON.parse(payloadJson);
-  // Adapter: local Phase 0 booking payload -> backend create schema
-  // Local: { localId, customerName, startsAt, endsAt }
-  // Backend expects: { roomId, startTimeIso, players, hours }
-  let roomId = process.env.POS_ROOM_ID || process.env.DEFAULT_ROOM_ID || discoveredRoomId;
-  if (!roomId) {
-    roomId = await discoverRoomId(apiBase) || null;
-  }
-  if (!roomId) {
-    console.warn('[SYNC] No roomId (env or discovered); aborting push');
-    incrementAttempt(outboxId);
-    pendingErrorInfo = { code: 'NO_ROOM_ID', message: 'Room discovery failed (no active rooms or network/auth issue)', outboxId };
-    return 'failure';
-  }
+  
+  // New booking format includes all required fields
+  // Extract data from payload
+  const roomId = raw.roomId;
+  const userId = raw.userId;
+  const customerName = raw.customerName;
+  const customerPhone = raw.customerPhone;
+  const customerEmail = raw.customerEmail;
+  const startTimeIso = raw.startsAt;
+  const players = raw.players || 1;
+  const bookingSource = raw.bookingSource || 'WALK_IN';
+  const createdBy = raw.createdBy;
+  const internalNotes = raw.internalNotes;
+  
+  // Calculate hours from start/end times
   let hours = 1;
   try {
     const start = new Date(raw.startsAt);
     const end = new Date(raw.endsAt);
     const diffH = (end.getTime() - start.getTime()) / 3600000;
-    if (diffH >= 1 && diffH <= 4) hours = Math.round(diffH);
+    if (diffH >= 1 && diffH <= 8) hours = Math.round(diffH);
   } catch {/* keep default */}
-  const players = 1; // Phase 0 assumption
-  const startTimeIso = raw.startsAt;
-  const body = { roomId, startTimeIso, players, hours };
+  
+  // Build request body matching backend API
+  const body: any = {
+    roomId,
+    userId,
+    startTimeIso,
+    players,
+    hours,
+    bookingSource,
+    customerName,
+    customerPhone
+  };
+  
+  // Optional fields
+  if (customerEmail) body.customerEmail = customerEmail;
+  if (createdBy) body.createdBy = createdBy;
+  if (internalNotes) body.internalNotes = internalNotes;
 
   const headers: Record<string,string> = { 'Content-Type': 'application/json' };
   const token = getAccessToken();
@@ -178,9 +212,17 @@ async function pushSingle(apiBase: string, payloadJson: string, outboxId: string
   const url = `${apiBase}/api/bookings`; // plural endpoint
   try {
     console.log('[SYNC] POST', url, body);
-    await axios.post(url, body, { headers, timeout: 8000, withCredentials: true });
+    const response = await axios.post(url, body, { headers, timeout: 8000, withCredentials: true });
+    
+    // Update local booking with serverId from backend response
+    if (response.data?.booking?.id && raw.localId) {
+      const db = getDb();
+      db.prepare('UPDATE Booking SET serverId = ?, dirty = 0 WHERE id = ?')
+        .run(response.data.booking.id, raw.localId);
+      console.log('[SYNC] Updated local booking', raw.localId, 'with serverId', response.data.booking.id);
+    }
+    
     deleteItem(outboxId);
-    if (raw.localId) markBookingClean(raw.localId);
     return 'success';
   } catch (e: any) {
     const status = e?.response?.status;
@@ -362,18 +404,21 @@ async function pushRoomUpdate(apiBase: string, item: SyncQueueItem): Promise<Pus
  */
 async function handlePullOperation(apiBase: string, item: SyncQueueItem): Promise<PushOutcome> {
   try {
-    console.log('[SYNC][PULL] Processing', item.type);
-    
+    // Log with specific category based on type
     if (item.type === 'menu:pull') {
+      console.log('[SYNC][MENU][PULL] Processing menu:pull');
       return await pullMenuItems(apiBase, item);
     }
     
     if (item.type === 'rooms:pull') {
+      console.log('[SYNC][ROOM][PULL] Processing rooms:pull');
       return await pullRooms(apiBase, item);
     }
     
-    // Future pull operations can be added here:
-    // if (item.type === 'bookings:pull') return await pullBookings(apiBase, item);
+    if (item.type === 'bookings:pull') {
+      console.log('[SYNC][BOOKING][PULL] Processing bookings:pull');
+      return await pullBookings(apiBase, item);
+    }
     
     console.warn('[SYNC][PULL] Unknown pull type:', item.type);
     deleteItem(item.id); // drop unknown type
@@ -582,6 +627,267 @@ async function pullRooms(apiBase: string, item: SyncQueueItem): Promise<PushOutc
     incrementAttempt(item.id);
     pendingErrorInfo = { 
       code: status >= 500 ? 'SERVER_ERROR' : 'NETWORK_ERROR', 
+      status, 
+      message: body?.error || e?.message,
+      outboxId: item.id 
+    };
+    return 'failure';
+  }
+}
+
+/**
+ * Pull bookings from backend and sync to local SQLite
+ * Strategy:
+ * - On initial sync (fullSync=true): Fetch ALL bookings to populate complete history
+ * - On incremental sync (fullSync=false): Fetch only bookings updated since lastSyncedAt
+ * Uses UPSERT strategy and maps serverId <-> local id for coordination
+ */
+async function pullBookings(apiBase: string, item: SyncQueueItem): Promise<PushOutcome> {
+  try {
+    const headers: Record<string,string> = {};
+    const token = getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const cookieHeader = getSessionCookieHeader();
+    if (cookieHeader) headers.Cookie = cookieHeader;
+    
+    // Check if this is a full sync (initial pull) or incremental
+    const payload = JSON.parse(item.payloadJson || '{}');
+    const isFullSync = payload.fullSync === true;
+    
+    let url = `${apiBase}/api/bookings`;
+    let syncDescription = '';
+    
+    if (!isFullSync) {
+      // Incremental sync: Only fetch bookings updated since last sync
+      const lastSyncedAt = getMetadata('bookings_lastSyncedAt');
+      
+      if (lastSyncedAt) {
+        // Backend supports ?updatedAfter filter + large limit to get all changed bookings
+        url += `?updatedAfter=${encodeURIComponent(lastSyncedAt)}&limit=9999`;
+        syncDescription = ` (updated after ${lastSyncedAt})`;
+        console.log('[SYNC][BOOKINGS] Incremental sync since:', lastSyncedAt);
+      } else {
+        // No previous sync timestamp, treat as full sync
+        url += '?limit=9999';
+        console.log('[SYNC][BOOKINGS] No lastSyncedAt found, performing full sync with large limit');
+        syncDescription = ' (full sync - no previous timestamp)';
+      }
+    } else {
+      // Full sync: Fetch ALL bookings (use large limit to bypass pagination)
+      url += '?limit=9999';
+      syncDescription = ' (FULL SYNC - all bookings)';
+    }
+    
+    console.log('[SYNC][BOOKINGS] GET', url, syncDescription);
+    
+    const response = await axios.get(url, { 
+      headers, 
+      timeout: 15000, // Longer timeout for full sync
+      withCredentials: true 
+    });
+    
+    const { bookings } = response.data;
+    
+    if (!Array.isArray(bookings)) {
+      console.error('[SYNC][BOOKINGS] Invalid response format:', response.data);
+      incrementAttempt(item.id);
+      pendingErrorInfo = { 
+        code: 'INVALID_RESPONSE', 
+        message: 'Invalid bookings response format',
+        outboxId: item.id 
+      };
+      return 'failure';
+    }
+    
+    console.log('[SYNC][BOOKINGS] Received', bookings.length, 'bookings from backend', isFullSync ? '(full)' : '(incremental)');
+    
+    // Update local SQLite with UPSERT strategy
+    const db = getDb();
+    
+    // Use transaction for atomic update
+    let insertedCount = 0;
+    let updatedCount = 0;
+    const updateTransaction = db.transaction(() => {
+      // UPSERT: Insert or update based on serverId
+      const upsertStmt = db.prepare(`
+        INSERT INTO Booking (
+          id, serverId, roomId, userId, customerName, customerPhone, customerEmail,
+          startTime, endTime, players, price, status, bookingSource, createdBy, 
+          internalNotes, createdAt, updatedAt, dirty
+        ) VALUES (
+          @id, @serverId, @roomId, @userId, @customerName, @customerPhone, @customerEmail,
+          @startTime, @endTime, @players, @price, @status, @bookingSource, @createdBy,
+          @internalNotes, @createdAt, @updatedAt, 0
+        )
+        ON CONFLICT(id) DO UPDATE SET
+          serverId = @serverId,
+          roomId = @roomId,
+          userId = @userId,
+          customerName = @customerName,
+          customerPhone = @customerPhone,
+          customerEmail = @customerEmail,
+          startTime = @startTime,
+          endTime = @endTime,
+          players = @players,
+          price = @price,
+          status = @status,
+          bookingSource = @bookingSource,
+          createdBy = @createdBy,
+          internalNotes = @internalNotes,
+          updatedAt = @updatedAt,
+          dirty = CASE WHEN dirty = 1 THEN 1 ELSE 0 END
+      `);
+      
+      // First, check for existing local bookings with serverIds
+      const serverIdMap = new Map<string, string>(); // serverId -> localId
+      const existingBookings = db.prepare('SELECT id, serverId FROM Booking WHERE serverId IS NOT NULL').all();
+      for (const existing of existingBookings) {
+        if (existing.serverId) {
+          serverIdMap.set(existing.serverId, existing.id);
+        }
+      }
+      
+      for (const booking of bookings) {
+        // Use existing local ID if we have a serverId mapping, otherwise use backend ID
+        const localId = serverIdMap.get(booking.id) || booking.id;
+        
+        const result = upsertStmt.run({
+          id: localId,
+          serverId: booking.id, // Backend ID
+          roomId: booking.roomId,
+          userId: booking.userId,
+          customerName: booking.customerName || '',
+          customerPhone: booking.customerPhone || '',
+          customerEmail: booking.customerEmail || null,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          players: booking.players || 1,
+          price: booking.price || 0,
+          status: booking.status || 'CONFIRMED',
+          bookingSource: booking.bookingSource || 'ONLINE',
+          createdBy: booking.createdBy || null,
+          internalNotes: booking.internalNotes || null,
+          createdAt: booking.createdAt || new Date().toISOString(),
+          updatedAt: booking.updatedAt || new Date().toISOString()
+        });
+        
+        if (result.changes > 0) {
+          if (serverIdMap.has(booking.id)) {
+            updatedCount++;
+          } else {
+            insertedCount++;
+          }
+        }
+      }
+    });
+    
+    updateTransaction();
+    
+    const finalCount = db.prepare('SELECT COUNT(*) as count FROM Booking').get().count;
+    console.log('[SYNC][BOOKINGS] ✅ Sync complete:', insertedCount, 'inserted,', updatedCount, 'updated,', 'Total in SQLite:', finalCount);
+    
+    // Update lastSyncedAt timestamp for incremental sync
+    const now = new Date().toISOString();
+    setMetadata('bookings_lastSyncedAt', now);
+    console.log('[SYNC][BOOKINGS] Updated lastSyncedAt to:', now);
+    
+    // Remove from queue
+    deleteItem(item.id);
+    return 'success';
+    
+  } catch (e: any) {
+    const status = e?.response?.status;
+    const body = e?.response?.data;
+    console.error('[SYNC][BOOKINGS] Pull failed', status, body || e?.message);
+    
+    if (status === 401) {
+      console.warn('[SYNC][BOOKINGS] Auth expired (401)');
+      pendingErrorInfo = { 
+        code: 'AUTH_EXPIRED', 
+        status: 401, 
+        message: 'Authentication expired (401)', 
+        outboxId: item.id 
+      };
+      return 'auth-expired';
+    }
+    
+    incrementAttempt(item.id);
+    pendingErrorInfo = { 
+      code: status >= 500 ? 'SERVER_ERROR' : 'NETWORK_ERROR', 
+      status, 
+      message: body?.error || e?.message,
+      outboxId: item.id 
+    };
+    return 'failure';
+  }
+}
+
+/**
+ * Push booking status update to backend
+ */
+async function pushBookingStatusUpdate(apiBase: string, item: SyncQueueItem): Promise<PushOutcome> {
+  try {
+    const payload = JSON.parse(item.payloadJson);
+    const { id, status } = payload;
+    
+    if (!id || !status) {
+      console.error('[SYNC][BOOKING_STATUS] Missing id or status in payload');
+      deleteItem(item.id);
+      return 'success';
+    }
+    
+    const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+    const token = getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const cookieHeader = getSessionCookieHeader();
+    if (cookieHeader) headers.Cookie = cookieHeader;
+    
+    // Get serverId for backend sync
+    const db = getDb();
+    const booking = db.prepare('SELECT serverId FROM Booking WHERE id = ?').get(id);
+    const backendId = booking?.serverId || id; // Use serverId if available, else local id
+    
+    const url = `${apiBase}/api/bookings/${backendId}`;
+    console.log('[SYNC][BOOKING_STATUS] PATCH', url, { status });
+    
+    await axios.patch(url, { status }, { 
+      headers, 
+      timeout: 8000, 
+      withCredentials: true 
+    });
+    
+    // Mark as clean
+    db.prepare('UPDATE Booking SET dirty = 0 WHERE id = ?').run(id);
+    deleteItem(item.id);
+    
+    console.log('[SYNC][BOOKING_STATUS] Successfully updated booking', id, 'to', status);
+    return 'success';
+    
+  } catch (e: any) {
+    const status = e?.response?.status;
+    const body = e?.response?.data;
+    console.error('[SYNC][BOOKING_STATUS] Update failed', status, body || e?.message);
+    
+    if (status === 401) {
+      console.warn('[SYNC][BOOKING_STATUS] Auth expired (401)');
+      pendingErrorInfo = { 
+        code: 'AUTH_EXPIRED', 
+        status: 401, 
+        message: 'Authentication expired (401)', 
+        outboxId: item.id 
+      };
+      return 'auth-expired';
+    }
+    
+    if (status === 404) {
+      console.warn('[SYNC][BOOKING_STATUS] Booking not found on backend, dropping update');
+      deleteItem(item.id);
+      return 'success';
+    }
+    
+    incrementAttempt(item.id);
+    pendingErrorInfo = { 
+      code: status >= 500 ? 'SERVER_ERROR' : 'UPDATE_ERROR', 
       status, 
       message: body?.error || e?.message,
       outboxId: item.id 

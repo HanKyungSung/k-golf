@@ -33,7 +33,7 @@ try {
 } catch {/* ignore dotenv load errors */}
 import { initDb } from './core/db';
 import { enqueueBooking } from './core/bookings';
-import { getQueueSize, listQueue, enqueue, enqueuePullIfNotExists } from './core/sync-queue';
+import { getQueueSize, listQueue, enqueue, enqueuePullIfNotExists, enqueueFullPullBookings } from './core/sync-queue';
 import { processSyncCycle } from './core/sync';
 import { setAccessToken, saveRefreshToken, loadRefreshToken, setAuthenticatedUser, getAuthenticatedUser, setSessionCookies, getSessionCookieHeader, clearAuthState, clearRefreshToken } from './core/auth';
 import { registerMenuHandlers } from './main/handlers/menu-handlers';
@@ -272,6 +272,24 @@ app.whenReady().then(async () => {
     }
   }, ROOMS_PULL_INTERVAL_MS);
   
+  // Start periodic bookings pull sync (15 seconds for real-time updates)
+  // This pulls incrementally (last 30 days), while login does full pull (all history)
+  const BOOKINGS_PULL_INTERVAL_MS = 15 * 1000; // 15 seconds
+  console.log('[MAIN] Starting periodic bookings pull (incremental), interval:', BOOKINGS_PULL_INTERVAL_MS, 'ms');
+  setInterval(() => {
+    const user = getAuthenticatedUser();
+    if (!user) return; // Only pull when authenticated
+    
+    // Incremental pull (no fullSync flag, default behavior)
+    const syncQueueId = enqueuePullIfNotExists('bookings:pull');
+    if (syncQueueId) {
+      console.log('[MAIN][BOOKINGS_PULL] Enqueued incremental bookings:pull, syncQueueId:', syncQueueId);
+      emitToAll('queue:update', { queueSize: getQueueSize() });
+    } else {
+      console.log('[MAIN][BOOKINGS_PULL] bookings:pull already queued, skipping');
+    }
+  }, BOOKINGS_PULL_INTERVAL_MS);
+  
   // Also trigger menu pull on app startup (after auth)
   ipcMain.on('auth:ready', () => {
     console.log('[MAIN] Auth ready, triggering initial menu pull');
@@ -312,15 +330,28 @@ app.whenReady().then(async () => {
     if (!user) return { ok: false, error: 'NOT_AUTHENTICATED' };
     if (!userHasStaffRole()) return { ok: false, error: 'FORBIDDEN_ROLE' };
     try {
-      // Basic validation (minimal)
-      if (!payload || !payload.customerName || !payload.startsAt || !payload.endsAt) {
-        throw new Error('Missing fields');
+      // Validation
+      if (!payload || !payload.roomId || !payload.userId || !payload.customerName || 
+          !payload.customerPhone || !payload.startsAt || !payload.endsAt || 
+          !payload.players || !payload.price) {
+        throw new Error('Missing required fields');
       }
+      
       const result = enqueueBooking({
+        roomId: String(payload.roomId),
+        userId: String(payload.userId),
         customerName: String(payload.customerName),
+        customerPhone: String(payload.customerPhone),
+        customerEmail: payload.customerEmail ? String(payload.customerEmail) : undefined,
         startsAt: String(payload.startsAt),
-        endsAt: String(payload.endsAt)
+        endsAt: String(payload.endsAt),
+        players: Number(payload.players),
+        price: Number(payload.price),
+        bookingSource: payload.bookingSource || 'WALK_IN',
+        createdBy: user.id, // Current admin user
+        internalNotes: payload.internalNotes ? String(payload.internalNotes) : undefined
       });
+      
       emitToAll('queue:update', { queueSize: result.queueSize });
       emitToAll('booking:created', { id: result.bookingId, ...payload });
       return { ok: true, ...result };
@@ -328,6 +359,80 @@ app.whenReady().then(async () => {
       return { ok: false, error: e.message };
     }
   });
+  
+  // Booking list/read handlers (SQLite-based)
+  ipcMain.handle('bookings:list', async (_evt: any, options?: { date?: string; roomId?: string }) => {
+    const user = getAuthenticatedUser();
+    if (!user) return { ok: false, error: 'NOT_AUTHENTICATED' };
+    
+    try {
+      const db = require('./core/db').getDb();
+      let query = 'SELECT * FROM Booking WHERE 1=1';
+      const params: any[] = [];
+      
+      // Filter by date if provided (no default filter - show all bookings)
+      if (options?.date) {
+        const targetDate = new Date(options.date);
+        const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+        const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
+        query += ' AND startTime >= ? AND startTime < ?';
+        params.push(startOfDay.toISOString(), endOfDay.toISOString());
+      }
+      
+      // Filter by room if provided
+      if (options?.roomId) {
+        query += ' AND roomId = ?';
+        params.push(options.roomId);
+      }
+      
+      query += ' ORDER BY startTime ASC';
+      
+      const bookings = db.prepare(query).all(...params);
+      return { ok: true, bookings };
+    } catch (e: any) {
+      console.error('[BOOKINGS][LIST] Error:', e);
+      return { ok: false, error: e.message };
+    }
+  });
+  
+  ipcMain.handle('bookings:getById', async (_evt: any, id: string) => {
+    const user = getAuthenticatedUser();
+    if (!user) return { ok: false, error: 'NOT_AUTHENTICATED' };
+    
+    try {
+      const db = require('./core/db').getDb();
+      const booking = db.prepare('SELECT * FROM Booking WHERE id = ?').get(id);
+      return booking ? { ok: true, booking } : { ok: false, error: 'NOT_FOUND' };
+    } catch (e: any) {
+      console.error('[BOOKINGS][GET] Error:', e);
+      return { ok: false, error: e.message };
+    }
+  });
+  
+  ipcMain.handle('bookings:updateStatus', async (_evt: any, { id, status }: { id: string; status: string }) => {
+    const user = getAuthenticatedUser();
+    if (!user) return { ok: false, error: 'NOT_AUTHENTICATED' };
+    if (!userHasStaffRole()) return { ok: false, error: 'FORBIDDEN_ROLE' };
+    
+    try {
+      const db = require('./core/db').getDb();
+      const now = new Date().toISOString();
+      
+      // Update local record and mark as dirty for sync
+      db.prepare('UPDATE Booking SET status = ?, updatedAt = ?, dirty = 1 WHERE id = ?')
+        .run(status, now, id);
+      
+      // Enqueue sync operation
+      const syncQueueId = enqueue('booking:updateStatus', { id, status });
+      emitToAll('queue:update', { queueSize: getQueueSize() });
+      
+      return { ok: true, syncQueueId };
+    } catch (e: any) {
+      console.error('[BOOKINGS][UPDATE_STATUS] Error:', e);
+      return { ok: false, error: e.message };
+    }
+  });
+  
   ipcMain.handle('queue:getSize', () => ({ queueSize: getQueueSize() }));
   ipcMain.handle('queue:enqueue', (_evt: any, params: { type: string; payload: any }) => {
     try {
@@ -401,6 +506,11 @@ app.whenReady().then(async () => {
       if (roomsSyncId) {
         console.log('[AUTH][LOGIN] rooms:pull enqueued, syncQueueId:', roomsSyncId);
       }
+      
+      // Trigger FULL bookings pull after successful login (populates complete history)
+      console.log('[AUTH][LOGIN] Triggering FULL bookings pull (all history)');
+      const bookingsSyncId = enqueueFullPullBookings();
+      console.log('[AUTH][LOGIN] bookings:pull (FULL) enqueued, syncQueueId:', bookingsSyncId);
       
       emitToAll('queue:update', { queueSize: getQueueSize() });
       
