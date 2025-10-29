@@ -548,52 +548,52 @@ model Booking {
 [x] Update .env.example with Gmail App Password instructions
 [x] Document 2-Step Verification requirement
 
-### 1.7 POS - Enhanced Booking Modal (Dashboard Integration)
+### 1.7 Simplified Booking Flow with Guest Support – ✅ Completed
 
-**Multi-Step Booking Modal:**
-[ ] Update DashboardPage booking modal
-[ ] Add modal state management (step tracking)
+**Backend Changes:**
+[x] Make Booking.userId nullable for guest bookings
+[x] Create POST /api/bookings/simple/create endpoint
+[x] Simplified payload: customerName, customerPhone, customerEmail (optional)
+[x] Auto-link bookings to users by matching phone number
+[x] Add auto-linking logic in user registration (/api/auth/register)
+[x] Create migration script for existing guest bookings
+[x] Test all backend endpoints (5 scenarios: guest, existing user, conflicts, validation, auto-link)
 
-**Step 1: Booking Source Selector**
-[ ] Radio buttons: "Walk-in" / "Phone Booking"
-[ ] Store bookingSource state
+**Frontend Changes:**
+[x] Refactor BookingModal to 2-step flow (Customer → Details)
+[x] Add Walk-in/Phone source selection buttons (customer step)
+[x] Implement live phone search (500ms debounce, auto-triggers at 10 digits)
+[x] Remove source step (integrated into customer step)
+[x] Remove internal notes field
+[x] Remove estimated price display
+[x] Fix phone input deletion bug (partial E.164 format)
+[x] Fix continue button validation (E.164 length check)
 
-**Step 2: Customer Selection**
-[ ] Integrate CustomerSearch component
-[ ] Handle three paths: Existing / New / Guest
-[ ] Pass bookingSource prop (controls guest visibility)
+**Implementation:**
+- Phone-first approach: Enter phone → Search automatically → Select/create customer
+- Guest bookings: userId=null, stored with customer info
+- Auto-linking: When guest registers online, existing bookings link automatically
+- E.164 format: +1XXXXXXXXXX (12 chars) for complete validation
+- Partial E.164: Returns +1XXX for incomplete numbers (prevents deletion bug)
 
-**Step 3a: New Customer Registration Form**
-[ ] Form fields: Name (required), Phone (required), Email (optional)
-[ ] Phone uniqueness check
-[ ] "Create Account & Continue" button
-[ ] Client-side validation
+### 1.8 Guest/Registered Badge Display
 
-**Step 3b: Guest Booking Form**
-[ ] Form fields: Name, Phone, Email (optional)
-[ ] No uniqueness check for phone
-[ ] "Continue as Guest" button
-[ ] Only for WALK_IN bookings
+[ ] Add userId to Booking interface (BookingContext.tsx)
+[ ] Update DashboardPage booking list UI
+[ ] Display badge next to customer name based on userId
+[ ] Badge variants: "Registered" (userId exists) vs "Guest" (userId null)
+[ ] Verify badges display correctly after sync
 
-**Step 4: Booking Details**
-[ ] Room selector (ACTIVE only)
-[ ] Date picker with availability calendar
-[ ] Time picker (available slots only)
-[ ] Duration selector (1-4 hours)
-[ ] Players count (1-4)
-[ ] Price preview (live updates)
-[ ] Admin fields: Custom price, custom tax, internal notes
+### 1.9 End-to-End Testing
 
-**Step 5: Confirmation Screen**
-[ ] Summary: Customer, booking, pricing
-[ ] "Confirm & Create Booking" button
-[ ] "Back to Edit" button
-
-**Submit & Handling:**
-[ ] POST to /api/bookings/admin/create
-[ ] Loading state during submission
-[ ] Success: Toast, close modal, refresh list, optional print
-[ ] Error: Display inline, allow retry, specific messages
+[ ] Test new guest booking creation (no existing user)
+[ ] Test existing customer booking (auto-link)
+[ ] Test phone search with multiple matches
+[ ] Test customer name editing
+[ ] Verify sync pulls userId correctly from backend
+[ ] Verify badge display based on userId
+[ ] Test phone input validation and formatting
+[ ] Test complete booking flow (phone → details → submit)
 
 ### 1.8 Analytics Dashboard (Optional - Future)
 
