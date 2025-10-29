@@ -155,7 +155,8 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
   };
 
   const canProceedFromCustomer = () => {
-    return phone.length >= 10 && customerName.trim().length > 0;
+    // E.164 format is +1XXXXXXXXXX (12 chars) for complete phone number
+    return phone.length === 12 && phone.startsWith('+1') && customerName.trim().length > 0;
   };
 
   const canProceedToSubmit = () => {
