@@ -1,8 +1,6 @@
 import * as React from 'react';
 import { Button, Card, Input, Label } from './ui/primitives';
 import { PhoneInput } from './PhoneInput';
-import { CustomerSearch } from './CustomerSearch';
-import type { Customer, CustomerMode, BookingSource, NewCustomerData, GuestCustomerData } from '../types/booking';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -11,46 +9,53 @@ interface BookingModalProps {
   onSuccess: () => void;
 }
 
-type Step = 'source' | 'customerMode' | 'customerData' | 'bookingDetails' | 'review';
+type Step = 'customer' | 'details';
+type BookingSource = 'WALK_IN' | 'PHONE' | 'ONLINE';
+
+interface CustomerMatch {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  bookingCount: number;
+}
 
 export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModalProps) {
-  const [currentStep, setCurrentStep] = React.useState<Step>('source');
+  const [currentStep, setCurrentStep] = React.useState<Step>('customer');
   const [bookingSource, setBookingSource] = React.useState<BookingSource>('WALK_IN');
-  const [customerMode, setCustomerMode] = React.useState<CustomerMode>('existing');
-  const [selectedCustomer, setSelectedCustomer] = React.useState<Customer | null>(null);
-  const [newCustomerData, setNewCustomerData] = React.useState<NewCustomerData>({
-    name: '',
-    phone: '',
-    email: '',
-    password: '',
-  });
-  const [guestData, setGuestData] = React.useState<GuestCustomerData>({
-    name: '',
-    phone: '',
-    email: '',
-  });
   
+  // Customer data
+  const [phone, setPhone] = React.useState('');
+  const [customerName, setCustomerName] = React.useState('');
+  const [customerEmail, setCustomerEmail] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState<CustomerMatch[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = React.useState<string | null>(null);
+  const [hasSearched, setHasSearched] = React.useState(false);
+  const [isSearching, setIsSearching] = React.useState(false);
+  
+  // Booking details
   const [roomId, setRoomId] = React.useState('');
   const [date, setDate] = React.useState('');
   const [time, setTime] = React.useState('');
-  const [hours, setHours] = React.useState(1);
+  const [duration, setDuration] = React.useState(1);
   const [players, setPlayers] = React.useState(1);
   
   const [error, setError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const isSubmittingRef = React.useRef(false);
 
   const resetForm = () => {
-    setCurrentStep('source');
+    setCurrentStep('customer');
     setBookingSource('WALK_IN');
-    setCustomerMode('existing');
-    setSelectedCustomer(null);
-    setNewCustomerData({ name: '', phone: '', email: '', password: '' });
-    setGuestData({ name: '', phone: '', email: '' });
+    setPhone('');
+    setCustomerName('');
+    setCustomerEmail('');
+    setSearchResults([]);
+    setSelectedCustomerId(null);
+    setHasSearched(false);
     setRoomId('');
     setDate('');
     setTime('');
-    setHours(1);
+    setDuration(1);
     setPlayers(1);
     setError('');
   };
@@ -60,8 +65,79 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
     onClose();
   };
 
+  const handlePhoneSearch = async () => {
+    if (!phone || phone.length < 10) {
+      setSearchResults([]);
+      setHasSearched(false);
+      return;
+    }
+    
+    setIsSearching(true);
+    setError('');
+    
+    try {
+      const response = await fetch(`http://localhost:8080/api/users/lookup?phone=${encodeURIComponent(phone)}`, {
+        headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' },
+      });
+      
+      const data = await response.json();
+      setHasSearched(true);
+      
+      if (data.found && data.user) {
+        setSearchResults([{
+          id: data.user.id,
+          name: data.user.name,
+          phone: data.user.phone,
+          email: data.user.email,
+          bookingCount: data.stats?.bookingCount || 0,
+        }]);
+        setSelectedCustomerId(data.user.id);
+        setCustomerName(data.user.name);
+        if (data.user.email) {
+          setCustomerEmail(data.user.email);
+        }
+      } else {
+        setSearchResults([]);
+        setSelectedCustomerId(null);
+        setCustomerName('');
+      }
+    } catch (err) {
+      setError('Failed to search for customer');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced phone search (E.164 format is +1XXXXXXXXXX = 12 chars)
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (phone.length === 12 && phone.startsWith('+1')) {
+        handlePhoneSearch();
+      } else {
+        setSearchResults([]);
+        setHasSearched(false);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [phone]);
+
+  const handleSelectCustomer = (customer: CustomerMatch) => {
+    setSelectedCustomerId(customer.id);
+    setCustomerName(customer.name);
+    if (customer.email) {
+      setCustomerEmail(customer.email);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedCustomerId(null);
+    setCustomerName('');
+    setCustomerEmail('');
+  };
+
   const nextStep = () => {
-    const steps: Step[] = ['source', 'customerMode', 'customerData', 'bookingDetails', 'review'];
+    const steps: Step[] = ['customer', 'details'];
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex < steps.length - 1) {
       setCurrentStep(steps[currentIndex + 1]);
@@ -70,7 +146,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
   };
 
   const prevStep = () => {
-    const steps: Step[] = ['source', 'customerMode', 'customerData', 'bookingDetails', 'review'];
+    const steps: Step[] = ['customer', 'details'];
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex > 0) {
       setCurrentStep(steps[currentIndex - 1]);
@@ -78,40 +154,35 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
     }
   };
 
+  const canProceedFromCustomer = () => {
+    return phone.length >= 10 && customerName.trim().length > 0;
+  };
+
+  const canProceedToSubmit = () => {
+    return roomId && date && time && duration > 0 && players > 0;
+  };
+
   const handleSubmit = async () => {
-    // Prevent double submissions using ref (synchronous check)
-    if (isSubmittingRef.current) {
-      return;
-    }
+    if (isSubmitting) return;
     
-    // Also check state for extra safety
-    if (isSubmitting) {
-      return;
-    }
-    
-    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setError('');
     
     try {
-      const payload: any = {
-        customerMode,
-        bookingSource,
+      const normalizedPhone = phone.startsWith('+') ? phone : `+1${phone.replace(/\D/g, '')}`;
+      
+      const payload = {
+        customerName: customerName.trim(),
+        customerPhone: normalizedPhone,
+        customerEmail: bookingSource === 'ONLINE' && customerEmail ? customerEmail : undefined,
         roomId,
-        startTimeIso: `${date}T${time}:00.000Z`,
-        hours,
+        startTime: `${date}T${time}:00.000Z`,
+        duration,
         players,
+        bookingSource,
       };
 
-      if (customerMode === 'existing') {
-        payload.customerPhone = selectedCustomer?.phone;
-      } else if (customerMode === 'new') {
-        payload.newCustomer = newCustomerData;
-      } else if (customerMode === 'guest') {
-        payload.guest = guestData;
-      }
-
-      const response = await fetch('http://localhost:8080/api/bookings/admin/create', {
+      const response = await fetch('http://localhost:8080/api/bookings/simple/create', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -122,48 +193,19 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create booking');
+        throw new Error(errorData.error || errorData.details || 'Failed to create booking');
       }
 
+      const result = await response.json();
+      console.log('[BOOKING] Created:', result);
+      
       onSuccess();
       handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create booking');
     } finally {
-      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
-  };
-
-  const canProceedFromCustomerMode = () => {
-    // Must have selected a customer mode
-    if (!customerMode) {
-      return false;
-    }
-    // Guest mode is only allowed for walk-in bookings
-    if (customerMode === 'guest' && bookingSource === 'PHONE') {
-      return false;
-    }
-    return true;
-  };
-
-  const canProceedFromCustomerData = () => {
-    if (customerMode === 'existing') {
-      return !!selectedCustomer;
-    } else if (customerMode === 'new') {
-      return newCustomerData.name && newCustomerData.phone && newCustomerData.password;
-    } else if (customerMode === 'guest') {
-      // Guest mode only allowed for walk-in bookings
-      if (bookingSource === 'PHONE') {
-        return false;
-      }
-      return guestData.name && guestData.phone;
-    }
-    return false;
-  };
-
-  const canProceedToReview = () => {
-    return roomId && date && time && hours > 0 && players > 0;
   };
 
   if (!isOpen) return null;
@@ -176,11 +218,10 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
             <h2 className="text-2xl font-bold text-white">Create Booking</h2>
             <button onClick={handleClose} className="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
           </div>
-          
           {/* Progress Indicator */}
           <div className="flex items-center gap-2 text-xs">
-            {['Source', 'Mode', 'Customer', 'Details', 'Review'].map((label, idx) => {
-              const steps: Step[] = ['source', 'customerMode', 'customerData', 'bookingDetails', 'review'];
+            {['Customer', 'Details'].map((label, idx) => {
+              const steps: Step[] = ['customer', 'details'];
               const currentIdx = steps.indexOf(currentStep);
               const isActive = idx === currentIdx;
               const isComplete = idx < currentIdx;
@@ -189,7 +230,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                   <div className={`px-3 py-1 rounded ${isActive ? 'bg-amber-500 text-black font-medium' : isComplete ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-400'}`}>
                     {label}
                   </div>
-                  {idx < 4 && <div className="h-px w-4 bg-slate-600" />}
+                  {idx < 1 && <div className="h-px w-4 bg-slate-600" />}
                 </React.Fragment>
               );
             })}
@@ -203,184 +244,127 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
             </div>
           )}
 
-          {/* Step 1: Booking Source */}
-          {currentStep === 'source' && (
+          {currentStep === 'customer' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2">Select Booking Source</h3>
-                <p className="text-sm text-slate-400 mb-4">How is this booking being made?</p>
+                <h3 className="text-lg font-semibold text-white mb-2">Customer Information</h3>
+                <p className="text-sm text-slate-400 mb-4">Search by phone or enter new customer details</p>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div data-testid="source-walk-in" onClick={() => setBookingSource('WALK_IN')} className="cursor-pointer">
-                  <Card className={`p-6 transition-all ${bookingSource === 'WALK_IN' ? 'bg-amber-500/10 border-amber-500' : 'hover:bg-slate-700/50'}`}>
-                    <div className="text-center">
-                      <h4 className="font-semibold text-white mb-1">Walk-in</h4>
-                      <p className="text-xs text-slate-400">Customer is present</p>
-                    </div>
-                  </Card>
-                </div>
-                
-                <div data-testid="source-phone" onClick={() => setBookingSource('PHONE')} className="cursor-pointer">
-                  <Card className={`p-6 transition-all ${bookingSource === 'PHONE' ? 'bg-amber-500/10 border-amber-500' : 'hover:bg-slate-700/50'}`}>
-                    <div className="text-center">
-                      <h4 className="font-semibold text-white mb-1">Phone</h4>
-                      <p className="text-xs text-slate-400">Remote booking</p>
-                    </div>
-                  </Card>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Step 2: Customer Mode */}
-          {currentStep === 'customerMode' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-2">Customer Type</h3>
-                <p className="text-sm text-slate-400 mb-4">Select how to identify the customer</p>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div data-testid="mode-existing" onClick={() => setCustomerMode('existing')} className="cursor-pointer">
-                  <Card className={`p-6 transition-all ${customerMode === 'existing' ? 'bg-amber-500/10 border-amber-500' : 'hover:bg-slate-700/50'}`}>
-                    <div className="text-center">
-                      <h4 className="font-semibold text-white text-sm mb-1">Existing</h4>
-                      <p className="text-xs text-slate-400">Lookup customer</p>
-                    </div>
-                  </Card>
-                </div>
-                
-                <div data-testid="mode-new-customer" onClick={() => setCustomerMode('new')} className="cursor-pointer">
-                  <Card className={`p-6 transition-all ${customerMode === 'new' ? 'bg-amber-500/10 border-amber-500' : 'hover:bg-slate-700/50'}`}>
-                    <div className="text-center">
-                      <h4 className="font-semibold text-white text-sm mb-1">New</h4>
-                      <p className="text-xs text-slate-400">Register account</p>
-                    </div>
-                  </Card>
-                </div>
-                
-                <div 
-                  data-testid="mode-guest"
-                  onClick={() => bookingSource === 'WALK_IN' && setCustomerMode('guest')} 
-                  className={bookingSource === 'PHONE' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+              {/* Booking Source Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  onClick={() => setBookingSource('WALK_IN')}
+                  variant={bookingSource === 'WALK_IN' ? 'default' : 'outline'}
+                  className={bookingSource === 'WALK_IN' ? 'bg-amber-500 text-black hover:bg-amber-600' : ''}
                 >
-                  <Card className={`p-6 transition-all ${customerMode === 'guest' ? 'bg-amber-500/10 border-amber-500' : bookingSource === 'PHONE' ? '' : 'hover:bg-slate-700/50'}`}>
-                    <div className="text-center">
-                      <h4 className="font-semibold text-white text-sm mb-1">Guest</h4>
-                      <p className="text-xs text-slate-400">
-                        {bookingSource === 'PHONE' ? 'Walk-in only' : 'No account'}
-                      </p>
-                    </div>
-                  </Card>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Customer Data */}
-          {currentStep === 'customerData' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  {customerMode === 'existing' && 'Find Customer'}
-                  {customerMode === 'new' && 'New Customer Details'}
-                  {customerMode === 'guest' && 'Guest Information'}
-                </h3>
+                  Walk-in
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setBookingSource('PHONE')}
+                  variant={bookingSource === 'PHONE' ? 'default' : 'outline'}
+                  className={bookingSource === 'PHONE' ? 'bg-amber-500 text-black hover:bg-amber-600' : ''}
+                >
+                  Phone
+                </Button>
               </div>
 
-              {customerMode === 'existing' && (
-                <CustomerSearch 
-                  onSelectCustomer={setSelectedCustomer}
-                  selectedCustomer={selectedCustomer}
-                />
-              )}
-
-              {customerMode === 'new' && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="new-name">Full Name *</Label>
-                    <Input
-                      id="new-name"
-                      data-testid="customer-name"
-                      value={newCustomerData.name}
-                      onChange={(e) => setNewCustomerData({...newCustomerData, name: e.target.value})}
-                      placeholder="John Smith"
-                    />
-                  </div>
-                  
+              <div className="space-y-4">
+                {/* Phone Input with Live Search */}
+                <div className="space-y-2">
                   <PhoneInput
-                    value={newCustomerData.phone}
-                    onChange={(phone) => setNewCustomerData({...newCustomerData, phone})}
+                    value={phone}
+                    onChange={setPhone}
                     label="Phone Number"
                     required
                   />
-                  
+                  {isSearching && (
+                    <p className="text-xs text-slate-400">Searching...</p>
+                  )}
+                </div>
+
+                {hasSearched && searchResults.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-300">Found {searchResults.length} customer(s):</label>
+                    {searchResults.map(customer => (
+                      <button
+                        key={customer.id}
+                        onClick={() => handleSelectCustomer(customer)}
+                        className={`w-full text-left p-4 rounded border transition-all ${
+                          selectedCustomerId === customer.id
+                            ? 'bg-amber-500/10 border-amber-500'
+                            : 'bg-slate-900/50 border-slate-600 hover:border-amber-500/50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-white">{customer.name}</div>
+                            <div className="text-sm text-slate-400">{customer.phone}</div>
+                            {customer.email && <div className="text-xs text-slate-500">{customer.email}</div>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-emerald-500/20 text-emerald-300">
+                              Registered
+                            </span>
+                            <span className="text-xs text-slate-400">{customer.bookingCount} bookings</span>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                    
+                    <button
+                      onClick={handleClearSelection}
+                      className="w-full p-3 rounded border border-slate-600 bg-slate-900/30 hover:bg-slate-900/50 text-slate-300 text-sm font-medium transition-all"
+                    >
+                      + Create New Customer Profile
+                    </button>
+                  </div>
+                )}
+
+                {hasSearched && searchResults.length === 0 && (
+                  <div className="p-4 rounded bg-slate-900/50 border border-slate-600">
+                    <p className="text-sm text-slate-400">No existing customer found with this phone number</p>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="customer-name">Customer Name *</Label>
+                  <Input
+                    id="customer-name"
+                    data-testid="customer-name"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder={selectedCustomerId ? "Edit name if needed" : "Enter customer name"}
+                  />
+                  {selectedCustomerId && (
+                    <p className="text-xs text-slate-400 mt-1">Name can be edited (phone is the primary identifier)</p>
+                  )}
+                </div>
+
+                {bookingSource === 'ONLINE' && (
                   <div>
-                    <Label htmlFor="new-email">Email (optional)</Label>
+                    <Label htmlFor="customer-email">Email (Optional)</Label>
                     <Input
-                      id="new-email"
+                      id="customer-email"
                       data-testid="customer-email"
                       type="email"
-                      value={newCustomerData.email}
-                      onChange={(e) => setNewCustomerData({...newCustomerData, email: e.target.value})}
-                      placeholder="john@example.com"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="customer@example.com"
                     />
                   </div>
-                  
-                  <div>
-                    <Label htmlFor="new-password">Password *</Label>
-                    <Input
-                      id="new-password"
-                      data-testid="customer-password"
-                      type="password"
-                      value={newCustomerData.password}
-                      onChange={(e) => setNewCustomerData({...newCustomerData, password: e.target.value})}
-                      placeholder="Min 6 characters"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {customerMode === 'guest' && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="guest-name">Full Name *</Label>
-                    <Input
-                      id="guest-name"
-                      value={guestData.name}
-                      onChange={(e) => setGuestData({...guestData, name: e.target.value})}
-                      placeholder="John Smith"
-                    />
-                  </div>
-                  
-                  <PhoneInput
-                    value={guestData.phone}
-                    onChange={(phone) => setGuestData({...guestData, phone})}
-                    label="Phone Number"
-                    required
-                  />
-                  
-                  <div>
-                    <Label htmlFor="guest-email">Email (optional)</Label>
-                    <Input
-                      id="guest-email"
-                      type="email"
-                      value={guestData.email}
-                      onChange={(e) => setGuestData({...guestData, email: e.target.value})}
-                      placeholder="john@example.com"
-                    />
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
-          {/* Step 4: Booking Details */}
-          {currentStep === 'bookingDetails' && (
+          {currentStep === 'details' && (
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2">Booking Details</h3>
+                <p className="text-sm text-slate-400">Customer: <span className="text-white font-medium">{customerName}</span> ({phone})</p>
               </div>
 
               <div className="space-y-4">
@@ -426,15 +410,15 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="hours">Duration (hours) *</Label>
+                    <Label htmlFor="duration">Duration (hours) *</Label>
                     <Input
-                      id="hours"
+                      id="duration"
                       data-testid="booking-hours"
                       type="number"
                       min="1"
-                      max="8"
-                      value={hours}
-                      onChange={(e) => setHours(parseInt(e.target.value))}
+                      max="4"
+                      value={duration}
+                      onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
                     />
                   </div>
                   
@@ -447,104 +431,19 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                       min="1"
                       max="4"
                       value={players}
-                      onChange={(e) => setPlayers(parseInt(e.target.value))}
+                      onChange={(e) => setPlayers(parseInt(e.target.value) || 1)}
                     />
                   </div>
                 </div>
               </div>
             </div>
           )}
-
-          {/* Step 5: Review */}
-          {currentStep === 'review' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-2">Review & Confirm</h3>
-                <p className="text-sm text-slate-400">Please review the booking details</p>
-              </div>
-
-              <div className="space-y-4">
-                <Card className="p-4">
-                  <h4 className="font-semibold text-white mb-3">Customer</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Type:</span>
-                      <span className="text-white capitalize">{customerMode}</span>
-                    </div>
-                    {customerMode === 'existing' && selectedCustomer && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Name:</span>
-                          <span data-testid="review-customer-name" className="text-white">{selectedCustomer.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Phone:</span>
-                          <span data-testid="review-phone" className="text-white">{selectedCustomer.phone}</span>
-                        </div>
-                      </>
-                    )}
-                    {customerMode === 'new' && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Name:</span>
-                          <span data-testid="review-customer-name" className="text-white">{newCustomerData.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Phone:</span>
-                          <span data-testid="review-phone" className="text-white">{newCustomerData.phone}</span>
-                        </div>
-                      </>
-                    )}
-                    {customerMode === 'guest' && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Name:</span>
-                          <span data-testid="review-customer-name" className="text-white">{guestData.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Phone:</span>
-                          <span data-testid="review-phone" className="text-white">{guestData.phone}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </Card>
-
-                <Card className="p-4">
-                  <h4 className="font-semibold text-white mb-3">Booking</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Source:</span>
-                      <span className="text-white">{bookingSource}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Room:</span>
-                      <span className="text-white">{rooms.find(r => r.id === roomId)?.name || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Date & Time:</span>
-                      <span className="text-white">{date} at {time}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Duration:</span>
-                      <span className="text-white">{hours} hour{hours > 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Players:</span>
-                      <span className="text-white">{players}</span>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Footer with navigation buttons */}
         <div className="sticky bottom-0 bg-slate-800 border-t border-slate-700 p-6 flex justify-between gap-3">
           <Button
             onClick={prevStep}
-            disabled={currentStep === 'source'}
+            disabled={currentStep === 'customer'}
             variant="outline"
           >
             Back
@@ -555,20 +454,20 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
               Cancel
             </Button>
             
-            {currentStep !== 'review' ? (
+            {currentStep !== 'details' ? (
               <Button
                 data-testid="continue-btn"
                 onClick={nextStep}
-                disabled={
-                  (currentStep === 'customerMode' && !canProceedFromCustomerMode()) ||
-                  (currentStep === 'customerData' && !canProceedFromCustomerData()) ||
-                  (currentStep === 'bookingDetails' && !canProceedToReview())
-                }
+                disabled={currentStep === 'customer' && !canProceedFromCustomer()}
               >
                 Continue
               </Button>
             ) : (
-              <Button data-testid="create-booking-btn" onClick={handleSubmit} disabled={isSubmitting}>
+              <Button 
+                data-testid="create-booking-btn" 
+                onClick={handleSubmit} 
+                disabled={isSubmitting || !canProceedToSubmit()}
+              >
                 {isSubmitting ? 'Creating...' : 'Create Booking'}
               </Button>
             )}

@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import pino from 'pino';
 import { bookingRouter } from './routes/booking';
+import bookingSimpleRouter from './routes/bookingSimple';
 import { authRouter } from './routes/auth';
 import settingsRouter from './routes/settings';
 import usersRouter from './routes/users';
@@ -22,6 +23,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/bookings', bookingRouter);
+app.use('/api/bookings/simple', bookingSimpleRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/menu', menuRouter);

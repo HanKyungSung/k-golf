@@ -43,14 +43,15 @@ function formatPhoneNumber(input: string): string {
 
 /**
  * Convert to E.164 format: +1XXXXXXXXXX
- * Only converts if exactly 10 digits
+ * Returns partial format for less than 10 digits to preserve state
  */
 function toE164(input: string): string {
-  const digits = input.replace(/\D/g, '').slice(0, 10); // Limit to 10 digits
+  const digits = input.replace(/\D/g, '').slice(0, 10);
   if (digits.length === 10) {
     return `+1${digits}`;
   }
-  return '';
+  // Return partial value to maintain state
+  return digits.length > 0 ? `+1${digits}` : '';
 }
 
 /**
@@ -74,9 +75,16 @@ export const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
     ref
   ) => {
     const [displayValue, setDisplayValue] = React.useState('');
+    const isUpdatingRef = React.useRef(false);
 
-    // Initialize display value from E.164 format
+    // Initialize display value from E.164 format (only on external changes)
     React.useEffect(() => {
+      // Skip if we're updating from user input
+      if (isUpdatingRef.current) {
+        isUpdatingRef.current = false;
+        return;
+      }
+      
       if (value && value.startsWith('+1')) {
         const digits = value.slice(2);
         setDisplayValue(formatPhoneNumber(digits));
@@ -87,11 +95,19 @@ export const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const input = e.target.value;
-      const formatted = formatPhoneNumber(input);
+      
+      // Extract just the digits
+      const digits = input.replace(/\D/g, '').slice(0, 10);
+      
+      // Format the digits for display
+      const formatted = formatPhoneNumber(digits);
       setDisplayValue(formatted);
 
-      // Convert to E.164 and pass to parent
-      const e164 = toE164(input);
+      // Mark that we're updating from user input
+      isUpdatingRef.current = true;
+
+      // Convert to E.164 and pass to parent (empty string if < 10 digits)
+      const e164 = toE164(digits);
       onChange(e164);
     };
 

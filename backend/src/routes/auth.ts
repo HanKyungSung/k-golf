@@ -36,6 +36,19 @@ router.post('/register', async (req, res) => {
   
   const passwordHash = await hashPassword(password);
   const user = await createUser(normEmail, name, normPhone, passwordHash);
+  
+  // Auto-link existing guest bookings with matching phone number
+  const linkedCount = await prisma.$executeRaw`
+    UPDATE "Booking"
+    SET "userId" = ${user.id}
+    WHERE "customerPhone" = ${normPhone}
+      AND "userId" IS NULL
+  `;
+  
+  if (linkedCount > 0) {
+    console.log(`[AUTH] Linked ${linkedCount} guest bookings to new user ${user.id}`);
+  }
+  
   const { plain, expiresAt } = await createEmailVerificationToken(user.id);
   try {
     if (user.email) {

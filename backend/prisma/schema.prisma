@@ -65,8 +65,8 @@ model Booking {
   id            String   @id @default(uuid())
   room          Room     @relation(fields: [roomId], references: [id])
   roomId        String
-  user          User     @relation(fields: [userId], references: [id]) // Always required (customer profile)
-  userId        String   // Always required - links to User (customer profile or account)
+  user          User?    @relation(fields: [userId], references: [id]) // Nullable: supports guest bookings
+  userId        String?  // Nullable: null for guest bookings, auto-linked on registration
   customerName  String   // Denormalized snapshot: name at booking time
   customerPhone String   // Denormalized snapshot: phone at booking time
   customerEmail String?  // Denormalized snapshot: email at booking time (optional)
