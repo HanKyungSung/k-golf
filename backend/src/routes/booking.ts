@@ -166,6 +166,7 @@ router.post('/', requireAuth, async (req, res) => {
       players,
       hours,
       price,
+      bookingSource: 'ONLINE', // Web frontend bookings are always ONLINE
     });
     res.status(201).json({ booking: presentBooking(booking) });
   } catch (e: any) {

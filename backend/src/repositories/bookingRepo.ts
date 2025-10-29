@@ -13,6 +13,7 @@ export interface CreateBookingInput {
   hours?: number; // Optional if endTime provided
   price: number | string; // stored as Decimal(10,2) in DB
   status?: string;
+  bookingSource: string; // Required: "ONLINE" | "WALK_IN" | "PHONE"
 }
 
 // Compute endTime: independent hours selection
@@ -46,6 +47,7 @@ export async function createBooking(data: CreateBookingInput): Promise<Booking> 
       players: data.players,
       price: data.price,
       status: data.status || 'CONFIRMED',
+      bookingSource: data.bookingSource, // Required field, no default
     },
   });
 }

@@ -276,6 +276,10 @@ async function main() {
 						const isPast = startTime < today;
 						const status = isPast ? 'CONFIRMED' : 'CONFIRMED'; // All confirmed for now
 						
+						// Random booking source: ONLINE, WALK_IN, or PHONE
+						const sources = ['ONLINE', 'WALK_IN', 'PHONE'];
+						const bookingSource = sources[Math.floor(Math.random() * sources.length)];
+						
 						// Created at: random time before start time
 						const createdAt = new Date(startTime.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000); // Up to 7 days before
 						
@@ -290,8 +294,7 @@ async function main() {
 							players,
 							price: basePrice,
 							status,
-							isGuestBooking: false,
-							bookingSource: Math.random() < 0.5 ? 'WALK_IN' : 'PHONE',
+							bookingSource: bookingSource,
 							createdBy: adminUser.id,
 							createdAt,
 						});

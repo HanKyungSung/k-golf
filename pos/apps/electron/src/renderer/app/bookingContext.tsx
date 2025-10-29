@@ -21,6 +21,7 @@ export interface Booking {
   customerName: string;
   customerEmail: string;
   customerPhone?: string;
+  bookingSource: string;
   roomName: string;
   roomId: string;
   date: string;
@@ -138,6 +139,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             customerName: b.customerName || 'Guest',
             customerEmail: b.customerEmail || '',
             customerPhone: b.customerPhone || '',
+            bookingSource: b.bookingSource,
             roomName: room?.name || `Room ${b.roomId}`,
             roomId: b.roomId,
             date: startTime.toISOString().split('T')[0],

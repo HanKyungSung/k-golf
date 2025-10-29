@@ -728,6 +728,7 @@ export default function BookingDetailPage() {
                   <InfoBlock label="Start Time" value={booking.time} />
                   <InfoBlock label="Duration" value={`${booking.duration} hour(s)`} />
                   <InfoBlock label="Players" value={`${booking.players}`} />
+                  <InfoBlock label="Booking Source" value={booking.bookingSource} />
                 </div>
                 {booking.notes && (
                   <div className="pt-4 border-t border-slate-700 mt-4">
