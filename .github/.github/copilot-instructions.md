@@ -6,6 +6,7 @@
 - When explaining concepts or flows, use **visual diagrams and code examples** in responses rather than creating documentation files
 - Prefer inline explanations with ASCII diagrams, code snippets, and visual representations
 - Only create documentation files when the user specifically asks for it
+- Provide compact commit message when user ask for it
 
 ## Communication Style
 
