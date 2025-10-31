@@ -48,6 +48,13 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [x] Validation prevents orphaning items when reducing seats
 - **menu pos** 
   - will need to have check list of what it was served or not.
+- **Booking Availability & Time Slots:**
+  - [x] **DECISION:** Unified time slot system (exact times for availability)
+    - Walk-in bookings: Allow exact time selection (e.g., 1:12 PM)
+    - Online booking availability: Based on actual end times (e.g., if walk-in ends 2:12 PM, next slot is 2:12 PM)
+    - No rounding to standard intervals (:00, :30) - show real availability
+  - [ ] Cleaning/buffer time: Decide if gaps needed between bookings (e.g., 15 min cleaning time)
+  - [ ] Implementation: Backend availability endpoint should return exact available start times based on existing booking end times
 
 ### Open questions
 - [x] ~~When the number of seats changes, does number of players also should changes?~~ → Decoupled: seats and players are independent

@@ -152,12 +152,37 @@ export const TabsContent: React.FC<{
 export const Input = React.forwardRef<
   HTMLInputElement,
   React.InputHTMLAttributes<HTMLInputElement>
->(({ className = '', type, ...props }, ref) => {
+>(({ className = '', type, onClick, ...props }, ref) => {
+  // Add cursor-pointer for date/time inputs to make them more obviously clickable
+  const cursorClass = (type === 'date' || type === 'time') ? 'cursor-pointer' : '';
+  
+  // Handle click to open picker for date/time inputs
+  const handleClick = (e: React.MouseEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    if (type === 'date' || type === 'time') {
+      // Try to open the native picker
+      if ('showPicker' in input && typeof input.showPicker === 'function') {
+        try {
+          input.showPicker();
+        } catch (error) {
+          // Fallback: focus the input which may trigger picker in some browsers
+          input.focus();
+        }
+      } else {
+        // Fallback for browsers that don't support showPicker
+        input.focus();
+      }
+    }
+    // Call original onClick if provided
+    onClick?.(e);
+  };
+  
   return (
     <input
       type={type}
       ref={ref}
-      className={`flex h-9 w-full rounded-md border border-slate-600 bg-slate-900/50 px-3 py-1 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`flex h-9 w-full rounded-md border border-slate-600 bg-slate-900/50 px-3 py-1 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50 [color-scheme:dark] ${cursorClass} ${className}`}
+      onClick={handleClick}
       {...props}
     />
   );

@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Button, Card, Input, Label } from './ui/primitives';
 import { PhoneInput } from './PhoneInput';
+import { TimePicker } from './ui/TimePicker';
+import { DatePicker } from './ui/DatePicker';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -213,7 +215,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={handleClose}>
-      <div data-testid="booking-modal" className="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div data-testid="booking-modal" className="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl max-w-3xl w-full min-h-[55vh] max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 z-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-white">Create Booking</h2>
@@ -388,23 +390,21 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="date">Date *</Label>
-                    <Input
+                    <DatePicker
                       id="date"
                       data-testid="booking-date"
-                      type="date"
                       value={date}
-                      onChange={(e) => setDate(e.target.value)}
+                      onChange={(value) => setDate(value)}
                     />
                   </div>
                   
                   <div>
                     <Label htmlFor="time">Time *</Label>
-                    <Input
+                    <TimePicker
                       id="time"
                       data-testid="booking-time"
-                      type="time"
                       value={time}
-                      onChange={(e) => setTime(e.target.value)}
+                      onChange={(value) => setTime(value)}
                     />
                   </div>
                 </div>
