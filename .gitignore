@@ -75,3 +75,8 @@ Thumbs.db
 .tmp/
 tmp/
 *.tsbuildinfo
+
+# MCP Server (development tooling, not part of the app)
+k-golf-mcp-server/
+../k-golf-mcp-server/
+mcp-server/
