@@ -1,0 +1,10 @@
+{
+  "github.copilot.chat.mcp.servers": {
+    "k-golf-droplet": {
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/k-golf-mcp-server/dist/index.js"
+      ]
+    }
+  }
+}
