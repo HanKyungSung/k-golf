@@ -70,6 +70,7 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 
 # Temporary scratch
 .tmp/
