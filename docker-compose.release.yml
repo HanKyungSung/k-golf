@@ -41,28 +41,12 @@ services:
     env_file:
       - .env.production
   # All runtime vars (including NODE_ENV, PORT) provided via .env.production
-    expose:
-      - "8080"
+    ports:
+      - "8082:8080"
     networks:
       - kgolf_net
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    restart: unless-stopped
-
-  frontend:
-    image: ghcr.io/hankyungsung/kgolf-frontend:${IMAGE_TAG:-latest}
-    depends_on:
-      backend:
-        condition: service_healthy
-    ports:
-      - "8081:80"
-    networks:
-      - kgolf_net
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
       interval: 30s
       timeout: 5s
       retries: 3

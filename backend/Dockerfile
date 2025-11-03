@@ -1,29 +1,40 @@
-## Backend Dockerfile (multi-stage) for production
-FROM node:20-alpine AS deps
-WORKDIR /app
+## Backend Dockerfile (multi-stage) for production - includes frontend static files
+FROM node:20-alpine AS backend-deps
+WORKDIR /app/backend
 ENV CI=true
 RUN apk add --no-cache openssl libc6-compat
-COPY package*.json ./
-COPY prisma ./prisma
+COPY backend/package*.json ./
+COPY backend/prisma ./prisma
 RUN npm install
 
-FROM node:20-alpine AS build
-WORKDIR /app
+FROM node:20-alpine AS backend-build
+WORKDIR /app/backend
 ENV NODE_ENV=production
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-# Build triggers prisma generate via prebuild script
+COPY --from=backend-deps /app/backend/node_modules ./node_modules
+COPY backend/ ./
+# Build backend - triggers prisma generate
+RUN npm run build
+
+FROM node:20-alpine AS frontend-build
+WORKDIR /app/frontend
+ENV CI=true
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+# Build frontend static files
 RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache openssl libc6-compat
-# Only copy necessary runtime files
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/package*.json ./
+# Copy backend runtime files
+COPY --from=backend-build /app/backend/node_modules ./node_modules
+COPY --from=backend-build /app/backend/dist ./dist
+COPY --from=backend-build /app/backend/prisma ./prisma
+COPY --from=backend-build /app/backend/package*.json ./
+# Copy frontend static files to public directory
+COPY --from=frontend-build /app/frontend/dist ./public
 
 # Expose app port (matches PORT env or fallback in code)
 EXPOSE 8080

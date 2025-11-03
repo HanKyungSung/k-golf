@@ -1,19 +1,18 @@
-## Docker CI/CD workflow: builds images and deploys via SSH using docker-compose.release.yml
+## Docker CI/CD workflow: builds backend image (includes frontend) and deploys via SSH
 name: Docker Deploy
 
 on:
   push:
     branches: [ main ]          # Trigger automatically on pushes to main
-  workflow_dispatch: {}          # Allow manual manual run
+  workflow_dispatch: {}          # Allow manual run
 
 env:
   REGISTRY: ghcr.io                               # Container registry host
   IMAGE_BACKEND: ghcr.io/hankyungsung/kgolf-backend
-  IMAGE_FRONTEND: ghcr.io/hankyungsung/kgolf-frontend
 
 jobs:
   build-and-push:
-    name: Build & Push Images
+    name: Build & Push Backend Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -41,36 +40,16 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Extract metadata (frontend)
-        id: meta_frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_FRONTEND }}
-          tags: |
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build & push backend
+      - name: Build & push backend (includes frontend static files)
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: .
           file: ./backend/Dockerfile
           push: true
           tags: ${{ steps.meta_backend.outputs.tags }}
           labels: ${{ steps.meta_backend.outputs.labels }}
           cache-from: type=registry,ref=${{ env.IMAGE_BACKEND }}:buildcache
           cache-to: type=registry,ref=${{ env.IMAGE_BACKEND }}:buildcache,mode=max
-
-      - name: Build & push frontend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          tags: ${{ steps.meta_frontend.outputs.tags }}
-          labels: ${{ steps.meta_frontend.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.IMAGE_FRONTEND }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_FRONTEND }}:buildcache,mode=max
 
       - name: Export IMAGE_TAG (commit SHA)
         id: vars
