@@ -81,3 +81,6 @@ tmp/
 k-golf-mcp-server/
 ../k-golf-mcp-server/
 mcp-server/
+
+# Server status markdown file
+SERVER_STATUS.md
