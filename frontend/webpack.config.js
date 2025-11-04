@@ -10,7 +10,11 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') })
 module.exports = {
   entry: path.resolve(__dirname, 'src', 'main.tsx'),
   output: {
-    path: path.resolve(__dirname, '../backend/dist/public'),
+    // In Docker: output to ./dist (default)
+    // Locally: output to ../backend/dist/public for unified structure
+    path: process.env.WEBPACK_OUTPUT_PATH 
+      ? path.resolve(__dirname, process.env.WEBPACK_OUTPUT_PATH)
+      : path.resolve(__dirname, '../backend/dist/public'),
     filename: 'assets/[name].[contenthash].js',
     chunkFilename: 'assets/[name].[contenthash].js',
     publicPath: '/',
@@ -79,7 +83,12 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: path.resolve(__dirname, 'public'), to: path.resolve(__dirname, '../backend/dist/public') },
+        { 
+          from: path.resolve(__dirname, 'public'), 
+          to: process.env.WEBPACK_OUTPUT_PATH 
+            ? path.resolve(__dirname, process.env.WEBPACK_OUTPUT_PATH)
+            : path.resolve(__dirname, '../backend/dist/public')
+        },
       ],
     }),
   ],

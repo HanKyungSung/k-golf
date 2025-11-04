@@ -18,6 +18,8 @@ RUN npm run build
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/frontend
 ENV CI=true
+# Set webpack output to ./dist (default Docker behavior)
+ENV WEBPACK_OUTPUT_PATH=./dist
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ ./
