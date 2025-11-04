@@ -14,3 +14,12 @@
 - Show data flows and architecture using text-based diagrams
 - Include code examples with inline comments for explanations
 - Keep explanations concise and visual-first
+
+## Command Execution Guidelines
+
+- **Always explain commands** before or when running them on servers
+- For each terminal command, provide a brief one-line explanation of:
+  - What the command does
+  - What it's checking or modifying
+  - Expected outcome
+- Example format: "Check Docker container status to verify K-Golf is running"
