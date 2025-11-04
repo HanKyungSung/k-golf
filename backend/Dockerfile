@@ -33,8 +33,8 @@ COPY --from=backend-build /app/backend/node_modules ./node_modules
 COPY --from=backend-build /app/backend/dist ./dist
 COPY --from=backend-build /app/backend/prisma ./prisma
 COPY --from=backend-build /app/backend/package*.json ./
-# Copy frontend static files to public directory
-COPY --from=frontend-build /app/frontend/dist ./public
+# Copy frontend static files to dist/public (matches local structure)
+COPY --from=frontend-build /app/frontend/dist ./dist/public
 
 # Expose app port (matches PORT env or fallback in code)
 EXPOSE 8080
@@ -42,4 +42,4 @@ EXPOSE 8080
 # Healthcheck (optional, compose has its own)
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://localhost:8080/health || exit 1
 
-CMD ["node", "dist/src/server.js"]
+CMD ["node", "dist/server.js"]
