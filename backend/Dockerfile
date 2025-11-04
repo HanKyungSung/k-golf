@@ -42,4 +42,4 @@ EXPOSE 8080
 # Healthcheck (optional, compose has its own)
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://localhost:8080/health || exit 1
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/src/server.js"]
