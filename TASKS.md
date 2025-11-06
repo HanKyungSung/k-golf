@@ -583,7 +583,29 @@ model Booking {
 - E.164 format: +1XXXXXXXXXX (12 chars) for complete validation
 - Partial E.164: Returns +1XXX for incomplete numbers (prevents deletion bug)
 
-### 1.8 Guest/Registered Badge Display
+### 1.8 Frontend Build & Environment Configuration – ✅ Completed
+
+**Production API URL Fix:**
+[x] Fixed frontend API calls to use relative URLs instead of localhost
+[x] Updated Dockerfile to set `REACT_APP_API_BASE=` (empty string)
+[x] Fixed webpack DefinePlugin to handle empty string correctly
+[x] Changed from `|| 'http://localhost:8080'` to explicit undefined check
+[x] Deployed fix (commit d81e5c3: "fix: properly handle empty string for REACT_APP_API_BASE")
+[x] Verified login works in production at k-golf.inviteyou.ca
+
+**Implementation:**
+- Environment Strategy: Empty string for production → relative URLs (`/api/auth/login`)
+- Fallback for Development: `http://localhost:8080` when env var not set
+- Webpack Logic: `process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080'`
+- Result: No CORS issues, same-origin requests in production
+
+**Architecture:**
+- Unified deployment: Single Node.js container serving both frontend static files and API
+- Path structure: `backend/dist/src/server.js` serves `backend/dist/public/` (frontend build output)
+- Nginx: Reverse proxy on port 8082 to k-golf.inviteyou.ca
+- Docker: Multi-stage build (frontend → backend → runner)
+
+### 1.9 Guest/Registered Badge Display
 
 [ ] Add userId to Booking interface (BookingContext.tsx)
 [ ] Update DashboardPage booking list UI
@@ -591,7 +613,7 @@ model Booking {
 [ ] Badge variants: "Registered" (userId exists) vs "Guest" (userId null)
 [ ] Verify badges display correctly after sync
 
-### 1.9 End-to-End Testing
+### 1.10 End-to-End Testing
 
 [ ] Test new guest booking creation (no existing user)
 [ ] Test existing customer booking (auto-link)
@@ -602,7 +624,7 @@ model Booking {
 [ ] Test phone input validation and formatting
 [ ] Test complete booking flow (phone → details → submit)
 
-### 1.8 Analytics Dashboard (Optional - Future)
+### 1.10 Analytics Dashboard (Optional - Future)
 
 [ ] Registration source analytics
 [ ] Charts: Users by source, bookings over time
@@ -610,7 +632,7 @@ model Booking {
 [ ] Admin performance metrics
 [ ] Filters and CSV export
 
-### 1.9 Testing & Documentation
+### 1.11 Testing & Documentation
 
 **Backend Integration Tests:**
 [ ] Create booking for existing customer
@@ -758,6 +780,32 @@ model Booking {
 ## ✅ Completed Tasks Archive
 
 <details>
+<summary>Frontend Build & Deployment (Phase 1.8) - 2025-11-06</summary>
+
+**Production API URL Fix:**
+[x] Fixed frontend API calls to use relative URLs instead of localhost
+[x] Updated backend Dockerfile to set `REACT_APP_API_BASE=` (empty string)
+[x] Fixed webpack DefinePlugin to handle empty string correctly
+[x] Changed from `|| 'http://localhost:8080'` to explicit undefined check
+[x] Deployed fix (commit d81e5c3: "fix: properly handle empty string for REACT_APP_API_BASE")
+[x] Verified login works in production at k-golf.inviteyou.ca
+
+**Architecture Consolidation:**
+[x] Unified deployment: Single Node.js container serving both frontend and API
+[x] TypeScript structure: `rootDir: "."` compiles to `dist/src/server.js`
+[x] Path resolution: `backend/dist/src/` → `backend/dist/public/` (static files)
+[x] Docker multi-stage build: frontend → backend → runner
+[x] Environment strategy: Empty string for production (relative URLs), localhost fallback for dev
+
+**Deployment Pipeline:**
+[x] GitHub Actions: Build image → Push to GHCR → SSH to server → Pull & restart
+[x] Server: DigitalOcean droplet 147.182.215.135, Nginx reverse proxy on port 8082
+[x] Docker Compose: Automated migrations and seeding
+[x] Database: PostgreSQL 16, all tables healthy, admin user seeded
+
+</details>
+
+<details>
 <summary>Authentication & Database (2025-10-19)</summary>
 
 [x] Simplified authentication to single admin
@@ -867,5 +915,7 @@ npm run test:e2e
 
 ---
 
-**Last Updated:** 2025-10-20
-**Version:** 1.0 (Consolidated)
+**Last Updated:** 2025-11-06
+**Version:** 1.1 (Updated: Frontend build & deployment fixes)
+
+````
