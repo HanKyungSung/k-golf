@@ -42,7 +42,7 @@ services:
       - .env.production
     # Seed runs in production mode (skips test users and mock bookings)
     # Set SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD in .env.production to customize
-    command: ["npm", "run", "db:seed"]
+    command: ["node", "dist/prisma/seed.js"]
     restart: "no"
     networks:
       - kgolf_net

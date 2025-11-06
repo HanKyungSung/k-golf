@@ -8,10 +8,9 @@
     "skipLibCheck": true,
     "strict": true,
     "outDir": "dist",
-    "rootDir": "src",
     "resolveJsonModule": true,
     "types": ["node", "jest"]
   },
-  "include": ["src"],
+  "include": ["src", "prisma/seed.ts"],
   "exclude": ["node_modules", "dist"]
 }
