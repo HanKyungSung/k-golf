@@ -76,7 +76,12 @@ module.exports = {
   },
   plugins: [
     new webpack.DefinePlugin({
-      'process.env.REACT_APP_API_BASE': JSON.stringify(process.env.REACT_APP_API_BASE || 'http://localhost:8080')
+      // Check for undefined, not falsy (empty string is valid)
+      'process.env.REACT_APP_API_BASE': JSON.stringify(
+        process.env.REACT_APP_API_BASE !== undefined 
+          ? process.env.REACT_APP_API_BASE 
+          : 'http://localhost:8080'
+      )
     }),
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, 'index.html'),
