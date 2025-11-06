@@ -20,6 +20,8 @@ WORKDIR /app/frontend
 ENV CI=true
 # Set webpack output to ./dist (default Docker behavior)
 ENV WEBPACK_OUTPUT_PATH=./dist
+# Use relative URLs for API calls (empty string means same origin)
+ENV REACT_APP_API_BASE=
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ ./
