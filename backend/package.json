@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "build:frontend": "cd ../frontend && npm run build",
     "build:full": "npm run build && npm run build:frontend && rm -rf dist/public && cp -r ../frontend/dist dist/public",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "start:full": "npm run build:full && npm start",
     "test": "jest",
     "test:watch": "jest --watch",

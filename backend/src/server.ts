@@ -31,8 +31,9 @@ app.use('/api/users', usersRouter);
 app.use('/api/menu', menuRouter);
 
 // Serve frontend static files (after API routes to avoid conflicts)
-// Frontend builds to backend/dist/public, so from src/ we go ../dist/public
-const publicPath = path.join(__dirname, '../dist/public');
+// With rootDir='.', structure is: dist/src/server.js and dist/public/
+// From dist/src/, we go ../public to reach dist/public/
+const publicPath = path.join(__dirname, '../public');
 app.use(express.static(publicPath, {
   maxAge: '1h', // Cache static assets for 1 hour
   etag: true,
