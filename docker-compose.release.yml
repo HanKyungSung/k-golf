@@ -31,12 +31,30 @@ services:
     networks:
       - kgolf_net
 
+  seed:
+    image: ghcr.io/hankyungsung/kgolf-backend:${IMAGE_TAG:-latest}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env.production
+    # Seed runs in production mode (skips test users and mock bookings)
+    # Set SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD in .env.production to customize
+    command: ["npm", "run", "db:seed"]
+    restart: "no"
+    networks:
+      - kgolf_net
+
   backend:
     image: ghcr.io/hankyungsung/kgolf-backend:${IMAGE_TAG:-latest}
     depends_on:
       db:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      seed:
         condition: service_completed_successfully
     env_file:
       - .env.production
