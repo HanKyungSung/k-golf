@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "dev:test": "DATABASE_URL=postgresql://kgolf:kgolf_password@localhost:5432/k_golf_test tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build:frontend && tsc -p tsconfig.json && cp -r public dist/public",
     "build:frontend": "cd ../frontend && npm run build",
-    "build:full": "npm run build && npm run build:frontend && rm -rf dist/public && cp -r ../frontend/dist dist/public",
+    "build:full": "npm run build",
     "start": "node dist/src/server.js",
     "start:full": "npm run build:full && npm start",
     "test": "jest",

@@ -29,3 +29,6 @@ next-env.d.ts
 
 # dist
 /dist
+
+# frontend build output (copied during build)
+/public

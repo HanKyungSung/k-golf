@@ -10,11 +10,11 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') })
 module.exports = {
   entry: path.resolve(__dirname, 'src', 'main.tsx'),
   output: {
-    // In Docker: output to ./dist (default)
-    // Locally: output to ../backend/dist/public for unified structure
+    // In Docker: output to ./dist (WEBPACK_OUTPUT_PATH set in Dockerfile)
+    // Locally: output to ./dist (default), then npm build copies to backend/public
     path: process.env.WEBPACK_OUTPUT_PATH 
       ? path.resolve(__dirname, process.env.WEBPACK_OUTPUT_PATH)
-      : path.resolve(__dirname, '../backend/dist/public'),
+      : path.resolve(__dirname, 'dist'),
     filename: 'assets/[name].[contenthash].js',
     chunkFilename: 'assets/[name].[contenthash].js',
     publicPath: '/',
@@ -92,7 +92,7 @@ module.exports = {
           from: path.resolve(__dirname, 'public'), 
           to: process.env.WEBPACK_OUTPUT_PATH 
             ? path.resolve(__dirname, process.env.WEBPACK_OUTPUT_PATH)
-            : path.resolve(__dirname, '../backend/dist/public')
+            : path.resolve(__dirname, 'dist')
         },
       ],
     }),
