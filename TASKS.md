@@ -352,6 +352,130 @@ model Booking {
 - Data retention: All historical bookings preserved (no automatic cleanup)
 - Pagination: Client-side pagination shows 10 bookings per page with navigation
 
+### 0.9.5 Sync Interval Optimization – ✅ Completed
+[x] Analyzed sync architecture (queue-based with 4 independent timers)
+[x] Evaluated timer consolidation (recommended keeping separate)
+[x] Created optimization documentation with 3 configuration options
+[x] Implemented Option A (Conservative) sync intervals:
+  - Sync cycle: 15s → 5s (67% faster, real-time feel)
+  - Bookings pull: 15s → 5s (3x faster updates)
+  - Rooms pull: 5min → 30s (90% faster availability)
+  - Menu pull: 5min → 2min (60% faster menu changes)
+[x] Performance impact: 504 → 1,590 ops/hour (~145KB/hour bandwidth)
+[x] Committed changes (commit 7a33eac) with detailed metrics
+[x] Documentation: docs/pos_sync_interval_optimization.md
+
+**Next Steps:**
+- [ ] Rebuild POS app to apply new intervals
+- [ ] Test with production API
+- [ ] Monitor server performance impact
+- [ ] Collect user feedback on responsiveness
+
+### 0.10 POS Deployment & Distribution Pipeline
+
+**Phase 1: Local Build Setup**
+[ ] Install electron-builder (`npm install --save-dev electron-builder`)
+[ ] Configure electron-builder in package.json (appId, productName, targets)
+[ ] Add build scripts: pack, dist, dist:mac, dist:win, dist:linux
+[ ] Create app icons (512x512 PNG for macOS/Linux, 256x256 for Windows)
+[ ] Test local build (`npm run build && npm run dist`)
+[ ] Verify executable in `release/` directory
+
+**Phase 2: GitHub Release Automation**
+[ ] Create `.github/workflows/pos-release.yml` workflow
+[ ] Configure matrix build (macos-latest, windows-latest)
+[ ] Add steps: checkout, setup Node.js, install deps, build TS, build Electron
+[ ] Upload artifacts (DMG, NSIS installer)
+[ ] Add GitHub Release creation step (on tag `pos-v*`)
+[ ] Test workflow with manual trigger (workflow_dispatch)
+
+**Phase 3: Code Signing** ⏭️ SKIPPED
+**Reason:** Single-venue deployment (parents' business) - no public distribution needed
+**Cost avoided:** $99/year (macOS) + $200-400/year (Windows)
+**Workaround:** Manually add security exception on venue devices
+~~[ ] macOS: Get Apple Developer certificate ($99/year)~~
+~~[ ] macOS: Configure identity, hardenedRuntime, entitlements~~
+~~[ ] macOS: Store certificate in GitHub Secrets (MACOS_CERTIFICATE)~~
+~~[ ] Windows: Get code signing certificate (DigiCert/Sectigo)~~
+~~[ ] Windows: Add signtool step to workflow~~
+~~[ ] Windows: Store certificate in GitHub Secrets (WIN_CERT_PASSWORD)~~
+
+**Phase 4: Auto-Update Setup** ⏭️ SKIPPED
+**Reason:** Simple manual updates sufficient for single-venue deployment
+**Alternative:** Download new versions from GitHub Releases when needed
+~~[ ] Install electron-updater (`npm install --save electron-updater`)~~
+~~[ ] Configure autoUpdater in main.ts (checkForUpdatesAndNotify)~~
+~~[ ] Add publish config to package.json (GitHub provider)~~
+~~[ ] Test update flow with beta release~~
+~~[ ] Add update UI notifications in renderer~~
+
+**Phase 3: Distribution & Documentation** (renumbered from Phase 5)
+[ ] Create installation guide (README or wiki)
+[ ] Document first-time setup (API_BASE_URL, login)
+[ ] Create download page or link to GitHub Releases
+[ ] Add troubleshooting section (common errors)
+[ ] Document update process (manual vs auto-update)
+
+**Current Status:**
+- Development builds working locally (`npm run dev`)
+- Production packaging not configured (no electron-builder)
+- No automated release pipeline
+- Code signing: SKIPPED (single-venue deployment)
+- Auto-update: SKIPPED (manual updates sufficient)
+
+**Deployment Strategy (Single-Venue):**
+- Tag releases: `git tag pos-v0.1.0 && git push --tags`
+- GitHub Actions builds unsigned executables
+- Download from GitHub Releases (private repo)
+- Manual installation on venue devices
+- Bypass OS security warnings on first launch:
+  - **macOS**: System Settings → Privacy & Security → "Open Anyway"
+  - **Windows**: "More info" → "Run anyway"
+- Manual updates: Download and reinstall when needed
+
+### 0.11 Logging & Monitoring Enhancement
+
+**Sync Logging Requirements:**
+[ ] Add structured logging for all sync operations
+[ ] Log sync cycle start/end with duration
+[ ] Log queue size before/after each cycle
+[ ] Log individual operation success/failure (booking:create, rooms:pull, etc.)
+[ ] Add error categorization (network, auth, validation, server)
+[ ] Log retry attempts with backoff timing
+[ ] Add sync performance metrics (operations/sec, avg response time)
+
+**UI Logging Display:**
+[ ] Add "Sync Logs" tab or panel in POS admin dashboard
+[ ] Display last 100 sync events with timestamps
+[ ] Color-code by severity (info/warn/error)
+[ ] Filter by operation type (push/pull, booking/room/menu)
+[ ] Add export logs button (download as JSON/CSV)
+[ ] Show connection status history (online/offline transitions)
+
+**Backend Logging:**
+[ ] Log POS API requests with device identifier
+[ ] Track sync frequency per device
+[ ] Monitor for abnormal sync patterns (spam detection)
+[ ] Add metrics endpoint for sync health monitoring
+
+**Development Logging:**
+[x] Forward main process logs to renderer DevTools (completed 0.9.1)
+[ ] Add log levels (DEBUG, INFO, WARN, ERROR)
+[ ] Configure log rotation (max file size, max files)
+[ ] Add log filtering in DevTools console
+
+**Production Logging:**
+[ ] electron-log file output configuration
+[ ] Remote error reporting (Sentry/LogRocket)
+[ ] Performance monitoring (response times, queue depths)
+[ ] Alert system for critical errors (sync failures > 5 min)
+
+**Monitoring Dashboard (Optional Future):**
+[ ] Admin web dashboard showing all POS devices
+[ ] Real-time sync status per device
+[ ] Historical sync reliability graphs
+[ ] Alert configuration (email/SMS on failures)
+
 ### Follow-Ups (Post 0.6g) – Pagination Enhancements
 [ ] Add filtering (status, date range, room, customer name)
 [ ] Add search functionality
