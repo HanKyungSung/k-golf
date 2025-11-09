@@ -6,7 +6,8 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ---
 
-## 📝 Table of Contents
+
+## �📝 Table of Contents
 
 1. [Project Specifications](#project-specifications)
 2. [Open Questions & Decisions](#open-questions--decisions)
@@ -445,6 +446,49 @@ model Booking {
 - Guest bookings supported (nullable userId)
 - Track registration source (ONLINE/WALK_IN/PHONE)
 - Admin audit trail (createdBy, registeredBy)
+
+### 1.0 POS API Key Security Improvement – ⚠️ CRITICAL
+
+**Status:** Must be addressed before production deployment
+
+**Current Issue:**
+- POS authentication uses hardcoded static API key: `'pos-dev-key-change-in-production'`
+- API key is visible in frontend code (anyone with app access can extract it)
+- Same API key for all POS devices (no device-specific authentication)
+- API key never expires (no rotation mechanism)
+
+**Required Changes:**
+
+[ ] **Backend:**
+  - [ ] Add `POS_ADMIN_KEY` to backend/.env.example with security warning
+  - [ ] Change default value in requireAuth.ts from hardcoded string to env-only
+  - [ ] Set unique, strong `POS_ADMIN_KEY` in production .env
+  - [ ] Document API key security in backend README
+  - [ ] Restart backend server after env change
+
+[ ] **Production Deployment:**
+  - [ ] Generate cryptographically secure API key (e.g., `openssl rand -hex 32`)
+  - [ ] Update production backend .env with new key
+  - [ ] Test POS connectivity with new key
+  - [ ] Document key rotation procedure
+
+[ ] **Future Enhancements (Phase 2):**
+  - [ ] Per-device API keys (track individual POS devices)
+  - [ ] Key expiration and rotation mechanism
+  - [ ] OAuth2 device flow for proper authentication
+  - [ ] Store device keys in secure location (not in frontend code)
+  - [ ] Audit log for API key usage
+
+**Security Context:**
+- Current method: Header `x-pos-admin-key` bypasses session authentication
+- Risk: Anyone with app access can extract key and impersonate admin
+- Web app uses HttpOnly session cookies (secure)
+- POS uses static API key (insecure for production)
+
+**Documentation:**
+- Authentication architecture: `/docs/admin_manual_booking_feature.md`
+- CSP configuration: `pos/apps/electron/src/renderer/index.html`
+- Middleware: `backend/src/middleware/requireAuth.ts`
 
 ### 1.1 Database Schema Migration – ✅ Completed
 
