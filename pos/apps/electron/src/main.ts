@@ -528,6 +528,9 @@ app.whenReady().then(async () => {
     emitToAll('auth:state', { authenticated: false });
     return { ok: true };
   });
+  ipcMain.handle('config:getApiBaseUrl', async () => {
+    return process.env.API_BASE_URL || 'http://localhost:8080';
+  });
   ipcMain.handle('rooms:list', async () => {
     const user = getAuthenticatedUser();
     try { console.log('[ROOMS][TRACE] rooms:list role=', user?.role, 'user=', user); } catch {/* ignore */}

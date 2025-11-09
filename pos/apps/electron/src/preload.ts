@@ -62,7 +62,8 @@ contextBridge.exposeInMainWorld('kgolf', {
 	onMainLog: (cb: (log: { level: string; message: any[] }) => void) => {
 		ipcRenderer.removeAllListeners('main-log');
 		ipcRenderer.on('main-log', (_e, payload) => cb(payload));
-	}
+	},
+	getApiBaseUrl: () => ipcRenderer.invoke('config:getApiBaseUrl')
 });
 
 console.log('[PRELOAD] injected');

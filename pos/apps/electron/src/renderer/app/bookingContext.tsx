@@ -197,26 +197,23 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   /**
-   * Fetch rooms from backend API
+   * Fetch rooms from local SQLite (synced from backend)
    */
   const fetchRooms = useCallback(async () => {
-    console.log('[BOOKING_CTX] Fetching rooms from API...');
+    console.log('[BOOKING_CTX] Fetching rooms from local database...');
 
     try {
-      const response = await fetch('http://localhost:8080/api/bookings/rooms', {
-        headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' },
-      });
+      const result = await (window as any).electron.listRooms();
 
-      if (!response.ok) {
-        console.warn('[BOOKING_CTX] ❌ Failed to fetch rooms (status:', response.status, ')');
+      if (!result.ok) {
+        console.warn('[BOOKING_CTX] ❌ Failed to fetch rooms:', result.error);
         return;
       }
 
-      const data = await response.json();
-      console.log('[BOOKING_CTX] ✅ Loaded rooms from API:', data.rooms);
+      console.log('[BOOKING_CTX] ✅ Loaded rooms from local DB:', result.rooms);
 
-      if (data.rooms && Array.isArray(data.rooms)) {
-        const mappedRooms = data.rooms.map((r: any, idx: number) => ({
+      if (result.rooms && Array.isArray(result.rooms)) {
+        const mappedRooms = result.rooms.map((r: any, idx: number) => ({
           id: r.id,
           name: r.name,
           capacity: r.capacity || 4,
@@ -238,7 +235,8 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('[BOOKING_CTX] Fetching tax rate from API...');
 
     try {
-      const response = await fetch('http://localhost:8080/api/settings/global_tax_rate', {
+      const apiBase = await (window as any).electron.getApiBaseUrl();
+      const response = await fetch(`${apiBase}/api/settings/global_tax_rate`, {
         credentials: 'include',
       });
 
@@ -297,22 +295,24 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('[BOOKING_CTX] Tax rate updated locally to:', validRate);
 
     // Sync with backend
-    fetch('http://localhost:8080/api/settings/global_tax_rate', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ value: validRate }),
-    })
-      .then((response) => {
-        if (response.ok) {
-          console.log('[BOOKING_CTX] ✅ Tax rate synced to backend');
-        } else {
-          console.warn('[BOOKING_CTX] ⚠️ Failed to sync tax rate to backend');
-        }
+    (window as any).electron.getApiBaseUrl().then((apiBase: string) => {
+      fetch(`${apiBase}/api/settings/global_tax_rate`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ value: validRate }),
       })
-      .catch((error) => {
-        console.warn('[BOOKING_CTX] ⚠️ Error syncing tax rate:', error);
-      });
+        .then((response) => {
+          if (response.ok) {
+            console.log('[BOOKING_CTX] ✅ Tax rate synced to backend');
+          } else {
+            console.warn('[BOOKING_CTX] ⚠️ Failed to sync tax rate to backend');
+          }
+        })
+        .catch((error) => {
+          console.warn('[BOOKING_CTX] ⚠️ Error syncing tax rate:', error);
+        });
+    });
   }, []);
 
   const getBookingById = useCallback(

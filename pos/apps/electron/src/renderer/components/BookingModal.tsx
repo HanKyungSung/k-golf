@@ -78,7 +78,8 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
     setError('');
     
     try {
-      const response = await fetch(`http://localhost:8080/api/users/lookup?phone=${encodeURIComponent(phone)}`, {
+      const apiBase = await (window as any).electron.getApiBaseUrl();
+      const response = await fetch(`${apiBase}/api/users/lookup?phone=${encodeURIComponent(phone)}`, {
         headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' },
       });
       
@@ -185,7 +186,8 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
         bookingSource,
       };
 
-      const response = await fetch('http://localhost:8080/api/bookings/simple/create', {
+      const apiBase = await (window as any).electron.getApiBaseUrl();
+      const response = await fetch(`${apiBase}/api/bookings/simple/create`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

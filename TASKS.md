@@ -780,9 +780,9 @@ model Booking {
 ## ✅ Completed Tasks Archive
 
 <details>
-<summary>Frontend Build & Deployment (Phase 1.8) - 2025-11-06</summary>
+<summary>Frontend Build & Deployment (Phase 1.8) - 2025-11-08</summary>
 
-**Production API URL Fix:**
+**Production API URL Fix (2025-11-06):**
 [x] Fixed frontend API calls to use relative URLs instead of localhost
 [x] Updated backend Dockerfile to set `REACT_APP_API_BASE=` (empty string)
 [x] Fixed webpack DefinePlugin to handle empty string correctly
@@ -790,10 +790,23 @@ model Booking {
 [x] Deployed fix (commit d81e5c3: "fix: properly handle empty string for REACT_APP_API_BASE")
 [x] Verified login works in production at k-golf.inviteyou.ca
 
+**Build Path Simplification (2025-11-08):**
+[x] Refactored frontend build output path for consistency across dev/prod
+[x] Frontend now builds to `frontend/dist` then copies to `backend/public`
+[x] Backend dev mode (`tsx watch`) serves from `backend/public`
+[x] Backend production build copies `backend/public` → `backend/dist/public`
+[x] Simplified webpack config: always outputs to `dist` (no conditional paths)
+[x] Simplified server.ts: always uses `../public` relative to `__dirname`
+[x] Added `backend/public` to .gitignore (build artifact)
+[x] Commit eadde42: "refactor: simplify frontend build output path"
+
 **Architecture Consolidation:**
 [x] Unified deployment: Single Node.js container serving both frontend and API
 [x] TypeScript structure: `rootDir: "."` compiles to `dist/src/server.js`
-[x] Path resolution: `backend/dist/src/` → `backend/dist/public/` (static files)
+[x] Path resolution works in all environments:
+  - Dev: `src/../public` = `backend/public`
+  - Prod: `dist/src/../public` = `backend/dist/public`
+  - Docker: `/app/dist/src/../public` = `/app/dist/public`
 [x] Docker multi-stage build: frontend → backend → runner
 [x] Environment strategy: Empty string for production (relative URLs), localhost fallback for dev
 
@@ -915,7 +928,7 @@ npm run test:e2e
 
 ---
 
-**Last Updated:** 2025-11-06
-**Version:** 1.1 (Updated: Frontend build & deployment fixes)
+**Last Updated:** 2025-11-08
+**Version:** 1.2 (Updated: Frontend build path simplification)
 
 ````
