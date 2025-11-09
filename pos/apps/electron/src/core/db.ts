@@ -63,7 +63,7 @@ export function initDb(baseDir = path.join(process.cwd(), 'data')): InitResult {
              id TEXT PRIMARY KEY,
              serverId TEXT,
              roomId TEXT NOT NULL,
-             userId TEXT NOT NULL,
+             userId TEXT,
              customerName TEXT NOT NULL,
              customerPhone TEXT NOT NULL,
              customerEmail TEXT,
