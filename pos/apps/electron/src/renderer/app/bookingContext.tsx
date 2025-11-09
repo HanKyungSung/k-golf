@@ -203,7 +203,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('[BOOKING_CTX] Fetching rooms from local database...');
 
     try {
-      const result = await (window as any).electron.listRooms();
+      const result = await (window as any).kgolf.listRooms();
 
       if (!result.ok) {
         console.warn('[BOOKING_CTX] ❌ Failed to fetch rooms:', result.error);
@@ -221,6 +221,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           status: r.status || 'ACTIVE',
           color: ROOM_COLORS[idx % ROOM_COLORS.length],
         }));
+        console.log('[BOOKING_CTX] 📍 Setting rooms state:', mappedRooms);
         setRooms(mappedRooms);
       }
     } catch (error) {
@@ -235,7 +236,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('[BOOKING_CTX] Fetching tax rate from API...');
 
     try {
-      const apiBase = await (window as any).electron.getApiBaseUrl();
+      const apiBase = await (window as any).kgolf.getApiBaseUrl();
       const response = await fetch(`${apiBase}/api/settings/global_tax_rate`, {
         credentials: 'include',
       });
@@ -295,7 +296,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('[BOOKING_CTX] Tax rate updated locally to:', validRate);
 
     // Sync with backend
-    (window as any).electron.getApiBaseUrl().then((apiBase: string) => {
+    (window as any).kgolf.getApiBaseUrl().then((apiBase: string) => {
       fetch(`${apiBase}/api/settings/global_tax_rate`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -360,9 +361,10 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       // Refresh when sync completes successfully
       if (payload?.sync?.pushed > 0 || payload?.queueSize === 0) {
-        console.log('[BOOKING_CTX] 🔄 Sync completed, refreshing bookings...');
+        console.log('[BOOKING_CTX] 🔄 Sync completed, refreshing bookings and rooms...');
         lastRefresh = now;
         refreshBookings();
+        fetchRooms(); // Also refresh rooms after sync
       }
     };
 

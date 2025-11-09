@@ -39,13 +39,12 @@ const DashboardPage: React.FC = () => {
     bookingsPagination,
     updateBookingStatus, 
     updateRoomStatus, 
-    rooms: mockRooms, 
+    rooms, 
     globalTaxRate, 
     updateGlobalTaxRate, 
     refreshBookings,
     fetchBookingsPage 
   } = useBookingData();
-  const rooms = mockRooms; // Use mock rooms for now (TODO: sync with real backend data)
   const navigate = useNavigate();
   
   // Initialize to the start of the current week (Monday)

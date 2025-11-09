@@ -78,7 +78,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
     setError('');
     
     try {
-      const apiBase = await (window as any).electron.getApiBaseUrl();
+      const apiBase = await (window as any).kgolf.getApiBaseUrl();
       const response = await fetch(`${apiBase}/api/users/lookup?phone=${encodeURIComponent(phone)}`, {
         headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' },
       });
@@ -186,7 +186,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
         bookingSource,
       };
 
-      const apiBase = await (window as any).electron.getApiBaseUrl();
+      const apiBase = await (window as any).kgolf.getApiBaseUrl();
       const response = await fetch(`${apiBase}/api/bookings/simple/create`, {
         method: 'POST',
         headers: { 
