@@ -8,6 +8,12 @@
 - Only create documentation files when the user specifically asks for it
 - Provide compact commit message when user ask for it
 
+## Task Management
+
+- **Before committing or completing work** (if user wants to commit), always update `TASKS.md` based on the completed tasks
+- Mark completed tasks, add new ones if discovered, and keep the task list current
+- This ensures the project's task tracking stays synchronized with actual progress
+
 ## Communication Style
 
 - Use visual aids (diagrams, flowcharts, ASCII art) whenever possible to enhance understanding
