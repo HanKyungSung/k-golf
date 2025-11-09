@@ -208,8 +208,8 @@ app.whenReady().then(async () => {
   }
   createWindow();
   
-  // Start periodic sync cycle (15 seconds)
-  const SYNC_INTERVAL_MS = 15000;
+  // Start periodic sync cycle (5 seconds - optimized for faster feedback)
+  const SYNC_INTERVAL_MS = 5000;
   console.log('[MAIN] Starting periodic sync cycle, interval:', SYNC_INTERVAL_MS, 'ms');
   setInterval(async () => {
     const user = getAuthenticatedUser();
@@ -240,8 +240,8 @@ app.whenReady().then(async () => {
     }
   }, SYNC_INTERVAL_MS);
   
-  // Start periodic menu pull sync (5 minutes)
-  const MENU_PULL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+  // Start periodic menu pull sync (2 minutes - faster menu updates)
+  const MENU_PULL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
   console.log('[MAIN] Starting periodic menu pull, interval:', MENU_PULL_INTERVAL_MS, 'ms');
   setInterval(() => {
     const user = getAuthenticatedUser();
@@ -256,8 +256,8 @@ app.whenReady().then(async () => {
     }
   }, MENU_PULL_INTERVAL_MS);
   
-  // Start periodic rooms pull sync (5 minutes)
-  const ROOMS_PULL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+  // Start periodic rooms pull sync (30 seconds - frequent room status changes)
+  const ROOMS_PULL_INTERVAL_MS = 30 * 1000; // 30 seconds
   console.log('[MAIN] Starting periodic rooms pull, interval:', ROOMS_PULL_INTERVAL_MS, 'ms');
   setInterval(() => {
     const user = getAuthenticatedUser();
@@ -272,9 +272,9 @@ app.whenReady().then(async () => {
     }
   }, ROOMS_PULL_INTERVAL_MS);
   
-  // Start periodic bookings pull sync (15 seconds for real-time updates)
-  // This pulls incrementally (last 30 days), while login does full pull (all history)
-  const BOOKINGS_PULL_INTERVAL_MS = 15 * 1000; // 15 seconds
+  // Start periodic bookings pull sync (5 seconds for real-time updates)
+  // This pulls incrementally using updatedAfter timestamp
+  const BOOKINGS_PULL_INTERVAL_MS = 5 * 1000; // 5 seconds
   console.log('[MAIN] Starting periodic bookings pull (incremental), interval:', BOOKINGS_PULL_INTERVAL_MS, 'ms');
   setInterval(() => {
     const user = getAuthenticatedUser();
