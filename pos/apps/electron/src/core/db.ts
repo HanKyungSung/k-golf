@@ -37,7 +37,18 @@ export function getDb(): SqliteDb {
   return db;
 }
 
-export function initDb(baseDir = path.join(process.cwd(), 'data')): InitResult {
+export function initDb(baseDir?: string): InitResult {
+  // Use Electron's userData directory for production, or process.cwd()/data for dev
+  if (!baseDir) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { app } = require('electron');
+      baseDir = path.join(app.getPath('userData'), 'data');
+    } catch {
+      // Fallback for tests or non-Electron environments
+      baseDir = path.join(process.cwd(), 'data');
+    }
+  }
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
   const dbPath = path.join(baseDir, 'pos.sqlite');
   const newlyCreated = !fs.existsSync(dbPath);

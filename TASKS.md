@@ -366,20 +366,43 @@ model Booking {
 [x] Documentation: docs/pos_sync_interval_optimization.md
 
 **Next Steps:**
-- [ ] Rebuild POS app to apply new intervals
-- [ ] Test with production API
+- [x] Rebuild POS app to apply new intervals
+- [x] Test with production API
 - [ ] Monitor server performance impact
 - [ ] Collect user feedback on responsiveness
 
-### 0.10 POS Deployment & Distribution Pipeline
+### 0.10 POS Deployment & Distribution Pipeline – ✅ Phase 1 Complete
 
-**Phase 1: Local Build Setup**
-[ ] Install electron-builder (`npm install --save-dev electron-builder`)
-[ ] Configure electron-builder in package.json (appId, productName, targets)
-[ ] Add build scripts: pack, dist, dist:mac, dist:win, dist:linux
-[ ] Create app icons (512x512 PNG for macOS/Linux, 256x256 for Windows)
-[ ] Test local build (`npm run build && npm run dist`)
-[ ] Verify executable in `release/` directory
+**Phase 1: Local Build Setup** ✅ COMPLETE
+[x] Install electron-builder (`npm install --save-dev electron-builder`)
+[x] Configure electron-builder in package.json (appId, productName, targets)
+[x] Add build scripts: pack, dist, dist:mac, dist:win, dist:linux
+[x] Create app icons (512x512 PNG for macOS/Linux, 256x256 for Windows) - Skipped (using default)
+[x] Test local build (`npm run build && npm run dist`)
+[x] Verify executable in `release/` directory
+[x] Fix database path to use app.getPath('userData') instead of process.cwd()
+[x] Include .env file in packaged app for production API URL
+[x] Fix .env loading to check process.resourcesPath for packaged apps
+[x] Test installation and login with production API
+
+**Known Issues:**
+[ ] **UI State Refresh Issue (Post-Login/Sync):**
+  - **Symptom:** After login or sync completion, pulled data (bookings, rooms, menu) doesn't trigger React state updates automatically
+  - **Current Behavior:** Console logs show successful pull operations, but UI remains stale until manual hard refresh (Cmd+Shift+R)
+  - **Frequency:** Occurs on first login and intermittently after subsequent syncs
+  - **Workaround:** User must manually refresh page to see updated data
+  - **Root Cause:** Likely missing IPC event listeners or React state updates after data is written to SQLite
+  - **Investigation Needed:**
+    - Check if sync completion events are being emitted from main process
+    - Verify renderer's BookingContext is listening for sync events
+    - Confirm IPC event handlers are properly registered on app startup
+    - Check if useEffect dependencies are correctly set for data refresh
+  - **Proposed Fix:**
+    - Ensure main process emits 'sync:complete' event after successful pull
+    - Add/verify event listeners in BookingContext and other data contexts
+    - Force state refresh or re-query SQLite after sync events
+    - Consider WebSocket or interval polling as fallback
+  - **Priority:** High (affects user experience on every login)
 
 **Phase 2: GitHub Release Automation**
 [ ] Create `.github/workflows/pos-release.yml` workflow

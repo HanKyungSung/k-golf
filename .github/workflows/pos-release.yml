@@ -1,0 +1,79 @@
+name: POS Release Build
+
+on:
+  push:
+    tags:
+      - 'pos-v*'  # Trigger on tags like pos-v0.1.0
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build:
+    name: Build POS App
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'pos/apps/electron/package-lock.json'
+      
+      - name: Install dependencies
+        run: |
+          cd pos/apps/electron
+          npm ci
+      
+      - name: Build TypeScript
+        run: |
+          cd pos/apps/electron
+          npm run build
+      
+      - name: Build Electron App
+        run: |
+          cd pos/apps/electron
+          npm run dist
+      
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pos-${{ matrix.os }}
+          path: pos/apps/electron/release/*
+          retention-days: 30
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/pos-v')
+    
+    steps:
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pos-macos-latest
+          path: release-macos
+      
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pos-windows-latest
+          path: release-windows
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release-macos/*.dmg
+            release-windows/*.exe
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -19,14 +19,16 @@ const os = require('node:os')
 try {
   // We attempt multiple relative locations because at runtime __dirname points to dist/
   const pathCandidates = [
-    require('path').join(__dirname, '.env'), // if someone copied it into dist (unlikely)
-    require('path').join(__dirname, '..', '.env'), // typical: projectRoot/dist -> projectRoot/.env
+    require('path').join(__dirname, '.env'), // dist/.env (packaged app)
+    require('path').join(__dirname, '..', '.env'), // projectRoot/.env (dev mode)
+    require('path').join(process.resourcesPath || __dirname, '.env'), // app.asar/.env (packaged)
   ];
   const fs = require('fs');
   const dotenv = require('dotenv');
   for (const p of pathCandidates) {
     if (fs.existsSync(p)) {
       dotenv.config({ path: p });
+      console.log('[MAIN] Loaded .env from:', p);
       break;
     }
   }
