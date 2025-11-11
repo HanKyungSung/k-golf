@@ -34,7 +34,7 @@
     "rebuild:native": "electron-rebuild -f --only better-sqlite3,keytar",
     "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch",
     "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --minify --outfile=dist/renderer/index.js",
-    "copyhtml": "mkdirp dist/renderer && cpy src/renderer/index.html dist/renderer",
+    "copyhtml": "mkdirp dist/renderer && cpy src/renderer/index.html dist/renderer --flat",
     "copyhtml:watch": "npm run copyhtml && chokidar src/renderer/index.html -c 'npm run copyhtml'",
     "pack": "electron-builder --dir",
     "dist": "npm run build && electron-builder",

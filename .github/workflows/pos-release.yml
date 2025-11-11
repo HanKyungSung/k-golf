@@ -30,6 +30,10 @@ jobs:
         working-directory: pos/apps/electron
         run: npm install
       
+      - name: Create production .env
+        working-directory: pos/apps/electron
+        run: echo "API_BASE_URL=https://k-golf.inviteyou.ca" > .env
+      
       - name: Build TypeScript
         working-directory: pos/apps/electron
         run: npm run build
