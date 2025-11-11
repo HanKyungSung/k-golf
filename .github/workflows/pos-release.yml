@@ -22,23 +22,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'pos/apps/electron/package-lock.json'
       
       - name: Install dependencies
-        run: |
-          cd pos/apps/electron
-          npm ci
+        working-directory: pos/apps/electron
+        run: npm install
       
       - name: Build TypeScript
-        run: |
-          cd pos/apps/electron
-          npm run build
+        working-directory: pos/apps/electron
+        run: npm run build
       
       - name: Build Electron App
-        run: |
-          cd pos/apps/electron
-          npm run dist
+        working-directory: pos/apps/electron
+        run: npm run dist
       
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
