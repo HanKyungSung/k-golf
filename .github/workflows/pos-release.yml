@@ -23,7 +23,10 @@ jobs:
         with:
           node-version: '20'
       
-      - name: Install dependencies
+      - name: Install root dependencies (monorepo setup)
+        run: npm install
+      
+      - name: Install POS dependencies
         working-directory: pos/apps/electron
         run: npm install
       
