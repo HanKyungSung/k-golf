@@ -4,6 +4,12 @@ name: Docker Deploy
 on:
   push:
     branches: [ main ]          # Trigger automatically on pushes to main
+    paths:                       # Only run when backend/frontend changes
+      - 'backend/**'
+      - 'frontend/**'
+      - 'docker-compose.release.yml'
+      - 'backend/Dockerfile'
+      - '.github/workflows/docker-deploy.yml'
   workflow_dispatch: {}          # Allow manual run
 
 env:
