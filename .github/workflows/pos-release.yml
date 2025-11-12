@@ -12,73 +12,56 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-latest   # Intel (x64)
             arch: x64
-            target: x64
-          - os: macos-latest
+          - os: macos-14       # Apple Silicon (arm64)
             arch: arm64
-            target: arm64
           - os: windows-latest
             arch: x64
-            target: x64
+
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+
       - name: Install root dependencies (monorepo setup)
         run: npm install
-      
+
       - name: Install POS dependencies
         working-directory: pos/apps/electron
         run: npm install
-      
+
       - name: Create production .env
         working-directory: pos/apps/electron
         run: echo "API_BASE_URL=https://k-golf.inviteyou.ca" > .env
-      
+
       - name: Rebuild native modules for target architecture
-        if: matrix.os == 'macos-latest'
+        if: startsWith(matrix.os, 'macos')
         working-directory: pos/apps/electron
-        run: |
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            npx electron-builder install-app-deps --arch=arm64
-          else
-            npx electron-builder install-app-deps --arch=x64
-          fi
-      
+        run: npx electron-builder install-app-deps --arch=${{ matrix.arch }}
+
       - name: Build Electron App for macOS
-        if: matrix.os == 'macos-latest'
+        if: startsWith(matrix.os, 'macos')
         working-directory: pos/apps/electron
         run: |
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            npm run build && npx electron-builder --mac --arm64 --publish never
-          else
-            npm run build && npx electron-builder --mac --x64 --publish never
-          fi
+          npm run build
+          npx electron-builder --mac --${{ matrix.arch }} --publish never
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-          npm_config_arch: ${{ matrix.arch }}
-          npm_config_target_arch: ${{ matrix.arch }}
-      
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # Disable signing completely
+
       - name: Build Electron App for Windows
         if: matrix.os == 'windows-latest'
         working-directory: pos/apps/electron
         run: npm run dist:win
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-      
-      - name: Build Electron App for Linux
-        if: matrix.os == 'ubuntu-latest'
-        working-directory: pos/apps/electron
-        run: npm run dist:linux
-      
+
       - name: Verify Build Output
         working-directory: pos/apps/electron
         run: |
@@ -88,39 +71,32 @@ jobs:
           ls -lh dist/renderer/ || echo "No dist/renderer folder"
           if [ -f "dist/renderer/index.html" ]; then
             echo "✓ index.html exists"
-            cat dist/renderer/index.html | head -20
           else
             echo "✗ index.html missing"
             exit 1
           fi
           if [ -f "dist/renderer/index.js" ]; then
             echo "✓ index.js exists ($(wc -c < dist/renderer/index.js) bytes)"
-            head -c 200 dist/renderer/index.js
           else
             echo "✗ index.js missing"
             exit 1
           fi
-          echo ""
-          echo "=== Checking packaged app contents ==="
-          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          if [ "${{ matrix.os }}" = "macos-latest" ] || [ "${{ matrix.os }}" = "macos-14" ]; then
             BUILT_APP=$(find release -name "*.app" -type d | head -1)
             if [ -n "$BUILT_APP" ]; then
               echo "Found app: $BUILT_APP"
-              echo "Checking asar for renderer files..."
-              npx asar list "$BUILT_APP/Contents/Resources/app.asar" | grep -E "dist/renderer"
-              if [ $? -eq 0 ]; then
-                echo "✓ Renderer files present in asar"
-              else
-                echo "✗ ERROR: Renderer files NOT in asar!"
+              echo "Checking asar contents..."
+              npx asar list "$BUILT_APP/Contents/Resources/app.asar" | grep -E "dist/renderer" || {
+                echo "✗ ERROR: Renderer files missing in asar!"
                 exit 1
-              fi
+              }
             else
               echo "✗ ERROR: Could not find .app bundle"
               exit 1
             fi
           fi
         shell: bash
-      
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -136,26 +112,26 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/pos-v')
-    
+
     steps:
       - name: Download macOS Intel Artifact
         uses: actions/download-artifact@v4
         with:
           name: pos-macos-latest-x64
           path: release-macos-x64
-      
+
       - name: Download macOS ARM Artifact
         uses: actions/download-artifact@v4
         with:
-          name: pos-macos-latest-arm64
+          name: pos-macos-14-arm64
           path: release-macos-arm64
-      
+
       - name: Download Windows Artifact
         uses: actions/download-artifact@v4
         with:
           name: pos-windows-latest-x64
           path: release-windows
-      
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
