@@ -36,12 +36,6 @@ jobs:
         working-directory: pos/apps/electron
         run: npm install
       
-      - name: Rebuild native modules for Electron
-        working-directory: pos/apps/electron
-        run: |
-          export npm_config_arch=${{ matrix.arch }}
-          npx @electron/rebuild --force --arch=${{ matrix.arch }}
-      
       - name: Create production .env
         working-directory: pos/apps/electron
         run: echo "API_BASE_URL=https://k-golf.inviteyou.ca" > .env

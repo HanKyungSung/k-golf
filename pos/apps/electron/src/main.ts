@@ -43,6 +43,9 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
 
+// Default production API URL (can be overridden with API_BASE_URL env var)
+const DEFAULT_API_BASE_URL = 'https://k-golf.inviteyou.ca';
+
 // Optional: dynamic MV3 extension install (React DevTools) for Electron >=35 workaround
 let installExtension: any = null;
 let updateExtensions: any = null;

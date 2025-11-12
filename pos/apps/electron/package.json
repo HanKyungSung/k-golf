@@ -16,7 +16,7 @@
       ".env"
     ],
     "npmRebuild": true,
-    "buildDependenciesFromSource": false,
+    "buildDependenciesFromSource": true,
     "nodeGypRebuild": true,
     "mac": {
       "target": "dmg",
