@@ -103,10 +103,20 @@ jobs:
           echo ""
           echo "=== Checking packaged app contents ==="
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            BUILT_APP=$(find release/mac-${{ matrix.arch }} -name "*.app" -type d -maxdepth 1 | head -1)
+            BUILT_APP=$(find release -name "*.app" -type d | head -1)
             if [ -n "$BUILT_APP" ]; then
               echo "Found app: $BUILT_APP"
-              npx asar list "$BUILT_APP/Contents/Resources/app.asar" | grep -E "dist/renderer" || echo "⚠ renderer files not in asar!"
+              echo "Checking asar for renderer files..."
+              npx asar list "$BUILT_APP/Contents/Resources/app.asar" | grep -E "dist/renderer"
+              if [ $? -eq 0 ]; then
+                echo "✓ Renderer files present in asar"
+              else
+                echo "✗ ERROR: Renderer files NOT in asar!"
+                exit 1
+              fi
+            else
+              echo "✗ ERROR: Could not find .app bundle"
+              exit 1
             fi
           fi
         shell: bash
