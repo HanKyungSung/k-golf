@@ -11,7 +11,13 @@ jobs:
     name: Build POS App
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        include:
+          - os: macos-latest
+            arch: x64
+          - os: macos-latest
+            arch: arm64
+          - os: windows-latest
+            arch: x64
     runs-on: ${{ matrix.os }}
     
     steps:
@@ -41,11 +47,13 @@ jobs:
       - name: Build Electron App
         working-directory: pos/apps/electron
         run: npm run dist
+        env:
+          npm_config_arch: ${{ matrix.arch }}
       
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pos-${{ matrix.os }}
+          name: pos-${{ matrix.os }}-${{ matrix.arch }}
           path: pos/apps/electron/release/*
           retention-days: 30
 
@@ -56,23 +64,30 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/pos-v')
     
     steps:
-      - name: Download macOS Artifact
+      - name: Download macOS Intel Artifact
         uses: actions/download-artifact@v4
         with:
-          name: pos-macos-latest
-          path: release-macos
+          name: pos-macos-latest-x64
+          path: release-macos-x64
+      
+      - name: Download macOS ARM Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pos-macos-latest-arm64
+          path: release-macos-arm64
       
       - name: Download Windows Artifact
         uses: actions/download-artifact@v4
         with:
-          name: pos-windows-latest
+          name: pos-windows-latest-x64
           path: release-windows
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            release-macos/*.dmg
+            release-macos-x64/*.dmg
+            release-macos-arm64/*.dmg
             release-windows/*.exe
           draft: false
           prerelease: false
