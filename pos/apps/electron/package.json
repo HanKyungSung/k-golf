@@ -12,6 +12,7 @@
     "files": [
       "dist/**/*",
       "package.json",
+      "node_modules/**/*",
       ".env"
     ],
     "mac": {
