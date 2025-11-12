@@ -43,17 +43,29 @@ jobs:
         working-directory: pos/apps/electron
         run: echo "API_BASE_URL=https://k-golf.inviteyou.ca" > .env
       
+      - name: Rebuild native modules for target architecture
+        if: matrix.os == 'macos-latest'
+        working-directory: pos/apps/electron
+        run: |
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            npx electron-builder install-app-deps --arch=arm64
+          else
+            npx electron-builder install-app-deps --arch=x64
+          fi
+      
       - name: Build Electron App for macOS
         if: matrix.os == 'macos-latest'
         working-directory: pos/apps/electron
         run: |
           if [ "${{ matrix.arch }}" = "arm64" ]; then
-            npm run build && npx electron-builder --mac --arm64
+            npm run build && npx electron-builder --mac --arm64 --publish never
           else
-            npm run build && npx electron-builder --mac --x64
+            npm run build && npx electron-builder --mac --x64 --publish never
           fi
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          npm_config_arch: ${{ matrix.arch }}
+          npm_config_target_arch: ${{ matrix.arch }}
       
       - name: Build Electron App for Windows
         if: matrix.os == 'windows-latest'
