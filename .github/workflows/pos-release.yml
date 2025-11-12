@@ -88,16 +88,26 @@ jobs:
           ls -lh dist/renderer/ || echo "No dist/renderer folder"
           if [ -f "dist/renderer/index.html" ]; then
             echo "✓ index.html exists"
+            cat dist/renderer/index.html | head -20
           else
             echo "✗ index.html missing"
             exit 1
           fi
           if [ -f "dist/renderer/index.js" ]; then
-            echo "✓ index.js exists"
-            wc -c dist/renderer/index.js
+            echo "✓ index.js exists ($(wc -c < dist/renderer/index.js) bytes)"
+            head -c 200 dist/renderer/index.js
           else
             echo "✗ index.js missing"
             exit 1
+          fi
+          echo ""
+          echo "=== Checking packaged app contents ==="
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            BUILT_APP=$(find release/mac-${{ matrix.arch }} -name "*.app" -type d -maxdepth 1 | head -1)
+            if [ -n "$BUILT_APP" ]; then
+              echo "Found app: $BUILT_APP"
+              npx asar list "$BUILT_APP/Contents/Resources/app.asar" | grep -E "dist/renderer" || echo "⚠ renderer files not in asar!"
+            fi
           fi
         shell: bash
       
