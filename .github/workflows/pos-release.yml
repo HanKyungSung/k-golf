@@ -38,7 +38,9 @@ jobs:
       
       - name: Rebuild native modules for Electron
         working-directory: pos/apps/electron
-        run: npx @electron/rebuild
+        run: |
+          export npm_config_arch=${{ matrix.arch }}
+          npx @electron/rebuild --force --arch=${{ matrix.arch }}
       
       - name: Create production .env
         working-directory: pos/apps/electron
