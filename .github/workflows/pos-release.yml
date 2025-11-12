@@ -36,6 +36,10 @@ jobs:
         working-directory: pos/apps/electron
         run: npm install
       
+      - name: Rebuild native modules
+        working-directory: pos/apps/electron
+        run: npx electron-builder install-app-deps
+      
       - name: Create production .env
         working-directory: pos/apps/electron
         run: echo "API_BASE_URL=https://k-golf.inviteyou.ca" > .env
