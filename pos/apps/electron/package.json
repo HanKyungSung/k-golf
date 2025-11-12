@@ -15,9 +15,14 @@
       "node_modules/**/*",
       ".env"
     ],
+    "asarUnpack": [
+      "**/*.node"
+    ],
     "mac": {
       "target": "dmg",
-      "category": "public.app-category.business"
+      "category": "public.app-category.business",
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist"
     },
     "win": {
       "target": "nsis"
