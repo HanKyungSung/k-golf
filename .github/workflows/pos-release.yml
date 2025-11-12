@@ -41,10 +41,13 @@ jobs:
         working-directory: pos/apps/electron
         run: echo "API_BASE_URL=https://k-golf.inviteyou.ca" > .env
 
-      - name: Rebuild native modules for target architecture
+      - name: Rebuild native modules for Electron (macOS)
         if: startsWith(matrix.os, 'macos')
         working-directory: pos/apps/electron
-        run: npx electron-builder install-app-deps --arch=${{ matrix.arch }}
+        run: |
+          echo "Rebuilding native modules for Electron and arch ${{ matrix.arch }}"
+          npx electron-builder install-app-deps --arch=${{ matrix.arch }}
+          echo "Native modules rebuilt"
 
       - name: Build Electron App for macOS
         if: startsWith(matrix.os, 'macos')
