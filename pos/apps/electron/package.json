@@ -12,12 +12,8 @@
     "files": [
       "dist/**/*",
       "package.json",
-      "node_modules/**/*",
       ".env"
     ],
-    "npmRebuild": true,
-    "buildDependenciesFromSource": true,
-    "nodeGypRebuild": true,
     "mac": {
       "target": "dmg",
       "category": "public.app-category.business"
