@@ -46,7 +46,7 @@ jobs:
         working-directory: pos/apps/electron
         run: |
           echo "Rebuilding native modules for Electron version $(npx electron --version) and arch ${{ matrix.arch }}"
-          npx @electron/rebuild --arch=${{ matrix.arch }}
+          npx electron-rebuild --arch=${{ matrix.arch }}
 
       - name: Build Electron App (macOS)
         if: matrix.os == 'macos-latest'
@@ -61,7 +61,7 @@ jobs:
       - name: Rebuild native modules for Electron (Windows)
         if: matrix.os == 'windows-latest'
         working-directory: pos/apps/electron
-        run: npx @electron/rebuild --arch=x64
+        run: npx electron-rebuild --arch=x64
 
       - name: Build Electron App (Windows)
         if: matrix.os == 'windows-latest'
