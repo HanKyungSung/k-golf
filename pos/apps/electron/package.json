@@ -17,6 +17,7 @@
     ],
     "npmRebuild": true,
     "buildDependenciesFromSource": false,
+    "nodeGypRebuild": true,
     "mac": {
       "target": "dmg",
       "category": "public.app-category.business"

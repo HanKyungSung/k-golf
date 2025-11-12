@@ -32,9 +32,13 @@ jobs:
       - name: Install root dependencies (monorepo setup)
         run: npm install
       
-      - name: Install POS dependencies (without native rebuild)
+      - name: Install POS dependencies
         working-directory: pos/apps/electron
-        run: npm install --ignore-scripts
+        run: npm install
+      
+      - name: Rebuild native modules for Electron
+        working-directory: pos/apps/electron
+        run: npx @electron/rebuild
       
       - name: Create production .env
         working-directory: pos/apps/electron
