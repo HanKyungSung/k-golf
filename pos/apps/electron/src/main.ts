@@ -174,11 +174,17 @@ async function createWindow() {
   if (disableCI) {
     console.warn('[MAIN] DEV contextIsolation disabled (less secure) to allow extension hook');
   }
+  
+  // In production, __dirname is app.asar/dist
+  // Use path.join to properly resolve preload path whether in asar or not
+  const preloadPath = path.join(__dirname, 'preload.js');
+  console.log('[MAIN] Preload path:', preloadPath);
+  
   const win = new BrowserWindow({
     width: 1000,
     height: 700,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: preloadPath,
       // React renderer now uses secure preload bridge only
       nodeIntegration: false,
       contextIsolation: !disableCI,
@@ -187,14 +193,19 @@ async function createWindow() {
   });
   // Maximize by default for POS terminal usage
   try { win.maximize(); } catch {/* ignore */}
-  console.log('[MAIN] BrowserWindow created. Dev mode:', !!process.env.ELECTRON_DEV);
-  // Always load the copied HTML in dist so that ./index.js (compiled from index.tsx) resolves.
+  console.log('[MAIN] BrowserWindow created. Dev mode:', isDev);
+  
+  // Resolve renderer HTML path - works with both dev and asar packaging
   const distHtml = path.join(__dirname, 'renderer', 'index.html');
-  if (fs.existsSync(distHtml)) {
+  console.log('[MAIN] Loading renderer from:', distHtml);
+  console.log('[MAIN] File exists check:', fs.existsSync(distHtml));
+  
+  try {
     await win.loadFile(distHtml);
-  } else {
-    console.error('[MAIN] dist renderer HTML missing at', distHtml);
-    await win.loadURL('data:text/html,<h1>Renderer HTML not found</h1>');
+    console.log('[MAIN] Renderer loaded successfully');
+  } catch (e: any) {
+    console.error('[MAIN] Failed to load renderer:', e.message);
+    await win.loadURL('data:text/html,<h1>Renderer HTML not found</h1><p>Path: ' + distHtml + '</p>');
   }
 }
 

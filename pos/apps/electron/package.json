@@ -15,11 +15,21 @@
       "node_modules/**/*",
       ".env"
     ],
+    "extraResources": [
+      {
+        "from": ".env",
+        "to": ".env",
+        "filter": ["**/*"]
+      }
+    ],
     "asarUnpack": [
       "**/*.node"
     ],
     "mac": {
-      "target": "dmg",
+      "target": {
+        "target": "dmg",
+        "arch": ["arm64", "x64"]
+      },
       "category": "public.app-category.business",
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist"
@@ -37,8 +47,8 @@
     "build": "tsc -p tsconfig.build.json && npm run copyhtml && npm run bundle:renderer:prod",
     "start": "node dist/main.js",
     "rebuild:native": "electron-rebuild -f --only better-sqlite3,keytar",
-    "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch",
-    "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --minify --outfile=dist/renderer/index.js",
+    "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=iife --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch",
+    "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=iife --platform=browser --minify --outfile=dist/renderer/index.js",
     "copyhtml": "mkdirp dist/renderer && cpy src/renderer/index.html dist/renderer --flat",
     "copyhtml:watch": "npm run copyhtml && chokidar src/renderer/index.html -c 'npm run copyhtml'",
     "pack": "electron-builder --dir",

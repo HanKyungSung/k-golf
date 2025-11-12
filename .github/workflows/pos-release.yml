@@ -14,10 +14,13 @@ jobs:
         include:
           - os: macos-latest
             arch: x64
+            target: x64
           - os: macos-latest
             arch: arm64
+            target: arm64
           - os: windows-latest
             arch: x64
+            target: x64
     runs-on: ${{ matrix.os }}
     
     steps:
@@ -40,15 +43,51 @@ jobs:
         working-directory: pos/apps/electron
         run: echo "API_BASE_URL=https://k-golf.inviteyou.ca" > .env
       
-      - name: Build TypeScript
+      - name: Build Electron App for macOS
+        if: matrix.os == 'macos-latest'
         working-directory: pos/apps/electron
-        run: npm run build
-      
-      - name: Build Electron App
-        working-directory: pos/apps/electron
-        run: npm run dist
+        run: |
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            npm run build && npx electron-builder --mac --arm64
+          else
+            npm run build && npx electron-builder --mac --x64
+          fi
         env:
-          npm_config_arch: ${{ matrix.arch }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      
+      - name: Build Electron App for Windows
+        if: matrix.os == 'windows-latest'
+        working-directory: pos/apps/electron
+        run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      
+      - name: Build Electron App for Linux
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: pos/apps/electron
+        run: npm run dist:linux
+      
+      - name: Verify Build Output
+        working-directory: pos/apps/electron
+        run: |
+          echo "=== Build artifacts ==="
+          ls -lh release/ || echo "No release folder"
+          echo "=== Dist folder contents ==="
+          ls -lh dist/renderer/ || echo "No dist/renderer folder"
+          if [ -f "dist/renderer/index.html" ]; then
+            echo "✓ index.html exists"
+          else
+            echo "✗ index.html missing"
+            exit 1
+          fi
+          if [ -f "dist/renderer/index.js" ]; then
+            echo "✓ index.js exists"
+            wc -c dist/renderer/index.js
+          else
+            echo "✗ index.js missing"
+            exit 1
+          fi
+        shell: bash
       
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
