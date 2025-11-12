@@ -30,6 +30,7 @@
     "dev": "ELECTRON_DEV=1 concurrently -k \"tsc -w\" \"npm:bundle:renderer\" \"npm:copyhtml:watch\" \"wait-on dist/main.js dist/renderer/index.js dist/renderer/index.html && electron dist/main.js\"",
     "build": "tsc -p tsconfig.build.json && npm run copyhtml && npm run bundle:renderer:prod",
     "start": "node dist/main.js",
+    "postinstall": "electron-builder install-app-deps",
     "rebuild:native": "electron-rebuild -f --only better-sqlite3,keytar",
     "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch",
     "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --minify --outfile=dist/renderer/index.js",
