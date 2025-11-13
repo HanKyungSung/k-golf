@@ -28,27 +28,53 @@ NODE_MODULE_VERSION 133.
 
 ## Solution
 
-### 1. Use `node-gyp` Directly with Electron Headers
+### 1. Cross-Platform Rebuild Script
 
-Instead of relying on `electron-rebuild` or `@electron/rebuild`, we use `node-gyp` directly to force compilation against Electron's Node.js version:
+Created `pos/apps/electron/scripts/rebuild-native.js` - a Node.js script that automatically rebuilds native modules for the correct platform and architecture:
 
-```bash
-cd node_modules/better-sqlite3
-npx node-gyp rebuild \
-  --target=35.7.5 \
-  --arch=arm64 \
-  --dist-url=https://electronjs.org/headers
+```javascript
+const { execSync } = require('child_process');
+const path = require('path');
+const os = require('os');
 
-cd ../keytar
-npx node-gyp rebuild \
-  --target=35.7.5 \
-  --arch=arm64 \
-  --dist-url=https://electronjs.org/headers
+const ELECTRON_VERSION = '35.7.5';
+const MODULES = ['better-sqlite3', 'keytar'];
+
+// Auto-detect architecture
+const arch = os.arch(); // 'arm64' on Apple Silicon, 'x64' on Intel/Windows
+
+console.log(`🔨 Rebuilding native modules for Electron ${ELECTRON_VERSION} (${arch})`);
+
+for (const moduleName of MODULES) {
+  const modulePath = path.join(process.cwd(), '../../..', 'node_modules', moduleName);
+  
+  console.log(`\n📦 Rebuilding ${moduleName}...`);
+  
+  try {
+    execSync(
+      `npx node-gyp rebuild --target=${ELECTRON_VERSION} --arch=${arch} --dist-url=https://electronjs.org/headers`,
+      { cwd: modulePath, stdio: 'inherit' }
+    );
+    console.log(`✅ ${moduleName} rebuilt successfully`);
+  } catch (error) {
+    console.error(`❌ Failed to rebuild ${moduleName}`);
+    process.exit(1);
+  }
+}
+
+console.log('\n✨ All native modules rebuilt successfully!');
 ```
+
+**Benefits:**
+- Works on **all platforms** (macOS, Windows, Linux)
+- Auto-detects architecture (no hardcoded arch values)
+- Single script for both local and CI builds
+- Clear console output with status indicators
+- Proper error handling
 
 **Parameters:**
 - `--target=35.7.5`: Electron version (determines Node.js MODULE_VERSION 133)
-- `--arch=arm64`: Target architecture (arm64 for Apple Silicon, x64 for Intel/Windows)
+- `--arch=${arch}`: Auto-detected architecture (arm64 for Apple Silicon, x64 for Intel/Windows)
 - `--dist-url`: Location of Electron's Node.js headers
 
 ### 2. Disable electron-builder's Automatic Rebuild
@@ -67,33 +93,65 @@ In `pos/apps/electron/package.json`:
 
 This prevents electron-builder from overwriting our correctly rebuilt native modules.
 
-### 3. Update Build Script
+### 3. Update Build Scripts
 
 In `pos/apps/electron/package.json`:
 
 ```json
 {
   "scripts": {
-    "rebuild": "cd /Users/hankyungsung/Desktop/project/k-golf/node_modules/better-sqlite3 && node-gyp rebuild --target=35.7.5 --arch=arm64 --dist-url=https://electronjs.org/headers && cd ../keytar && node-gyp rebuild --target=35.7.5 --arch=arm64 --dist-url=https://electronjs.org/headers",
-    "dist:mac": "npm run build && npm run rebuild && electron-builder --mac"
+    "rebuild:native": "node scripts/rebuild-native.js",
+    "dist:mac": "npm run build && npm run rebuild:native && electron-builder --mac",
+    "dist:win": "npm run build && npm run rebuild:native && electron-builder --win"
   }
 }
 ```
 
+The rebuild script now works on **all platforms** without modifications.
+
 ### 4. GitHub Actions CI Workflow
 
-Updated `.github/workflows/pos-release.yml`:
+Updated `.github/workflows/pos-release.yml` to use platform-specific steps:
 
+**macOS Build:**
 ```yaml
-- name: Rebuild native modules for Electron
+- name: Build Electron App (macOS)
+  if: matrix.os == 'macos-latest'
   shell: bash
   run: |
     echo "Rebuilding native modules for Electron 35.7.5 and arch ${{ matrix.arch }}"
     cd node_modules/better-sqlite3 && npx node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
     cd ../keytar && npx node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
+    cd ../../pos/apps/electron
+    npm run build
+    npx electron-builder --mac --${{ matrix.arch }} --publish never
 ```
 
-**Note:** Use `npx node-gyp` in CI since node-gyp isn't globally installed.
+**Windows Build:**
+```yaml
+- name: Build Electron App (Windows)
+  if: matrix.os == 'windows-latest'
+  shell: pwsh
+  run: |
+    Write-Host "Rebuilding native modules for Electron 35.7.5 and arch ${{ matrix.arch }}"
+    cd node_modules\better-sqlite3
+    npx node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
+    cd ..\keytar
+    npx node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
+    cd ..\..\pos\apps\electron
+    npm run build
+    npx electron-builder --win --${{ matrix.arch }} --publish never
+```
+
+**Alternative (Using Rebuild Script):**
+Both platforms can also use the cross-platform script:
+```yaml
+run: |
+  cd pos/apps/electron
+  npm run rebuild:native
+  npm run build
+  npx electron-builder --<platform> --${{ matrix.arch }} --publish never
+```
 
 ### 5. Bundle Format
 
@@ -207,6 +265,15 @@ If no MODULE_VERSION errors appear, the native modules are built correctly!
 - [better-sqlite3 Installation](https://github.com/WiseLibs/better-sqlite3/blob/master/docs/compilation.md)
 - [Electron Node.js Version Compatibility](https://github.com/electron/electron/blob/main/docs/tutorial/electron-timelines.md)
 
+## Timeline
+
+- **2025-11-11**: Problem discovered - CI builds had blank renderer window
+- **2025-11-12**: Root cause identified - NODE_MODULE_VERSION mismatch (131 vs 133)
+- **2025-11-12**: Solution implemented - Direct node-gyp rebuild with Electron headers
+- **2025-11-12**: Cross-platform script created - `scripts/rebuild-native.js`
+- **2025-11-12**: macOS ARM64 artifact verified working ✅
+- **2025-11-12**: Windows x64 build verified working in CI ✅
+
 ## Status
 
-✅ **RESOLVED** - App now builds successfully in both local and CI environments, with renderer displaying correctly and no MODULE_VERSION errors.
+✅ **RESOLVED** - App now builds successfully in both local and CI environments, with renderer displaying correctly and no MODULE_VERSION errors. Both macOS ARM64 and Windows x64 artifacts tested and working.

@@ -371,7 +371,7 @@ model Booking {
 - [ ] Monitor server performance impact
 - [ ] Collect user feedback on responsiveness
 
-### 0.10 POS Deployment & Distribution Pipeline – ✅ Phase 1 Complete
+### 0.10 POS Deployment & Distribution Pipeline – ✅ Phase 1 & 2 Complete
 
 **Phase 1: Local Build Setup** ✅ COMPLETE
 [x] Install electron-builder (`npm install --save-dev electron-builder`)
@@ -385,7 +385,33 @@ model Booking {
 [x] Fix .env loading to check process.resourcesPath for packaged apps
 [x] Test installation and login with production API
 
+**Phase 2: GitHub Release Automation** ✅ COMPLETE
+[x] Created `.github/workflows/pos-release.yml` workflow
+[x] Configured matrix build (macos-latest ARM64, windows-latest x64)
+[x] Added steps: checkout, setup Node.js, install deps, build TS
+[x] Fixed Electron native modules issue (better-sqlite3, keytar)
+  [x] Created cross-platform rebuild script (scripts/rebuild-native.js)
+  [x] Auto-detects architecture with os.arch()
+  [x] Rebuilds with Electron headers (--target=35.7.5)
+  [x] Works on macOS, Windows, Linux
+[x] Upload artifacts (DMG, EXE installer)
+[x] Added GitHub Release creation step (on tag `pos-v*`)
+[x] Tested workflow with manual trigger (workflow_dispatch)
+[x] **Verified:** macOS ARM64 artifact tested and working ✅
+[x] **Verified:** Windows x64 build working in CI ✅
+
+**Native Module Fix (Critical):**
+- **Problem:** better-sqlite3 v11 uses prebuild-install which downloads prebuilt binaries for system Node.js (MODULE_VERSION 131) instead of Electron's Node.js (MODULE_VERSION 133)
+- **Solution:** Created `pos/apps/electron/scripts/rebuild-native.js` to rebuild native modules with correct Electron version
+- **Implementation:** Uses node-gyp with --target=35.7.5 --arch=[auto-detected] --dist-url=https://electronjs.org/headers
+- **Result:** Both local and CI builds now work correctly with proper native modules
+
 **Known Issues:**
+[x] **FIXED: Electron renderer not showing on macOS ARM64 CI builds**
+  - **Root Cause:** NODE_MODULE_VERSION mismatch (131 vs 133)
+  - **Solution:** Cross-platform rebuild script with automatic architecture detection
+  - **Status:** Resolved 2025-11-12
+
 [ ] **UI State Refresh Issue (Post-Login/Sync):**
   - **Symptom:** After login or sync completion, pulled data (bookings, rooms, menu) doesn't trigger React state updates automatically
   - **Current Behavior:** Console logs show successful pull operations, but UI remains stale until manual hard refresh (Cmd+Shift+R)
@@ -403,14 +429,6 @@ model Booking {
     - Force state refresh or re-query SQLite after sync events
     - Consider WebSocket or interval polling as fallback
   - **Priority:** High (affects user experience on every login)
-
-**Phase 2: GitHub Release Automation**
-[ ] Create `.github/workflows/pos-release.yml` workflow
-[ ] Configure matrix build (macos-latest, windows-latest)
-[ ] Add steps: checkout, setup Node.js, install deps, build TS, build Electron
-[ ] Upload artifacts (DMG, NSIS installer)
-[ ] Add GitHub Release creation step (on tag `pos-v*`)
-[ ] Test workflow with manual trigger (workflow_dispatch)
 
 **Phase 3: Code Signing** ⏭️ SKIPPED
 **Reason:** Single-venue deployment (parents' business) - no public distribution needed
