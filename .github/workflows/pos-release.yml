@@ -34,18 +34,14 @@ jobs:
         working-directory: pos/apps/electron
         run: echo "API_BASE_URL=https://k-golf.inviteyou.ca" > .env
 
-      # ✅ Rebuild native modules for Electron using node-gyp directly
-      - name: Rebuild native modules for Electron
+      - name: Build Electron App (macOS)
+        if: matrix.os == 'macos-latest'
         shell: bash
         run: |
           echo "Rebuilding native modules for Electron 35.7.5 and arch ${{ matrix.arch }}"
           cd node_modules/better-sqlite3 && npx node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
           cd ../keytar && npx node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
-
-      - name: Build Electron App (macOS)
-        if: matrix.os == 'macos-latest'
-        working-directory: pos/apps/electron
-        run: |
+          cd ../../pos/apps/electron
           npm run build
           npx electron-builder --mac --${{ matrix.arch }} --publish never
         env:
@@ -53,10 +49,16 @@ jobs:
 
       - name: Build Electron App (Windows)
         if: matrix.os == 'windows-latest'
-        working-directory: pos/apps/electron
+        shell: pwsh
         run: |
+          Write-Host "Rebuilding native modules for Electron 35.7.5 and arch ${{ matrix.arch }}"
+          cd node_modules\better-sqlite3
+          npx node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
+          cd ..\keytar
+          npx node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
+          cd ..\..\pos\apps\electron
           npm run build
-          npm run dist:win
+          npx electron-builder --win --${{ matrix.arch }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
