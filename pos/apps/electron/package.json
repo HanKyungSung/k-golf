@@ -74,6 +74,7 @@
     "chokidar-cli": "^3.0.0",
     "concurrently": "^8.2.0",
     "cpy-cli": "^6.0.0",
+    "@electron/rebuild": "^3.6.0",
     "electron": "35.7.5",
     "electron-builder": "^26.0.12",
     "electron-rebuild": "^3.2.9",
