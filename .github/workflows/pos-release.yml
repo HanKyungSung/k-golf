@@ -5,6 +5,16 @@ on:
     tags:
       - 'pos-v*' # Trigger on tags like pos-v0.1.0
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 0.1.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -87,9 +97,23 @@ jobs:
     name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/pos-v')
+    if: startsWith(github.ref, 'refs/tags/pos-v') || github.event_name == 'workflow_dispatch'
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "tag=pos-v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/pos-v}" >> $GITHUB_OUTPUT
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Download macOS ARM64 Artifact
         uses: actions/download-artifact@v4
         with:
@@ -102,14 +126,30 @@ jobs:
           name: pos-windows-latest-x64
           path: release-windows
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release in Public Repo
         uses: softprops/action-gh-release@v1
         with:
+          repository: HanKyungSung/k-golf-release
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: K-Golf POS v${{ steps.version.outputs.version }}
+          body: |
+            ## K-Golf POS Release v${{ steps.version.outputs.version }}
+            
+            ### Download
+            - **macOS (Apple Silicon)**: Download the `.dmg` file below
+            - **Windows (x64)**: Download the `.exe` installer below
+            
+            ### Installation
+            - **macOS**: Open DMG and drag to Applications folder. On first launch, go to System Settings → Privacy & Security → "Open Anyway"
+            - **Windows**: Run the installer. Click "More info" → "Run anyway" if Windows SmartScreen appears
+            
+            ### What's New
+            See full changelog in the [main repository](https://github.com/HanKyungSung/k-golf)
           files: |
             release-macos-arm64/*.dmg
             release-windows/*.exe
           draft: false
-          prerelease: false
-          generate_release_notes: true
+          prerelease: ${{ github.event.inputs.prerelease || false }}
+          generate_release_notes: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
