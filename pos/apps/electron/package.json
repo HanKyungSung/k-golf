@@ -6,6 +6,9 @@
   "build": {
     "appId": "com.kgolf.pos",
     "productName": "K-Golf POS",
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
+    "buildDependenciesFromSource": false,
     "directories": {
       "output": "release"
     },
@@ -44,15 +47,16 @@
     "build": "tsc -p tsconfig.build.json && npm run copyhtml && npm run bundle:renderer:prod",
     "start": "node dist/main.js",
     "rebuild:native": "electron-rebuild -f --only better-sqlite3,keytar",
-    "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=iife --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch",
-    "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=iife --platform=browser --minify --outfile=dist/renderer/index.js",
+    "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch",
+    "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --minify --outfile=dist/renderer/index.js",
     "copyhtml": "mkdirp dist/renderer && cpy src/renderer/index.html dist/renderer --flat",
     "copyhtml:watch": "npm run copyhtml && chokidar src/renderer/index.html -c 'npm run copyhtml'",
     "pack": "electron-builder --dir",
-    "dist": "npm run build && electron-builder",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:linux": "npm run build && electron-builder --linux"
+    "rebuild": "cd /Users/hankyungsung/Desktop/project/k-golf/node_modules/better-sqlite3 && node-gyp rebuild --target=35.7.5 --arch=arm64 --dist-url=https://electronjs.org/headers && cd ../keytar && node-gyp rebuild --target=35.7.5 --arch=arm64 --dist-url=https://electronjs.org/headers",
+    "dist": "npm run build && npm run rebuild && electron-builder",
+    "dist:mac": "npm run build && npm run rebuild && electron-builder --mac",
+    "dist:win": "npm run build && npm run rebuild && electron-builder --win",
+    "dist:linux": "npm run build && npm run rebuild && electron-builder --linux"
   },
   "dependencies": {
     "axios": "^1.7.0",

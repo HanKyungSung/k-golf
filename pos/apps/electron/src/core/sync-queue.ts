@@ -18,6 +18,7 @@
  */
 import { getDb } from './db';
 import { v4 as uuid } from 'uuid';
+import log from 'electron-log';
 
 export interface SyncQueueItem {
   id: string;
@@ -52,7 +53,7 @@ export function enqueuePullIfNotExists(type: string, payload: Record<string, unk
     ).get(type) as { count: number };
     
     if (existing.count > 0) {
-      console.log(`[SYNC_QUEUE] ${type} already queued, skipping duplicate`);
+      log.info(`[SYNC_QUEUE] ${type} already queued, skipping duplicate`);
       return null;
     }
   }
@@ -66,7 +67,7 @@ export function enqueuePullIfNotExists(type: string, payload: Record<string, unk
  * This fetches complete history instead of just recent bookings.
  */
 export function enqueueFullPullBookings(): string {
-  console.log('[SYNC_QUEUE] Enqueuing FULL bookings pull (all history)');
+  log.info('[SYNC_QUEUE] Enqueuing FULL bookings pull (all history)');
   return enqueue('bookings:pull', { fullSync: true });
 }
 

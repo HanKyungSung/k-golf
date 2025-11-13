@@ -22,6 +22,7 @@ import { peekOldest, deleteItem, incrementAttempt, getQueueSize, type SyncQueueI
 import { getAccessToken, getSessionCookieHeader } from './auth';
 import { getDb } from './db';
 import { getMetadata, setMetadata } from './db';
+import log from 'electron-log';
 
 let syncing = false;
 
@@ -147,12 +148,12 @@ async function discoverRoomId(apiBase: string): Promise<string | null> {
     const rooms = res.data?.rooms || [];
     if (rooms.length) {
       const room = rooms.find((r: any) => r.active) || rooms[0];
-      console.log('[SYNC] Discovered room id', room.id, 'name', room.name);
+      log.info('[SYNC] Discovered room id', room.id, 'name', room.name);
       discoveredRoomId = room.id;
       return room.id;
     }
   } catch (e: any) {
-    console.warn('[SYNC] room discovery failed', e?.message);
+    log.warn('[SYNC] room discovery failed', e?.message);
   }
   return null;
 }
@@ -211,7 +212,7 @@ async function pushSingle(apiBase: string, payloadJson: string, outboxId: string
   if (cookieHeader) headers.Cookie = cookieHeader;
   const url = `${apiBase}/api/bookings`; // plural endpoint
   try {
-    console.log('[SYNC] POST', url, body);
+    log.info('[SYNC] POST', url, body);
     const response = await axios.post(url, body, { headers, timeout: 8000, withCredentials: true });
     
     // Update local booking with serverId from backend response
@@ -219,7 +220,7 @@ async function pushSingle(apiBase: string, payloadJson: string, outboxId: string
       const db = getDb();
       db.prepare('UPDATE Booking SET serverId = ?, dirty = 0 WHERE id = ?')
         .run(response.data.booking.id, raw.localId);
-      console.log('[SYNC] Updated local booking', raw.localId, 'with serverId', response.data.booking.id);
+      log.info('[SYNC] Updated local booking', raw.localId, 'with serverId', response.data.booking.id);
     }
     
     deleteItem(outboxId);
@@ -227,15 +228,15 @@ async function pushSingle(apiBase: string, payloadJson: string, outboxId: string
   } catch (e: any) {
     const status = e?.response?.status;
     const body = e?.response?.data;
-    console.error('[SYNC] push failed', status, body || e?.message);
+    log.error('[SYNC] push failed', status, body || e?.message);
     if (status === 400 && body?.error) {
-      console.error('[SYNC] server validation error:', body.error);
+      log.error('[SYNC] server validation error:', body.error);
       const errMsg: string = (body.error?.message) || body.error;
       const rawErr = String(errMsg || '').toLowerCase();
       const permanent = rawErr.includes('outside room operating hours') || rawErr.includes('cannot book a past time slot') || rawErr.includes('cross-day');
       if (permanent) {
         // Treat as permanent validation failure: drop from outbox so queue can progress.
-        console.warn('[SYNC] Dropping permanent validation failure (will not retry):', errMsg);
+        log.warn('[SYNC] Dropping permanent validation failure (will not retry):', errMsg);
         // Remove the outbox item; mark booking clean so UI no longer treats it dirty.
         deleteItem(outboxId);
         if (raw.localId) markBookingClean(raw.localId);
@@ -244,7 +245,7 @@ async function pushSingle(apiBase: string, payloadJson: string, outboxId: string
       }
     }
     if (status === 401) {
-      console.warn('[SYNC] Auth expired (401). Will signal caller to reset auth state.');
+      log.warn('[SYNC] Auth expired (401). Will signal caller to reset auth state.');
       // Do NOT increment attempt for auth-expired; user action required
   pendingErrorInfo = { code: 'AUTH_EXPIRED', status: 401, message: 'Authentication expired (401)', outboxId };
       return 'auth-expired';
@@ -284,7 +285,7 @@ async function processRoomUpdates(apiBase: string): Promise<{ pushed: number; fa
   const db = getDb();
   const allRoomUpdates = db.prepare('SELECT * FROM SyncQueue WHERE type = ? ORDER BY createdAt ASC').all('room:update') as SyncQueueItem[];
   
-  console.log('[SYNC][ROOM] Found', allRoomUpdates.length, 'room:update mutations in queue');
+  log.info('[SYNC][ROOM] Found', allRoomUpdates.length, 'room:update mutations in queue');
   
   if (allRoomUpdates.length === 0) {
     return { pushed: 0, failures: 0, authExpired: false };
@@ -303,7 +304,7 @@ async function processRoomUpdates(apiBase: string): Promise<{ pushed: number; fa
         byRoomId.set(roomId, item);
       }
     } catch (e) {
-      console.error('[SYNC][ROOM] Invalid payload JSON for outbox item', item.id);
+      log.error('[SYNC][ROOM] Invalid payload JSON for outbox item', item.id);
       deleteItem(item.id); // drop malformed entry
     }
   }
@@ -312,12 +313,12 @@ async function processRoomUpdates(apiBase: string): Promise<{ pushed: number; fa
   const finalIds = new Set(Array.from(byRoomId.values()).map(i => i.id));
   for (const item of allRoomUpdates) {
     if (!finalIds.has(item.id)) {
-      console.log('[SYNC][ROOM] Dropping superseded mutation', item.id);
+      log.info('[SYNC][ROOM] Dropping superseded mutation', item.id);
       deleteItem(item.id);
     }
   }
 
-  console.log('[SYNC][ROOM] After collapse:', byRoomId.size, 'unique room(s) to update');
+  log.info('[SYNC][ROOM] After collapse:', byRoomId.size, 'unique room(s) to update');
 
   // Push each final (latest) room update
   for (const item of byRoomId.values()) {
@@ -348,7 +349,7 @@ async function pushRoomUpdate(apiBase: string, item: SyncQueueItem): Promise<Pus
     const { roomId, status } = payload;
     
     if (!roomId || !status) {
-      console.warn('[SYNC][ROOM] Missing roomId or status in payload', item.id);
+      log.warn('[SYNC][ROOM] Missing roomId or status in payload', item.id);
       deleteItem(item.id); // drop invalid
       return 'success';
     }
@@ -362,26 +363,26 @@ async function pushRoomUpdate(apiBase: string, item: SyncQueueItem): Promise<Pus
     const url = `${apiBase}/api/bookings/rooms/${roomId}`;
     const body = { status };
     
-    console.log('[SYNC][ROOM] PATCH', url, body);
+    log.info('[SYNC][ROOM] PATCH', url, body);
     await axios.patch(url, body, { headers, timeout: 8000, withCredentials: true });
     
     deleteItem(item.id);
-    console.log('[SYNC][ROOM] Successfully updated room', roomId, 'to', status);
+    log.info('[SYNC][ROOM] Successfully updated room', roomId, 'to', status);
     return 'success';
   } catch (e: any) {
     const status = e?.response?.status;
     const body = e?.response?.data;
-    console.error('[SYNC][ROOM] push failed', status, body || e?.message);
+    log.error('[SYNC][ROOM] push failed', status, body || e?.message);
     
     if (status === 401) {
-      console.warn('[SYNC][ROOM] Auth expired (401)');
+      log.warn('[SYNC][ROOM] Auth expired (401)');
       pendingErrorInfo = { code: 'AUTH_EXPIRED', status: 401, message: 'Authentication expired (401)', outboxId: item.id };
       return 'auth-expired';
     }
     
     if (status === 400 || status === 404 || status === 409) {
       // Validation or conflict errors - log and drop to allow queue progress
-      console.warn('[SYNC][ROOM] Dropping permanent validation/conflict failure:', body?.error);
+      log.warn('[SYNC][ROOM] Dropping permanent validation/conflict failure:', body?.error);
       deleteItem(item.id);
       pendingErrorInfo = { code: 'VALIDATION_DROPPED', status, message: body?.error || 'Validation error', outboxId: item.id };
       return 'success'; // treat as success to continue draining
@@ -406,25 +407,25 @@ async function handlePullOperation(apiBase: string, item: SyncQueueItem): Promis
   try {
     // Log with specific category based on type
     if (item.type === 'menu:pull') {
-      console.log('[SYNC][MENU][PULL] Processing menu:pull');
+      log.info('[SYNC][MENU][PULL] Processing menu:pull');
       return await pullMenuItems(apiBase, item);
     }
     
     if (item.type === 'rooms:pull') {
-      console.log('[SYNC][ROOM][PULL] Processing rooms:pull');
+      log.info('[SYNC][ROOM][PULL] Processing rooms:pull');
       return await pullRooms(apiBase, item);
     }
     
     if (item.type === 'bookings:pull') {
-      console.log('[SYNC][BOOKING][PULL] Processing bookings:pull');
+      log.info('[SYNC][BOOKING][PULL] Processing bookings:pull');
       return await pullBookings(apiBase, item);
     }
     
-    console.warn('[SYNC][PULL] Unknown pull type:', item.type);
+    log.warn('[SYNC][PULL] Unknown pull type:', item.type);
     deleteItem(item.id); // drop unknown type
     return 'success';
   } catch (e: any) {
-    console.error('[SYNC][PULL] Unexpected error:', e);
+    log.error('[SYNC][PULL] Unexpected error:', e);
     incrementAttempt(item.id);
     pendingErrorInfo = { 
       code: 'PULL_ERROR', 
@@ -447,7 +448,7 @@ async function pullMenuItems(apiBase: string, item: SyncQueueItem): Promise<Push
     if (cookieHeader) headers.Cookie = cookieHeader;
     
     const url = `${apiBase}/api/menu/items`;
-    console.log('[SYNC][MENU] GET', url);
+    log.info('[SYNC][MENU] GET', url);
     
     const response = await axios.get(url, { 
       headers, 
@@ -458,7 +459,7 @@ async function pullMenuItems(apiBase: string, item: SyncQueueItem): Promise<Push
     const { success, items } = response.data;
     
     if (!success || !Array.isArray(items)) {
-      console.error('[SYNC][MENU] Invalid response format:', response.data);
+      log.error('[SYNC][MENU] Invalid response format:', response.data);
       incrementAttempt(item.id);
       pendingErrorInfo = { 
         code: 'INVALID_RESPONSE', 
@@ -468,7 +469,7 @@ async function pullMenuItems(apiBase: string, item: SyncQueueItem): Promise<Push
       return 'failure';
     }
     
-    console.log('[SYNC][MENU] Received', items.length, 'menu items from backend');
+    log.info('[SYNC][MENU] Received', items.length, 'menu items from backend');
     
     // Update local SQLite with backend menu items
     const db = getDb();
@@ -502,7 +503,7 @@ async function pullMenuItems(apiBase: string, item: SyncQueueItem): Promise<Push
     
     updateTransaction();
     
-    console.log('[SYNC][MENU] Successfully synced', items.length, 'menu items to local SQLite');
+    log.info('[SYNC][MENU] Successfully synced', items.length, 'menu items to local SQLite');
     
     // Remove from queue
     deleteItem(item.id);
@@ -511,10 +512,10 @@ async function pullMenuItems(apiBase: string, item: SyncQueueItem): Promise<Push
   } catch (e: any) {
     const status = e?.response?.status;
     const body = e?.response?.data;
-    console.error('[SYNC][MENU] Pull failed', status, body || e?.message);
+    log.error('[SYNC][MENU] Pull failed', status, body || e?.message);
     
     if (status === 401) {
-      console.warn('[SYNC][MENU] Auth expired (401)');
+      log.warn('[SYNC][MENU] Auth expired (401)');
       pendingErrorInfo = { 
         code: 'AUTH_EXPIRED', 
         status: 401, 
@@ -548,7 +549,7 @@ async function pullRooms(apiBase: string, item: SyncQueueItem): Promise<PushOutc
     if (cookieHeader) headers.Cookie = cookieHeader;
     
     const url = `${apiBase}/api/bookings/rooms`;
-    console.log('[SYNC][ROOMS] GET', url);
+    log.info('[SYNC][ROOMS] GET', url);
     
     const response = await axios.get(url, { 
       headers, 
@@ -559,7 +560,7 @@ async function pullRooms(apiBase: string, item: SyncQueueItem): Promise<PushOutc
     const { rooms } = response.data;
     
     if (!Array.isArray(rooms)) {
-      console.error('[SYNC][ROOMS] Invalid response format:', response.data);
+      log.error('[SYNC][ROOMS] Invalid response format:', response.data);
       incrementAttempt(item.id);
       pendingErrorInfo = { 
         code: 'INVALID_RESPONSE', 
@@ -569,7 +570,7 @@ async function pullRooms(apiBase: string, item: SyncQueueItem): Promise<PushOutc
       return 'failure';
     }
     
-    console.log('[SYNC][ROOMS] Received', rooms.length, 'rooms from backend');
+    log.info('[SYNC][ROOMS] Received', rooms.length, 'rooms from backend');
     
     // Update local SQLite with backend rooms
     const db = getDb();
@@ -602,7 +603,7 @@ async function pullRooms(apiBase: string, item: SyncQueueItem): Promise<PushOutc
     
     updateTransaction();
     
-    console.log('[SYNC][ROOMS] Successfully synced', rooms.length, 'rooms to local SQLite');
+    log.info('[SYNC][ROOMS] Successfully synced', rooms.length, 'rooms to local SQLite');
     
     // Remove from queue
     deleteItem(item.id);
@@ -611,10 +612,10 @@ async function pullRooms(apiBase: string, item: SyncQueueItem): Promise<PushOutc
   } catch (e: any) {
     const status = e?.response?.status;
     const body = e?.response?.data;
-    console.error('[SYNC][ROOMS] Pull failed', status, body || e?.message);
+    log.error('[SYNC][ROOMS] Pull failed', status, body || e?.message);
     
     if (status === 401) {
-      console.warn('[SYNC][ROOMS] Auth expired (401)');
+      log.warn('[SYNC][ROOMS] Auth expired (401)');
       pendingErrorInfo = { 
         code: 'AUTH_EXPIRED', 
         status: 401, 
@@ -665,11 +666,11 @@ async function pullBookings(apiBase: string, item: SyncQueueItem): Promise<PushO
         // Backend supports ?updatedAfter filter + large limit to get all changed bookings
         url += `?updatedAfter=${encodeURIComponent(lastSyncedAt)}&limit=9999`;
         syncDescription = ` (updated after ${lastSyncedAt})`;
-        console.log('[SYNC][BOOKINGS] Incremental sync since:', lastSyncedAt);
+        log.info('[SYNC][BOOKINGS] Incremental sync since:', lastSyncedAt);
       } else {
         // No previous sync timestamp, treat as full sync
         url += '?limit=9999';
-        console.log('[SYNC][BOOKINGS] No lastSyncedAt found, performing full sync with large limit');
+        log.info('[SYNC][BOOKINGS] No lastSyncedAt found, performing full sync with large limit');
         syncDescription = ' (full sync - no previous timestamp)';
       }
     } else {
@@ -678,7 +679,7 @@ async function pullBookings(apiBase: string, item: SyncQueueItem): Promise<PushO
       syncDescription = ' (FULL SYNC - all bookings)';
     }
     
-    console.log('[SYNC][BOOKINGS] GET', url, syncDescription);
+    log.info('[SYNC][BOOKINGS] GET', url, syncDescription);
     
     const response = await axios.get(url, { 
       headers, 
@@ -689,7 +690,7 @@ async function pullBookings(apiBase: string, item: SyncQueueItem): Promise<PushO
     const { bookings } = response.data;
     
     if (!Array.isArray(bookings)) {
-      console.error('[SYNC][BOOKINGS] Invalid response format:', response.data);
+      log.error('[SYNC][BOOKINGS] Invalid response format:', response.data);
       incrementAttempt(item.id);
       pendingErrorInfo = { 
         code: 'INVALID_RESPONSE', 
@@ -699,7 +700,7 @@ async function pullBookings(apiBase: string, item: SyncQueueItem): Promise<PushO
       return 'failure';
     }
     
-    console.log('[SYNC][BOOKINGS] Received', bookings.length, 'bookings from backend', isFullSync ? '(full)' : '(incremental)');
+    log.info('[SYNC][BOOKINGS] Received', bookings.length, 'bookings from backend', isFullSync ? '(full)' : '(incremental)');
     
     // Update local SQLite with UPSERT strategy
     const db = getDb();
@@ -784,12 +785,12 @@ async function pullBookings(apiBase: string, item: SyncQueueItem): Promise<PushO
     updateTransaction();
     
     const finalCount = db.prepare('SELECT COUNT(*) as count FROM Booking').get().count;
-    console.log('[SYNC][BOOKINGS] ✅ Sync complete:', insertedCount, 'inserted,', updatedCount, 'updated,', 'Total in SQLite:', finalCount);
+    log.info('[SYNC][BOOKINGS] ✅ Sync complete:', insertedCount, 'inserted,', updatedCount, 'updated,', 'Total in SQLite:', finalCount);
     
     // Update lastSyncedAt timestamp for incremental sync
     const now = new Date().toISOString();
     setMetadata('bookings_lastSyncedAt', now);
-    console.log('[SYNC][BOOKINGS] Updated lastSyncedAt to:', now);
+    log.info('[SYNC][BOOKINGS] Updated lastSyncedAt to:', now);
     
     // Remove from queue
     deleteItem(item.id);
@@ -798,10 +799,10 @@ async function pullBookings(apiBase: string, item: SyncQueueItem): Promise<PushO
   } catch (e: any) {
     const status = e?.response?.status;
     const body = e?.response?.data;
-    console.error('[SYNC][BOOKINGS] Pull failed', status, body || e?.message);
+    log.error('[SYNC][BOOKINGS] Pull failed', status, body || e?.message);
     
     if (status === 401) {
-      console.warn('[SYNC][BOOKINGS] Auth expired (401)');
+      log.warn('[SYNC][BOOKINGS] Auth expired (401)');
       pendingErrorInfo = { 
         code: 'AUTH_EXPIRED', 
         status: 401, 
@@ -831,7 +832,7 @@ async function pushBookingStatusUpdate(apiBase: string, item: SyncQueueItem): Pr
     const { id, status } = payload;
     
     if (!id || !status) {
-      console.error('[SYNC][BOOKING_STATUS] Missing id or status in payload');
+      log.error('[SYNC][BOOKING_STATUS] Missing id or status in payload');
       deleteItem(item.id);
       return 'success';
     }
@@ -848,7 +849,7 @@ async function pushBookingStatusUpdate(apiBase: string, item: SyncQueueItem): Pr
     const backendId = booking?.serverId || id; // Use serverId if available, else local id
     
     const url = `${apiBase}/api/bookings/${backendId}`;
-    console.log('[SYNC][BOOKING_STATUS] PATCH', url, { status });
+    log.info('[SYNC][BOOKING_STATUS] PATCH', url, { status });
     
     await axios.patch(url, { status }, { 
       headers, 
@@ -860,16 +861,16 @@ async function pushBookingStatusUpdate(apiBase: string, item: SyncQueueItem): Pr
     db.prepare('UPDATE Booking SET dirty = 0 WHERE id = ?').run(id);
     deleteItem(item.id);
     
-    console.log('[SYNC][BOOKING_STATUS] Successfully updated booking', id, 'to', status);
+    log.info('[SYNC][BOOKING_STATUS] Successfully updated booking', id, 'to', status);
     return 'success';
     
   } catch (e: any) {
     const status = e?.response?.status;
     const body = e?.response?.data;
-    console.error('[SYNC][BOOKING_STATUS] Update failed', status, body || e?.message);
+    log.error('[SYNC][BOOKING_STATUS] Update failed', status, body || e?.message);
     
     if (status === 401) {
-      console.warn('[SYNC][BOOKING_STATUS] Auth expired (401)');
+      log.warn('[SYNC][BOOKING_STATUS] Auth expired (401)');
       pendingErrorInfo = { 
         code: 'AUTH_EXPIRED', 
         status: 401, 
@@ -880,7 +881,7 @@ async function pushBookingStatusUpdate(apiBase: string, item: SyncQueueItem): Pr
     }
     
     if (status === 404) {
-      console.warn('[SYNC][BOOKING_STATUS] Booking not found on backend, dropping update');
+      log.warn('[SYNC][BOOKING_STATUS] Booking not found on backend, dropping update');
       deleteItem(item.id);
       return 'success';
     }

@@ -34,11 +34,13 @@ jobs:
         working-directory: pos/apps/electron
         run: echo "API_BASE_URL=https://k-golf.inviteyou.ca" > .env
 
-      # ✅ Rebuild native modules for Electron - run from root where node_modules exist
+      # ✅ Rebuild native modules for Electron using node-gyp directly
       - name: Rebuild native modules for Electron
+        shell: bash
         run: |
-          echo "Rebuilding native modules for Electron version $(npx electron --version) and arch ${{ matrix.arch }}"
-          ./node_modules/.bin/electron-rebuild
+          echo "Rebuilding native modules for Electron 35.7.5 and arch ${{ matrix.arch }}"
+          cd node_modules/better-sqlite3 && node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
+          cd ../keytar && node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
 
       - name: Build Electron App (macOS)
         if: matrix.os == 'macos-latest'

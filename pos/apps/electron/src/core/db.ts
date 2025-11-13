@@ -19,6 +19,7 @@
  * we rely on simple CREATE IF NOT EXISTS. Later we can implement a migration table.
  */
 import Database from 'better-sqlite3';
+import log from 'electron-log';
 import fs from 'fs';
 import path from 'path';
 
@@ -155,11 +156,11 @@ function seedMenuIfEmpty() {
   
   const count = db.prepare('SELECT COUNT(*) as count FROM MenuItem').get();
   if (count.count > 0) {
-    console.log('[DB] MenuItem table already has data, skipping seed');
+    log.info('[DB] MenuItem table already has data, skipping seed');
     return;
   }
   
-  console.log('[DB] Seeding initial menu items...');
+  log.info('[DB] Seeding initial menu items...');
   
   const initialMenu = [
     // Hours (Room booking time)
@@ -198,7 +199,7 @@ function seedMenuIfEmpty() {
   });
   
   insertMany(initialMenu);
-  console.log(`[DB] Seeded ${initialMenu.length} menu items`);
+  log.info(`[DB] Seeded ${initialMenu.length} menu items`);
 }
 
 /**
