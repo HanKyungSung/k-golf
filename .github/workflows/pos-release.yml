@@ -39,8 +39,8 @@ jobs:
         shell: bash
         run: |
           echo "Rebuilding native modules for Electron 35.7.5 and arch ${{ matrix.arch }}"
-          cd node_modules/better-sqlite3 && node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
-          cd ../keytar && node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
+          cd node_modules/better-sqlite3 && npx node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
+          cd ../keytar && npx node-gyp rebuild --target=35.7.5 --arch=${{ matrix.arch }} --dist-url=https://electronjs.org/headers
 
       - name: Build Electron App (macOS)
         if: matrix.os == 'macos-latest'
