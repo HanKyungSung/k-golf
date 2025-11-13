@@ -35,25 +35,19 @@ jobs:
         run: echo "API_BASE_URL=https://k-golf.inviteyou.ca" > .env
 
       # ✅ Rebuild native modules for Electron - run from root where node_modules exist
-      - name: Rebuild native modules for Electron (macOS)
-        if: matrix.os == 'macos-latest'
+      - name: Rebuild native modules for Electron
         run: |
           echo "Rebuilding native modules for Electron version $(npx electron --version) and arch ${{ matrix.arch }}"
-          npx @electron/rebuild --arch=${{ matrix.arch }}
+          ./node_modules/.bin/electron-rebuild
 
-      - name: Build Electron App (macOS)
-        if: matrix.os == 'macos-latest'
-        working-directory: pos/apps/electron
-        run: |
-          npm run build
-          npx electron-builder --mac --${{ matrix.arch }} --publish never
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      # ✅ Rebuild native modules for Windows - run from root where node_modules exist
-      - name: Rebuild native modules for Electron (Windows)
-        if: matrix.os == 'windows-latest'
-        run: npx @electron/rebuild --arch=x64
+      # - name: Build Electron App (macOS)
+      #   if: matrix.os == 'macos-latest'
+      #   working-directory: pos/apps/electron
+      #   run: |
+      #     npm run build
+      #     npx electron-builder --mac --${{ matrix.arch }} --publish never
+      #   env:
+      #     CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Build Electron App (Windows)
         if: matrix.os == 'windows-latest'
