@@ -72,8 +72,10 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Verify Build Output
+      - name: Verify Build Output (macOS)
+        if: matrix.os == 'macos-latest'
         working-directory: pos/apps/electron
+        shell: bash
         run: |
           echo "=== Build artifacts ==="
           ls -lh release/ || echo "No release folder found"
@@ -85,6 +87,22 @@ jobs:
             echo "✗ index.html missing"
             exit 1
           fi
+
+      - name: Verify Build Output (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: pos/apps/electron
+        shell: pwsh
+        run: |
+          Write-Host "=== Build artifacts ==="
+          if (Test-Path "release") { Get-ChildItem release | Format-Table } else { Write-Host "No release folder found" }
+          Write-Host "=== Renderer dist ==="
+          if (Test-Path "dist\renderer") { Get-ChildItem dist\renderer | Format-Table } else { Write-Host "No renderer dist found" }
+          if (Test-Path "dist\renderer\index.html") {
+            Write-Host "✓ index.html exists"
+          } else {
+            Write-Host "✗ index.html missing"
+            exit 1
+          }
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
