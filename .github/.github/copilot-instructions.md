@@ -1,5 +1,11 @@
 # GitHub Copilot Instructions
 
+## Core Principles
+
+- **No hallucination** - Only provide factually verified information
+- **Verify before answering** - Use tools to check actual file contents, directory structures, and configurations
+- **Don't make assumptions** - If uncertain, check the actual state rather than guessing
+
 ## Documentation Guidelines
 
 - **Do not create new markdown files** unless explicitly requested by the user
