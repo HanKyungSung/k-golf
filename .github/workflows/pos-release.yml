@@ -144,25 +144,25 @@ jobs:
           name: pos-windows-latest-x64
           path: release-windows
 
+      - name: Read Release Notes Template
+        id: release_notes
+        run: |
+          # Read the template and replace {VERSION} placeholder
+          TEMPLATE=$(cat pos/RELEASE_NOTES_TEMPLATE.md)
+          BODY="${TEMPLATE//\{VERSION\}/${{ steps.version.outputs.version }}}"
+          
+          # Handle multi-line output for GitHub Actions
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release in Public Repo
         uses: softprops/action-gh-release@v1
         with:
           repository: HanKyungSung/k-golf-release
           tag_name: ${{ steps.version.outputs.tag }}
           name: K-Golf POS v${{ steps.version.outputs.version }}
-          body: |
-            ## K-Golf POS Release v${{ steps.version.outputs.version }}
-            
-            ### Download
-            - **macOS (Apple Silicon)**: Download the `.dmg` file below
-            - **Windows (x64)**: Download the `.exe` installer below
-            
-            ### Installation
-            - **macOS**: Open DMG and drag to Applications folder. On first launch, go to System Settings → Privacy & Security → "Open Anyway"
-            - **Windows**: Run the installer. Click "More info" → "Run anyway" if Windows SmartScreen appears
-            
-            ### What's New
-            See full changelog in the [main repository](https://github.com/HanKyungSung/k-golf)
+          body: ${{ steps.release_notes.outputs.body }}
           files: |
             release-macos-arm64/*.dmg
             release-windows/*.exe

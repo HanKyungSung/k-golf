@@ -142,27 +142,36 @@ GitHub → Actions → POS Release Build → Run workflow
 
 **Step-by-step:**
 
-1. Navigate to Actions tab:
+1. **Update release notes** (optional, but recommended):
+   ```bash
+   # Edit pos/RELEASE_NOTES_TEMPLATE.md with actual changes
+   vim pos/RELEASE_NOTES_TEMPLATE.md
+   git add pos/RELEASE_NOTES_TEMPLATE.md
+   git commit -m "docs: update release notes for v0.2.0"
+   git push
+   ```
+
+2. Navigate to Actions tab:
    ```
    https://github.com/HanKyungSung/k-golf/actions
    ```
 
-2. Click **"POS Release Build"** workflow (left sidebar)
+3. Click **"POS Release Build"** workflow (left sidebar)
 
-3. Click **"Run workflow"** button (top right, blue button)
+4. Click **"Run workflow"** button (top right, blue button)
 
-4. Fill in the form:
+5. Fill in the form:
    - **Use workflow from**: `main` (branch)
    - **Release version**: Enter version number (e.g., `0.1.0`)
    - **Mark as pre-release**: Check if testing (unchecked for stable release)
 
-5. Click **"Run workflow"** (green button)
+6. Click **"Run workflow"** (green button)
 
-6. Wait for workflow to complete (~5-10 minutes)
+7. Wait for workflow to complete (~5-10 minutes)
    - ✅ Green checkmark = Success
    - ❌ Red X = Failed (check logs)
 
-7. View release at:
+8. View release at:
    ```
    https://github.com/HanKyungSung/k-golf-release/releases
    ```
@@ -405,6 +414,33 @@ Location: `pos/VERSION.txt`
 - **MINOR**: New features, backward compatible (e.g., 0.1.0 → 0.2.0)
 - **PATCH**: Bug fixes (e.g., 0.1.0 → 0.1.1)
 
+### Release Notes Template
+
+Location: `pos/RELEASE_NOTES_TEMPLATE.md`
+
+This template is automatically used for GitHub release descriptions. The `{VERSION}` placeholder is replaced with the actual version number.
+
+**Customize before each release:**
+```markdown
+# K-Golf POS Release
+
+## 🎉 What's New
+- Feature 1: Description
+- Feature 2: Description
+
+## 🐛 Bug Fixes
+- Fix 1: Description
+- Fix 2: Description
+
+## 📦 Installation
+(Installation instructions are auto-filled)
+```
+
+**Workflow automatically:**
+1. Reads `pos/RELEASE_NOTES_TEMPLATE.md`
+2. Replaces `{VERSION}` with actual version (e.g., `0.2.0`)
+3. Uses result as GitHub release body
+
 ### Updating Version
 
 **For next release:**
@@ -446,7 +482,7 @@ Before creating a release:
 
 - [ ] All tests passing locally
 - [ ] Version number updated in `pos/VERSION.txt`
-- [ ] Changelog or release notes prepared
+- [ ] Release notes updated in `pos/RELEASE_NOTES_TEMPLATE.md`
 - [ ] Breaking changes documented (if any)
 - [ ] Database migrations tested (if any)
 - [ ] API compatibility verified
