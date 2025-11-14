@@ -72,7 +72,59 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Define log retention policy
   - [ ] Create log monitoring dashboard
 
-**3. Dynamic Time Slot Suggestion Logic**
+**3. Fix Print Functionality - Seat-Specific Printing**
+- **Status:** 🔴 Open
+- **Component:** POS Admin Dashboard Print Feature
+- **Requirement:** Make print functionality customizable per seat/room
+- **Current Issue:** Print button doesn't filter orders by specific seat
+- **Expected Behavior:**
+  - Admin clicks "Print Seat 1" → Only Seat 1 orders print
+  - Admin clicks "Print Seat 2" → Only Seat 2 orders print
+  - Make it customizable for different room/seat configurations
+- **Implementation Needed:**
+  - [ ] Filter orders by room/seat ID before sending to print
+  - [ ] Add print template customization (header, footer, layout)
+  - [ ] Support multiple seat selections for batch printing
+  - [ ] Add print preview functionality
+  - [ ] Test with different room configurations
+- **Impact:** High - critical for kitchen order management and workflow
+- **Next Steps:**
+  - [ ] Review current print implementation in POS
+  - [ ] Add seat/room filter logic to print function
+  - [ ] Create customizable print templates
+  - [ ] Add user preferences for print settings
+
+**4. Thermal Printer Integration**
+- **Status:** 🔴 Open
+- **Component:** POS Printing System
+- **Requirement:** Build connection to thermal printer for kitchen orders
+- **Current State:** No thermal printer support, using browser print dialog
+- **Technical Requirements:**
+  - [ ] Research thermal printer protocols (ESC/POS, Star Line Mode)
+  - [ ] Choose thermal printer library (node-thermal-printer, escpos)
+  - [ ] Implement printer discovery and connection
+  - [ ] Add printer status monitoring (paper out, offline, error)
+  - [ ] Design receipt format for thermal printers (58mm or 80mm width)
+  - [ ] Handle printer-specific ESC/POS commands
+  - [ ] Add fallback to PDF/browser print if thermal printer unavailable
+- **Printer Models to Support:**
+  - [ ] Determine target thermal printer models
+  - [ ] Test with common brands (Epson TM-series, Star TSP series)
+  - [ ] Add USB and network (Ethernet/WiFi) printer support
+- **Features:**
+  - [ ] Auto-connect to configured printer on app startup
+  - [ ] Queue print jobs if printer busy
+  - [ ] Retry logic for failed prints
+  - [ ] Print job history and logging
+  - [ ] Settings UI for printer configuration
+- **Impact:** High - essential for production kitchen workflow
+- **Next Steps:**
+  - [ ] Research and select thermal printer library
+  - [ ] Acquire test thermal printer hardware
+  - [ ] Implement proof-of-concept for USB thermal printing
+  - [ ] Design kitchen receipt layout
+
+**5. Dynamic Time Slot Suggestion Logic**
 - **Status:** 🔴 Open
 - **Component:** Frontend Booking System
 - **Requirement:** Dynamic time slot suggestions based on actual booking end times
@@ -90,7 +142,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Update frontend booking form with time slot suggestions
   - [ ] Add validation to prevent overlapping bookings
 
-**4. User Lookup Feature (Missing)**
+**6. User Lookup Feature (Missing)**
 - **Status:** 🔴 Open
 - **Component:** Admin Dashboard / Customer Management
 - **Requirement:** Ability to search and view customer details
