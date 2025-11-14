@@ -16,9 +16,13 @@
 
 ## Task Management
 
-- **Before committing or completing work** (if user wants to commit), always update `TASKS.md` based on the completed tasks
+- **After every feature completion**, always:
+  1. Update `TASKS.md` with completed tasks and new status
+  2. Update related markdown documentation files in `docs/` if feature impacts them
+  3. Commit the changes with descriptive message
 - Mark completed tasks, add new ones if discovered, and keep the task list current
-- This ensures the project's task tracking stays synchronized with actual progress
+- This ensures the project's task tracking and documentation stay synchronized with actual progress
+- **Before committing or completing work** (if user wants to commit), verify all related documentation is updated
 
 ## Communication Style
 

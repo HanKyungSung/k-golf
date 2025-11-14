@@ -410,11 +410,34 @@ model Booking {
 [x] Successfully published first release (v0.1.0) ✅
 [x] **Public releases available at:** https://github.com/HanKyungSung/k-golf-release/releases
 [x] Created comprehensive release documentation
+[x] Added customizable release notes template (RELEASE_NOTES_TEMPLATE.md)
+
+**Phase 4: Auto-Update System** ✅ COMPLETE
+[x] Installed electron-updater dependency
+[x] Implemented auto-update in main.ts:
+  - Initial check after 10 seconds on app launch
+  - Periodic checks every 12 hours
+  - Auto-download updates in background
+  - Auto-install on app quit (silent updates)
+  - Event listeners for all update states
+  - IPC handlers for manual check and install
+[x] Updated workflow to generate update metadata:
+  - Removed `--publish never` flag
+  - Added GH_TOKEN for electron-builder
+  - Generates latest-mac.yml and latest.yml
+  - Generates .blockmap files for delta updates
+[x] Created comprehensive documentation:
+  - Auto-update guide with testing procedures
+  - Updated release guide with auto-update section
+  - Complete explanation of pipeline changes
+  - Troubleshooting and best practices
 
 **Documentation:**
 - Release Process: `/docs/pos_release_guide.md`
+- Auto-Update Guide: `/docs/electron_auto_update_guide.md`
 - Native Module Fix: `/docs/electron_native_module_fix.md`
 - Version Tracking: `/pos/VERSION.txt`
+- Release Notes Template: `/pos/RELEASE_NOTES_TEMPLATE.md`
 
 **Native Module Fix (Critical):**
 - **Problem:** better-sqlite3 v11 uses prebuild-install which downloads prebuilt binaries for system Node.js (MODULE_VERSION 131) instead of Electron's Node.js (MODULE_VERSION 133)
@@ -446,7 +469,7 @@ model Booking {
     - Consider WebSocket or interval polling as fallback
   - **Priority:** High (affects user experience on every login)
 
-**Phase 3: Code Signing** ⏭️ SKIPPED
+**Phase 5: Code Signing** ⏭️ SKIPPED
 **Reason:** Single-venue deployment (parents' business) - no public distribution needed
 **Cost avoided:** $99/year (macOS) + $200-400/year (Windows)
 **Workaround:** Manually add security exception on venue devices
@@ -457,16 +480,7 @@ model Booking {
 ~~[ ] Windows: Add signtool step to workflow~~
 ~~[ ] Windows: Store certificate in GitHub Secrets (WIN_CERT_PASSWORD)~~
 
-**Phase 4: Auto-Update Setup** ⏭️ SKIPPED
-**Reason:** Simple manual updates sufficient for single-venue deployment
-**Alternative:** Download new versions from GitHub Releases when needed
-~~[ ] Install electron-updater (`npm install --save electron-updater`)~~
-~~[ ] Configure autoUpdater in main.ts (checkForUpdatesAndNotify)~~
-~~[ ] Add publish config to package.json (GitHub provider)~~
-~~[ ] Test update flow with beta release~~
-~~[ ] Add update UI notifications in renderer~~
-
-**Phase 3: Distribution & Documentation** (renumbered from Phase 5)
+**Phase 6: Distribution & Documentation**
 [ ] Create installation guide (README or wiki)
 [ ] Document first-time setup (API_BASE_URL, login)
 [ ] Create download page or link to GitHub Releases
