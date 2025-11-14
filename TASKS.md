@@ -133,7 +133,29 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Document current split/merge logic
   - [ ] Implement merge-back if needed
 
-**7. Menu Item Addition Not Updating SQLite**
+**7. Booking Status Update Buttons Not Persisting**
+- **Status:** 🟡 Open
+- **Component:** POS Admin Dashboard (`pos/apps/electron/src/renderer/app/BookingContext.tsx`)
+- **Symptom:** Reset/Complete/Cancel buttons only update UI, changes don't persist
+- **Current Behavior:**
+  - Buttons update React state (optimistic update)
+  - Changes revert after page refresh
+  - No database update or sync to backend
+- **Root Cause:** `updateBookingStatus` only calls `setBookings()`, doesn't call IPC handler
+- **Expected Behavior:**
+  - Update local SQLite database
+  - Mark booking as dirty for sync
+  - Enqueue sync operation to backend
+  - Persist across app restarts
+- **Fix Required:** Make `updateBookingStatus` call `window.kgolf.updateBookingStatus()` like `updateRoomStatus` does
+- **Impact:** Medium - booking status changes are lost, confusing for staff
+- **Next Steps:**
+  - [ ] Update `BookingContext.updateBookingStatus` to call IPC handler
+  - [ ] Add optimistic update with rollback on error
+  - [ ] Test status changes persist after refresh
+  - [ ] Verify sync to backend works
+
+**8. Menu Item Addition Not Updating SQLite**
 - **Status:** 🟡 Open
 - **Component:** POS Menu Management
 - **Symptom:** Adding menu items doesn't persist to SQLite table
