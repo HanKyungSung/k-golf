@@ -749,8 +749,8 @@ function initAutoUpdater() {
     });
   }, 10000);
 
-  // Check for updates every 4 hours
-  const CHECK_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+  // Check for updates every 12 hours
+  const CHECK_INTERVAL = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
   setInterval(() => {
     log.info('[AUTO_UPDATE] Performing periodic update check');
     autoUpdater.checkForUpdates().catch(err => {

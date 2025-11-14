@@ -306,15 +306,15 @@ setTimeout(() => {
 ```
 **Why 10 seconds?** Give app time to fully initialize (auth, database, UI)
 
-#### Periodic Check (every 4 hours)
+#### Periodic Check (every 12 hours)
 ```typescript
-const CHECK_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours
+const CHECK_INTERVAL = 12 * 60 * 60 * 1000; // 12 hours
 setInterval(() => {
   log.info('[AUTO_UPDATE] Performing periodic update check');
   autoUpdater.checkForUpdates();
 }, CHECK_INTERVAL);
 ```
-**Why 4 hours?** Balance between:
+**Why 12 hours?** Balance between:
 - ⚡ Fast updates (users get fixes quickly)
 - 📡 Reasonable server load (not checking every minute)
 
@@ -478,14 +478,14 @@ tail -f ~/Library/Logs/K-Golf\ POS/main.log | grep AUTO_UPDATE
 
 **Test:**
 1. Launch app
-2. Leave running for 4+ hours
+2. Leave running for 12+ hours
 3. Check logs for periodic update check:
 
 ```bash
 # Should see multiple checks:
 # 10:00 - [AUTO_UPDATE] Performing initial update check
-# 14:00 - [AUTO_UPDATE] Performing periodic update check (4 hours later)
-# 18:00 - [AUTO_UPDATE] Performing periodic update check (8 hours later)
+# 22:00 - [AUTO_UPDATE] Performing periodic update check (12 hours later)
+# 10:00 - [AUTO_UPDATE] Performing periodic update check (24 hours later)
 ```
 
 ---

@@ -416,6 +416,7 @@ K-Golf POS includes automatic update functionality powered by **electron-updater
 App launches → [10s delay] → Check for updates
                                     │
                                     ├─ No update: Continue normally
+                                    │     └─ Check again in 12 hours
                                     │
                                     └─ Update available:
                                          │
