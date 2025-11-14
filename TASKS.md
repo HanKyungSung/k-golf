@@ -6,16 +6,118 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ---
 
+## 📝 Table of Contents
 
-## �📝 Table of Contents
+1. [Active Issues & Bugs](#active-issues--bugs)
+2. [Project Specifications](#project-specifications)
+3. [Open Questions & Decisions](#open-questions--decisions)
+4. [POS Electron App - Phase 0](#pos-electron-app---phase-0)
+5. [Backend & Admin Features - Phase 1](#backend--admin-features---phase-1)
+6. [Code Cleanup & Technical Debt](#code-cleanup--technical-debt)
+7. [Testing & Quality Assurance](#testing--quality-assurance)
+8. [Completed Tasks Archive](#completed-tasks-archive)
 
-1. [Project Specifications](#project-specifications)
-2. [Open Questions & Decisions](#open-questions--decisions)
-3. [POS Electron App - Phase 0](#pos-electron-app---phase-0)
-4. [Backend & Admin Features - Phase 1](#backend--admin-features---phase-1)
-5. [Code Cleanup & Technical Debt](#code-cleanup--technical-debt)
-6. [Testing & Quality Assurance](#testing--quality-assurance)
-7. [Completed Tasks Archive](#completed-tasks-archive)
+---
+
+## 🐛 Active Issues & Bugs
+
+### Priority: HIGH
+
+**1. POS Admin Dashboard State Refresh Issue**
+- **Status:** 🔴 Open
+- **Component:** POS Electron App (`pos/apps/electron/src/renderer/pages/DashboardPage.tsx`)
+- **Symptom:** Admin dashboard doesn't update after data changes
+  - React state changes but UI doesn't reflect updates
+  - Requires manual page refresh to see new data
+- **Impact:** High - affects real-time visibility of bookings/rooms
+- **Related:** Post-login/sync state refresh (see Phase 0.10)
+- **Next Steps:**
+  - [ ] Verify IPC event listeners are registered
+  - [ ] Check if BookingContext state updates trigger re-renders
+  - [ ] Add debugging to track state changes vs UI updates
+  - [ ] Consider using React DevTools to inspect state flow
+
+**2. Dynamic Time Slot Suggestion Logic**
+- **Status:** 🔴 Open
+- **Component:** Frontend Booking System
+- **Requirement:** Dynamic time slot suggestions based on actual booking end times
+- **Example:** Walk-in books 1:22pm - 2:22pm → Suggest 2:27pm - 3:27pm (with 5min buffer)
+- **Current State:** Not implemented (using fixed intervals or manual entry)
+- **Impact:** Medium - affects booking efficiency and user experience
+- **Implementation Notes:**
+  - Backend: Calculate available slots from existing booking end times
+  - Add configurable buffer time (5-15 minutes for cleanup)
+  - Frontend: Display suggested time slots dynamically
+- **Related:** Booking Availability & Time Slots (Project Specifications)
+- **Next Steps:**
+  - [ ] Create backend endpoint: GET /api/bookings/available-slots?roomId=X&date=Y
+  - [ ] Add buffer time configuration to settings
+  - [ ] Update frontend booking form with time slot suggestions
+  - [ ] Add validation to prevent overlapping bookings
+
+**3. User Lookup Feature (Missing)**
+- **Status:** 🔴 Open
+- **Component:** Admin Dashboard / Customer Management
+- **Requirement:** Ability to search and view customer details
+- **Current State:** Basic phone lookup exists in POS, needs enhancement
+- **Features Needed:**
+  - [ ] Search by phone, email, or name
+  - [ ] Display customer booking history
+  - [ ] Show total spent and last visit
+  - [ ] Quick access to create booking for customer
+  - [ ] Edit customer details
+- **Impact:** Medium - affects customer service efficiency
+- **Related:** Phase 1.3 (User Lookup API exists but limited UI)
+- **Next Steps:**
+  - [ ] Design user lookup UI (search bar + results list)
+  - [ ] Add to admin dashboard as new tab/page
+  - [ ] Integrate with existing GET /api/users/lookup endpoint
+  - [ ] Add customer detail modal/page
+
+### Priority: MEDIUM
+
+**4. Print Functionality Issues**
+- **Status:** 🟡 Needs Refinement
+- **Component:** POS Booking Detail (`pos/apps/electron/src/renderer/pages/BookingDetailPage.tsx`)
+- **Issues:**
+  - Print formatting needs improvement
+  - Receipt layout inconsistent
+  - Print preview not always accurate
+- **Next Steps:**
+  - [ ] Review CSS print styles
+  - [ ] Test across different printers
+  - [ ] Add print settings configuration
+
+**5. Split Functionality Bug**
+- **Status:** 🟡 Open
+- **Component:** POS Booking Detail (Seat Management)
+- **Symptom:** When deleting one split item, it doesn't merge back
+- **Question:** Is this intended behavior or bug?
+- **Next Steps:**
+  - [ ] Clarify expected behavior with stakeholders
+  - [ ] Document current split/merge logic
+  - [ ] Implement merge-back if needed
+
+**6. Menu Item Addition Not Updating SQLite**
+- **Status:** 🟡 Open
+- **Component:** POS Menu Management
+- **Symptom:** Adding menu items doesn't persist to SQLite table
+- **Impact:** Menu changes lost on app restart
+- **Next Steps:**
+  - [ ] Verify IPC handler for menu:create is called
+  - [ ] Check SQLite write permissions
+  - [ ] Add error logging for menu operations
+
+### Priority: LOW
+
+**7. Guest Checkout Data Collection**
+- **Status:** 🟢 Enhancement
+- **Component:** POS Booking Modal
+- **Requirement:** Collect name and phone number for guest checkouts
+- **Current State:** Guest bookings supported but minimal data collection
+- **Next Steps:**
+  - [ ] Add required fields validation for guest mode
+  - [ ] Update guest booking flow with data collection form
 
 ---
 
@@ -60,12 +162,6 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 ### Open questions
 - [x] ~~When the number of seats changes, does number of players also should changes?~~ → Decoupled: seats and players are independent
 - [x] ~~How can we handle the "cached" data? for instance, menu added to the running booking etc in case of the restart the app.~~ → Menu now persists in SQLite, orders saved in localStorage
-
-### Known Issues
-- [ ] Print functionality needs refinement
-- [ ] Split functionality needs fixing, when delete one of the splited item, it doesn't merge back (not sure if we want this) 
-- [ ] Guest checkout: Should collect name and phone number
-- [ ] when add menu, it doesn't update sqlite table.
 
 ---
 
@@ -445,29 +541,12 @@ model Booking {
 - **Implementation:** Uses node-gyp with --target=35.7.5 --arch=[auto-detected] --dist-url=https://electronjs.org/headers
 - **Result:** Both local and CI builds now work correctly with proper native modules
 
-**Known Issues:**
-[x] **FIXED: Electron renderer not showing on macOS ARM64 CI builds**
+**Resolved Issues:**
+[x] **FIXED: Electron renderer not showing on macOS ARM64 CI builds** (2025-11-12)
   - **Root Cause:** NODE_MODULE_VERSION mismatch (131 vs 133)
   - **Solution:** Cross-platform rebuild script with automatic architecture detection
-  - **Status:** Resolved 2025-11-12
 
-[ ] **UI State Refresh Issue (Post-Login/Sync):**
-  - **Symptom:** After login or sync completion, pulled data (bookings, rooms, menu) doesn't trigger React state updates automatically
-  - **Current Behavior:** Console logs show successful pull operations, but UI remains stale until manual hard refresh (Cmd+Shift+R)
-  - **Frequency:** Occurs on first login and intermittently after subsequent syncs
-  - **Workaround:** User must manually refresh page to see updated data
-  - **Root Cause:** Likely missing IPC event listeners or React state updates after data is written to SQLite
-  - **Investigation Needed:**
-    - Check if sync completion events are being emitted from main process
-    - Verify renderer's BookingContext is listening for sync events
-    - Confirm IPC event handlers are properly registered on app startup
-    - Check if useEffect dependencies are correctly set for data refresh
-  - **Proposed Fix:**
-    - Ensure main process emits 'sync:complete' event after successful pull
-    - Add/verify event listeners in BookingContext and other data contexts
-    - Force state refresh or re-query SQLite after sync events
-    - Consider WebSocket or interval polling as fallback
-  - **Priority:** High (affects user experience on every login)
+**Active Issues:** See [Active Issues & Bugs](#active-issues--bugs) section at top of document
 
 **Phase 5: Code Signing** ⏭️ SKIPPED
 **Reason:** Single-venue deployment (parents' business) - no public distribution needed
