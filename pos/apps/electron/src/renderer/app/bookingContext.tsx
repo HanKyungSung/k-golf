@@ -330,12 +330,16 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // ============================================================================
 
   /**
-   * On mount: Fetch rooms, tax rate, and initial bookings
+   * On mount: Fetch rooms first, then bookings
+   * Bookings depend on rooms data for display
    */
   useEffect(() => {
-    fetchRooms();
-    fetchTaxRate();
-    refreshBookings();
+    const initializeData = async () => {
+      await fetchRooms();
+      await fetchTaxRate();
+      await refreshBookings();
+    };
+    initializeData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
@@ -350,7 +354,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     let lastRefresh = 0;
 
-    const handleSyncUpdate = (payload: any) => {
+    const handleSyncUpdate = async (payload: any) => {
       const now = Date.now();
       const timeSinceLastRefresh = now - lastRefresh;
 
@@ -359,22 +363,23 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
 
-      // Refresh when sync completes successfully
-      if (payload?.sync?.pushed > 0 || payload?.queueSize === 0) {
-        console.log('[BOOKING_CTX] 🔄 Sync completed, refreshing bookings and rooms...');
+      // Refresh when sync actually completes with data changes
+      // payload.sync.pushed includes both push and pull operations
+      if (payload?.sync && payload.sync.pushed > 0) {
+        console.log('[BOOKING_CTX] 🔄 Refreshing after sync');
         lastRefresh = now;
-        refreshBookings();
-        fetchRooms(); // Also refresh rooms after sync
+        // Fetch rooms first, then bookings (bookings depend on rooms)
+        await fetchRooms();
+        await refreshBookings();
       }
     };
 
     kgolf.onSync(handleSyncUpdate);
-    console.log('[BOOKING_CTX] ✅ Listening for sync events');
 
     return () => {
-      console.log('[BOOKING_CTX] Cleanup sync listener');
+      // Cleanup on unmount
     };
-  }, [refreshBookings]);
+  }, [refreshBookings, fetchRooms]);
 
   // ============================================================================
   // Provider

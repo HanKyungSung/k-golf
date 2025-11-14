@@ -51,11 +51,11 @@ contextBridge.exposeInMainWorld('kgolf', {
 		ipcRenderer.on('auth:state', (_e, payload) => cb(payload));
 	},
 	onSync: (cb: (p: any) => void) => {
-		ipcRenderer.removeAllListeners('queue:update'); // queue:update covers sync results too
+		// Don't remove listeners - allow multiple components to listen
 		ipcRenderer.on('queue:update', (_e, payload) => cb(payload));
 	},
 	onQueueUpdate: (cb: (p: { queueSize: number }) => void) => {
-		ipcRenderer.removeAllListeners('queue:update');
+		// Don't remove listeners - allow multiple components to listen
 		ipcRenderer.on('queue:update', (_e, payload) => cb(payload));
 	},
 	listRooms: () => ipcRenderer.invoke('rooms:list'),

@@ -23,21 +23,56 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: HIGH
 
-**1. POS Admin Dashboard State Refresh Issue**
+**1. API Security & Authentication**
 - **Status:** 🔴 Open
-- **Component:** POS Electron App (`pos/apps/electron/src/renderer/pages/DashboardPage.tsx`)
-- **Symptom:** Admin dashboard doesn't update after data changes
-  - React state changes but UI doesn't reflect updates
-  - Requires manual page refresh to see new data
-- **Impact:** High - affects real-time visibility of bookings/rooms
-- **Related:** Post-login/sync state refresh (see Phase 0.10)
+- **Component:** Backend API (`backend/src/`)
+- **Requirement:** Protect API endpoints to ensure only authorized clients (POS, Frontend) can access
+- **Current State:** APIs are accessible without proper authentication/authorization
+- **Security Concerns:**
+  - No API key mechanism
+  - No rate limiting
+  - No request validation for client source
+- **Implementation Options:**
+  1. API Key authentication for POS client
+  2. JWT tokens with proper validation
+  3. IP whitelisting for known clients
+  4. Request signature validation
 - **Next Steps:**
-  - [ ] Verify IPC event listeners are registered
-  - [ ] Check if BookingContext state updates trigger re-renders
-  - [ ] Add debugging to track state changes vs UI updates
-  - [ ] Consider using React DevTools to inspect state flow
+  - [ ] Choose authentication strategy (API keys vs JWT)
+  - [ ] Implement middleware for API protection
+  - [ ] Add API key management system
+  - [ ] Document authentication flow
+  - [ ] Update POS client to include credentials
 
-**2. Dynamic Time Slot Suggestion Logic**
+**2. Logging System**
+- **Status:** 🔴 Open
+- **Component:** Backend + POS (`backend/src/`, `pos/apps/electron/src/`)
+- **Requirement:** Comprehensive logging for debugging, monitoring, and audit trails
+- **Current State:** Basic console.log statements, no structured logging
+- **Needed Features:**
+  - Structured log format (timestamp, level, component, message)
+  - Log levels: DEBUG, INFO, WARN, ERROR
+  - Log rotation and retention policy
+  - Searchable log storage
+  - Error tracking integration (e.g., Sentry)
+  - Request/response logging (with PII masking)
+- **Backend Logging:**
+  - [ ] Choose logging library (winston, pino, or bunyan)
+  - [ ] Add request/response middleware logging
+  - [ ] Log authentication events
+  - [ ] Log database operations
+  - [ ] Add error tracking
+- **POS Logging:**
+  - [ ] Implement electron-log configuration
+  - [ ] Log sync operations with timestamps
+  - [ ] Log IPC communication errors
+  - [ ] Add crash reporting
+- **Next Steps:**
+  - [ ] Set up logging infrastructure
+  - [ ] Define log retention policy
+  - [ ] Create log monitoring dashboard
+
+**3. Dynamic Time Slot Suggestion Logic**
 - **Status:** 🔴 Open
 - **Component:** Frontend Booking System
 - **Requirement:** Dynamic time slot suggestions based on actual booking end times
@@ -55,7 +90,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Update frontend booking form with time slot suggestions
   - [ ] Add validation to prevent overlapping bookings
 
-**3. User Lookup Feature (Missing)**
+**4. User Lookup Feature (Missing)**
 - **Status:** 🔴 Open
 - **Component:** Admin Dashboard / Customer Management
 - **Requirement:** Ability to search and view customer details
@@ -76,7 +111,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: MEDIUM
 
-**4. Print Functionality Issues**
+**5. Print Functionality Issues**
 - **Status:** 🟡 Needs Refinement
 - **Component:** POS Booking Detail (`pos/apps/electron/src/renderer/pages/BookingDetailPage.tsx`)
 - **Issues:**
@@ -88,7 +123,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Test across different printers
   - [ ] Add print settings configuration
 
-**5. Split Functionality Bug**
+**6. Split Functionality Bug**
 - **Status:** 🟡 Open
 - **Component:** POS Booking Detail (Seat Management)
 - **Symptom:** When deleting one split item, it doesn't merge back
@@ -98,7 +133,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Document current split/merge logic
   - [ ] Implement merge-back if needed
 
-**6. Menu Item Addition Not Updating SQLite**
+**7. Menu Item Addition Not Updating SQLite**
 - **Status:** 🟡 Open
 - **Component:** POS Menu Management
 - **Symptom:** Adding menu items doesn't persist to SQLite table
@@ -110,7 +145,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: LOW
 
-**7. Guest Checkout Data Collection**
+**8. Guest Checkout Data Collection**
 - **Status:** 🟢 Enhancement
 - **Component:** POS Booking Modal
 - **Requirement:** Collect name and phone number for guest checkouts
@@ -703,7 +738,7 @@ model Booking {
 [ ] Happy Hour dynamic pricing
 
 ---
-
+- need to have some api key mechanism to protect the api
 ## 👤 Backend & Admin Features - Phase 1
 
 > **Goal:** Phone-based admin booking system
