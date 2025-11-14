@@ -399,7 +399,98 @@ git ls-remote --tags origin
 
 ---
 
-## 📦 Version Management
+## � Auto-Update System
+
+K-Golf POS includes automatic update functionality powered by **electron-updater**.
+
+### How It Works
+
+1. **On App Startup**: Checks for updates 10 seconds after launch
+2. **Periodic Checks**: Automatically checks every 4 hours
+3. **Download**: Updates download in background (delta updates via blockmap)
+4. **Install**: Updates install automatically on next app restart
+
+### User Experience
+
+```
+App launches → [10s delay] → Check for updates
+                                    │
+                                    ├─ No update: Continue normally
+                                    │
+                                    └─ Update available:
+                                         │
+                                         ├─ Download in background (progress notifications)
+                                         │
+                                         └─ Download complete:
+                                              │
+                                              └─ Notification: "Update ready - will install on restart"
+                                                   │
+                                                   └─ User quits app → Update installs → Relaunches with new version
+```
+
+### Files Generated
+
+When you publish a release, electron-builder automatically generates:
+
+**macOS:**
+- `latest-mac.yml` - Update metadata (version, SHA512, file size)
+- `K-Golf POS-x.x.x-arm64.dmg.blockmap` - Delta update file
+
+**Windows:**
+- `latest.yml` - Update metadata
+- `K-Golf POS Setup x.x.x.exe.blockmap` - Delta update file
+
+### Manual Update Check
+
+Users can manually trigger update check (future UI feature):
+```typescript
+// Renderer can call:
+window.electron.invoke('update:check')
+```
+
+### Testing Auto-Update
+
+1. Install v0.1.0 on your machine
+2. Publish v0.2.0 to GitHub releases
+3. Launch v0.1.0 app
+4. Wait 10 seconds - should detect and download v0.2.0
+5. Quit and relaunch - should install and run v0.2.0
+
+**Check logs:**
+```bash
+# macOS
+tail -f ~/Library/Logs/K-Golf\ POS/main.log | grep AUTO_UPDATE
+
+# Windows
+type %USERPROFILE%\AppData\Roaming\K-Golf POS\logs\main.log | findstr AUTO_UPDATE
+```
+
+### Configuration
+
+Auto-update is configured in `pos/apps/electron/package.json`:
+
+```json
+{
+  "build": {
+    "publish": {
+      "provider": "github",
+      "owner": "HanKyungSung",
+      "repo": "k-golf-release",
+      "releaseType": "release"
+    }
+  }
+}
+```
+
+### Limitations
+
+- **Code signing required for production** (currently disabled for testing)
+- **Only works for installed apps** (not when running from DMG/Downloads)
+- **Pre-releases**: Set `"releaseType": "prerelease"` to auto-update to beta versions
+
+---
+
+## �📦 Version Management
 
 ### Version File
 
