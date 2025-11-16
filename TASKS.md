@@ -23,7 +23,155 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: HIGH
 
-**1. API Security & Authentication**
+**1. Booking Status Implementation (bookingStatus + paymentStatus)**
+- **Status:** 🔴 Open
+- **Component:** Full Stack (Backend + Frontend + POS)
+- **Requirement:** Implement dual-status system for booking lifecycle and payment workflow tracking
+- **Description:** Add `bookingStatus` (lifecycle) and `paymentStatus` (payment workflow) fields to properly track room status during operation
+- **Documentation:** See README.md "Booking Status Fields" section
+
+#### Backend Tasks
+- [ ] **Database Migration**
+  - [ ] Rename `status` column to `bookingStatus` in Booking model
+  - [ ] Add `paymentStatus` column (String, default "UNPAID")
+  - [ ] Add `billedAt` column (DateTime?, nullable)
+  - [ ] Add `paidAt` column (DateTime?, nullable)
+  - [ ] Add `paymentMethod` column (String?, nullable)
+  - [ ] Add `tipAmount` column (Decimal?, nullable)
+  - [ ] Create Prisma migration file
+  - [ ] Test migration with existing data (backfill strategy)
+  - [ ] Update seed script to use new field names
+
+- [ ] **API Updates**
+  - [ ] Update booking creation endpoint to set `bookingStatus=CONFIRMED`, `paymentStatus=UNPAID`
+  - [ ] Create `PATCH /api/bookings/:id/payment-status` endpoint
+    - [ ] Validate transitions: UNPAID → BILLED → PAID
+    - [ ] Set `billedAt` timestamp when changing to BILLED
+    - [ ] Set `paidAt` timestamp when changing to PAID
+    - [ ] Require `paymentMethod` when marking as PAID
+  - [ ] Update `GET /api/bookings` to include all new fields
+  - [ ] Update booking status endpoint to use `bookingStatus` field
+  - [ ] Add validation for payment workflow transitions
+  - [ ] Update booking completion logic (require PAID before COMPLETED)
+
+- [ ] **Repository Layer**
+  - [ ] Update `bookingRepo.ts` to handle new fields
+  - [ ] Add `updatePaymentStatus()` method
+  - [ ] Add query helpers for payment status filtering
+  - [ ] Update TypeScript interfaces
+
+- [ ] **Testing**
+  - [ ] Unit tests for payment status transitions
+  - [ ] Integration tests for booking workflow
+  - [ ] Test payment status validation rules
+  - [ ] Test backward compatibility with existing bookings
+
+#### Frontend Web App Tasks
+- [ ] **Type Updates**
+  - [ ] Update Booking interface to include `bookingStatus` and `paymentStatus`
+  - [ ] Update API response types
+  - [ ] Add payment status type definitions
+
+- [ ] **UI Updates**
+  - [ ] Update booking display to show both statuses
+  - [ ] Add payment status badges/indicators
+  - [ ] Update admin dashboard to filter by payment status
+  - [ ] Add payment status column to booking tables
+  - [ ] Update status update buttons for both fields
+
+- [ ] **Testing**
+  - [ ] Test UI with new status fields
+  - [ ] Test status display and filtering
+
+#### POS Electron App Tasks
+- [ ] **SQLite Schema**
+  - [ ] Update local Booking table schema
+  - [ ] Add migration for local DB
+  - [ ] Update sync logic to handle new fields
+
+- [ ] **Type Updates**
+  - [ ] Update BookingContext.tsx Booking interface
+  - [ ] Update `bookingStatus` type from lowercase to uppercase
+  - [ ] Add `paymentStatus` field to interface
+  - [ ] Add supporting fields (billedAt, paidAt, paymentMethod, tipAmount)
+
+- [ ] **Sync Engine**
+  - [ ] Update `bookings:pull` to sync new fields
+  - [ ] Update `bookings:push` (if needed) for payment status
+  - [ ] Test bidirectional sync of payment status
+
+- [ ] **Dashboard UI - Room Status Overview**
+  - [ ] Update room status logic in DashboardPage.tsx (line 151)
+  - [ ] Change from `currentBooking ? "ordered" : "empty"` to use `paymentStatus`
+  - [ ] Map payment statuses to room colors:
+    - `paymentStatus=UNPAID` → Yellow (Order Entered)
+    - `paymentStatus=BILLED` → Red (Bill Issued)
+    - `paymentStatus=PAID` → Blue or back to Green (Ready to complete)
+  - [ ] Add action buttons to room cards:
+    - [ ] "Issue Bill" button (UNPAID → BILLED)
+    - [ ] "Mark as Paid" button (BILLED → PAID)
+    - [ ] Show payment method selection on Mark as Paid
+  - [ ] Update room status legend to match new colors
+
+- [ ] **Booking Detail Page**
+  - [ ] Add payment status section
+  - [ ] Add "Issue Bill" button (updates to BILLED, sets billedAt)
+  - [ ] Add payment collection UI:
+    - [ ] Payment method selector (CARD | CASH)
+    - [ ] Tip amount input
+    - [ ] "Mark as Paid" button (updates to PAID, sets paidAt)
+  - [ ] Show payment history (billedAt, paidAt timestamps)
+  - [ ] Disable "Complete Booking" until paymentStatus=PAID
+
+- [ ] **IPC Bridge**
+  - [ ] Add `bookings:update-payment-status` IPC handler
+  - [ ] Expose payment status update method in preload.ts
+  - [ ] Add proper error handling and validation
+
+- [ ] **Testing**
+  - [ ] Test payment workflow: UNPAID → BILLED → PAID
+  - [ ] Test room card color changes
+  - [ ] Test action buttons on dashboard
+  - [ ] Test payment method and tip amount capture
+  - [ ] Test sync of payment status across terminals
+  - [ ] Test offline mode (queue payment updates)
+
+#### Documentation
+- [x] Document status fields in README.md
+- [ ] Update API documentation with new endpoints
+- [ ] Add payment workflow diagram to docs
+- [ ] Document payment status transition rules
+- [ ] Add examples for common scenarios
+
+#### Rollout Plan
+1. **Phase 1: Backend**
+   - Create migration and update API
+   - Deploy to staging, test with existing data
+   - Verify backward compatibility
+
+2. **Phase 2: Frontend Web**
+   - Update types and UI
+   - Deploy to staging
+   - Test booking display and status updates
+
+3. **Phase 3: POS App**
+   - Update local schema and sync
+   - Update dashboard UI with new workflow
+   - Test on development POS terminal
+
+4. **Phase 4: Production**
+   - Deploy backend migration during maintenance window
+   - Deploy frontend and POS updates
+   - Monitor for issues
+   - Train staff on new payment workflow
+
+**Impact:** HIGH - Core feature affecting all booking operations and room status tracking
+**Priority:** HIGH - Needed for proper POS workflow implementation
+**Estimated Effort:** 3-5 days across all components
+
+---
+
+**2. API Security & Authentication**
 - **Status:** 🔴 Open
 - **Component:** Backend API (`backend/src/`)
 - **Requirement:** Protect API endpoints to ensure only authorized clients (POS, Frontend) can access

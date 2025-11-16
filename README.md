@@ -371,6 +371,94 @@ Rules:
 
 Migration added enum `RoomStatus` + columns with defaults; existing rooms inherit ACTIVE 09:00–19:00.
 
+### Booking Status Fields
+
+The `Booking` model uses two separate status fields to track different aspects of the booking lifecycle:
+
+#### **1. Booking Status (`bookingStatus`)**
+Tracks the overall lifecycle state of the booking reservation.
+
+**Values:**
+- `CONFIRMED` (default) - Booking is active and valid
+- `COMPLETED` - Booking has finished successfully, customer has left
+- `CANCELLED` - Booking was cancelled by customer or staff
+
+**Usage:**
+- Used to filter active bookings: `WHERE bookingStatus = 'CONFIRMED'`
+- Revenue reports use `COMPLETED` status
+- Can be reset from `CANCELLED` back to `CONFIRMED` if needed
+
+#### **2. Payment Status (`paymentStatus`)**
+Tracks the payment and billing workflow during the customer's visit.
+
+**Values:**
+- `UNPAID` (default) - Customer has been seated, no bill issued yet
+- `BILLED` - Bill has been issued, waiting for payment
+- `PAID` - Payment received, transaction complete
+
+**Progression Flow:**
+```
+┌─────────┐    Create Booking    ┌─────────┐
+│ No      │ ──────────────────► │ UNPAID  │
+│ Booking │                       │(Yellow) │
+└─────────┘                       └─────┬───┘
+                                        │
+                                        │ Issue Bill
+                                        ▼
+                                  ┌─────────┐
+                                  │ BILLED  │
+                                  │  (Red)  │
+                                  └─────┬───┘
+                                        │
+                                        │ Mark as Paid
+                                        ▼
+                                  ┌─────────┐
+                                  │  PAID   │
+                                  │ (Blue)  │
+                                  └─────┬───┘
+                                        │
+                                        │ Complete Booking
+                                        ▼
+                            bookingStatus → COMPLETED
+```
+
+**Supporting Fields:**
+- `billedAt` (DateTime?) - Timestamp when bill was issued
+- `paidAt` (DateTime?) - Timestamp when payment was received
+- `paymentMethod` (String?) - Payment method used: `CARD` | `CASH`
+- `tipAmount` (Decimal?) - Tip amount if applicable
+
+**Valid State Combinations:**
+```
+bookingStatus=CONFIRMED + paymentStatus=UNPAID   → Customer seated, no orders yet
+bookingStatus=CONFIRMED + paymentStatus=BILLED  → Bill issued, waiting for payment
+bookingStatus=CONFIRMED + paymentStatus=PAID    → Paid, ready to complete booking
+bookingStatus=COMPLETED + paymentStatus=PAID    → Booking closed successfully
+bookingStatus=CANCELLED + paymentStatus=UNPAID  → Cancelled before billing
+bookingStatus=CANCELLED + paymentStatus=BILLED  → Cancelled after billing (refund needed)
+```
+
+**Why Two Fields?**
+- **Separation of Concerns**: Booking lifecycle (confirmed/completed/cancelled) is independent from payment workflow (unpaid/billed/paid)
+- **Better Analytics**: Can query "all billed bookings today" without complex status checks
+- **Flexible States**: Can track scenarios like "cancelled after billing" for refund processing
+- **Clearer Queries**: `WHERE bookingStatus='CONFIRMED'` means "active bookings" regardless of payment stage
+
+**Database Schema:**
+```prisma
+model Booking {
+  // ... other fields
+  bookingStatus   String    @default("CONFIRMED")     // CONFIRMED | COMPLETED | CANCELLED
+  paymentStatus   String    @default("UNPAID")        // UNPAID | BILLED | PAID
+  billedAt        DateTime? @db.Timestamptz
+  paidAt          DateTime? @db.Timestamptz
+  paymentMethod   String?                             // CARD | CASH
+  tipAmount       Decimal?  @db.Decimal(10, 2)
+}
+```
+
+**Note:** Previously the field was named `status`. It was renamed to `bookingStatus` for clarity when `paymentStatus` was added.
+
 ### Room Status Update Flow
 
 When an admin updates a room's status in the POS:

@@ -6,6 +6,11 @@ import { useBookingData } from '../app/BookingContext';
 
 // Types now provided by context (imported through hook). Keeping utility code local.
 
+// Simple icon component
+const Plus = ({ className = '' }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+);
+
 // ---------------- Utilities ----------------
 const timeSlots = Array.from({ length: (22 - 9) * 2 + 1 }, (_, i) => {
   const h = 9 + Math.floor(i / 2); const m = i % 2 === 0 ? '00' : '30'; return `${String(h).padStart(2,'0')}:${m}`;
@@ -107,9 +112,18 @@ const DashboardPage: React.FC = () => {
 
         {/* Room Status Overview */}
         <Card>
-          <CardHeader>
-            <CardTitle>Room Status</CardTitle>
-            <CardDescription>Quick overview of all room statuses</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <div>
+              <CardTitle>Room Status</CardTitle>
+              <CardDescription>Quick overview of all room statuses</CardDescription>
+            </div>
+            <Button 
+              onClick={() => setShowCreateModal(true)}
+              className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Booking</span>
+            </Button>
           </CardHeader>
           <CardContent>
             {/* Status Legend */}
