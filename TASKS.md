@@ -240,40 +240,108 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 ## 📋 Project Specifications
 
 ### Business Requirements
-- **Room Configuration:**
-  - Room 4: Supports both left-hand and right-hand players
-  - Rooms 1-3: Right-hand players only
-- **Booking Duration & Menu:**
-  - [x] Hours added as menu category (1-5 hours, $30-$150)
-  - [x] Auto-add booking hours to seat 1 on new bookings
-  - [x] Menu data migrated to SQLite for persistence
-- **Late Arrival Promotion:** Customers arriving 20+ minutes late get 1 hour free
-- **Score System:**
-  - Admin can manually enter player scores
-  - Track: Total hits, golf course name, final score
-  - Standard: 18 holes, 72 hits baseline (par)
-  - Scoring: Under 72 = negative score (e.g., -2)
-- **Authentication:** Phone number only (login/register for both online and POS)
-- **Billing:** Printing bill functionality required
-- **Admin Dashboard:** Must be able to edit all bookings
-- Need to fix the print
-- **Need pulling (Sync up)**
-- Way to handle transactions (billing)
-  - saves into the db. Need schema and others.
-- Maybe UI changes for current order page instead of vertical scroll we need tab but this can be handle later.
-- Seat management:
-  - [x] Seats decoupled from player count
-  - [x] Max 10 seats with color coding
-  - [x] Validation prevents orphaning items when reducing seats
-- **menu pos** 
-  - will need to have check list of what it was served or not.
-- **Booking Availability & Time Slots:**
-  - [x] **DECISION:** Unified time slot system (exact times for availability)
-    - Walk-in bookings: Allow exact time selection (e.g., 1:12 PM)
-    - Online booking availability: Based on actual end times (e.g., if walk-in ends 2:12 PM, next slot is 2:12 PM)
-    - No rounding to standard intervals (:00, :30) - show real availability
-  - [ ] Cleaning/buffer time: Decide if gaps needed between bookings (e.g., 15 min cleaning time)
-  - [ ] Implementation: Backend availability endpoint should return exact available start times based on existing booking end times
+
+**Overall Goal:** Simplify POS to focus only on essential operations (reference: NARU POS has many unused features)
+
+**Core Operations:**
+- **Centralized Booking Management:** All booking sources (Online/Phone/Walk-in) in one view
+- **Room-Based Workflow:** Complete order-to-payment per room
+  - View room status
+  - Take orders per room/seat
+  - Issue bills (per seat or combined)
+  - Mark payment received (card/cash/tip)
+  - Close out transactions
+- **Monthly Sales Reporting:** Card sales / Cash sales / Tips
+
+**Room Status Workflow (inspired by NARU POS):**
+- 🟢 Green: Empty/Available
+- 🟡 Yellow: Booked/Orders entered
+- 🔴 Red: Bill issued (awaiting payment)
+- 🟢 Green: Payment received & closed out
+
+**Room Configuration:**
+- Room 4: Supports both left-hand and right-hand players
+- Rooms 1-3: Right-hand players only
+
+**Booking Duration & Menu:**
+- [x] Hours added as menu category (1-5 hours, $30-$150)
+- [x] Auto-add booking hours to seat 1 on new bookings
+- [x] Menu data migrated to SQLite for persistence
+
+**Seat Management:**
+- [x] Seats decoupled from player count
+- [x] Max 10 seats with color coding
+- [x] Validation prevents orphaning items when reducing seats
+
+**Late Arrival Promotion:** Customers arriving 20+ minutes late get 1 hour free
+
+**Score System:**
+- Admin can manually enter player scores
+- Track: Total hits, golf course name, final score
+- Standard: 18 holes, 72 hits baseline (par)
+- Scoring: Under 72 = negative score (e.g., -2)
+
+**Authentication:** Phone number only (login/register for both online and POS)
+
+**Billing:** 
+- [x] Printing bill functionality (seat-specific)
+- [ ] Payment tracking (card/cash/tip)
+- [ ] Database schema for payment data
+
+**Menu POS:**
+- Will need checklist of what was served or not
+
+**Booking Availability & Time Slots:**
+- [x] **DECISION:** Unified time slot system (exact times for availability)
+  - Walk-in bookings: Allow exact time selection (e.g., 1:12 PM)
+  - Online booking availability: Based on actual end times (e.g., if walk-in ends 2:12 PM, next slot is 2:12 PM)
+  - No rounding to standard intervals (:00, :30) - show real availability
+- [ ] Cleaning/buffer time: Decide if gaps needed between bookings (e.g., 15 min cleaning time)
+- [ ] Implementation: Backend availability endpoint should return exact available start times based on existing booking end times
+
+### POS Dashboard Restructuring (Client Requirements)
+
+**Current Layout:** Bookings / Timeline / Room / Menu / Tax
+**New Layout:** Timeline / Room / Menu / Tax (remove Bookings section)
+
+**Rationale:** Move booking functionality into Room section for unified workflow
+
+**Timeline Section (Overview Only):**
+- [ ] Display one week of bookings for all rooms
+- [ ] Grid view: Days (columns) × Rooms (rows)
+- [ ] Different color per room for easy identification
+- [ ] Read-only, no interactions needed
+- [ ] Real-time updates when bookings change
+
+**Room Section (Primary Workspace - move Bookings functionality here):**
+- [ ] Display all rooms with current status color
+- [ ] Click room to view/manage booking details
+- [ ] Add orders per seat within room
+- [ ] Issue bill (per seat or combined)
+- [ ] Mark payment received (card/cash/tip)
+- [ ] Close out transaction (returns room to available)
+- [ ] Real-time status updates across all POS terminals
+
+**Room Data Display:**
+- Booking time and duration
+- Customer name
+- Number of players/seats
+- Current orders by seat
+- Bill status
+- Payment status
+
+**Implementation Priorities:**
+- **Phase 1:** Dashboard restructure (remove Bookings, expand Room section) 🔴 HIGH
+- **Phase 2:** Room workflow with status color coding 🔴 HIGH
+- **Phase 3:** Payment tracking (card/cash/tip) 🟡 MEDIUM
+- **Phase 4:** Monthly sales report 🟡 MEDIUM
+
+**Database Changes Needed:**
+- Add `roomStatus` enum: 'available' | 'ordered' | 'billed' | 'paid'
+- Add `paymentMethod` field: 'card' | 'cash' | null
+- Add `tipAmount` field: number
+- Add `paidAt` timestamp
+- Add `closedBy` user reference
 
 ### Open questions
 - [x] ~~When the number of seats changes, does number of players also should changes?~~ → Decoupled: seats and players are independent
