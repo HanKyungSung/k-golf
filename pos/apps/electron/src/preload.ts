@@ -63,7 +63,17 @@ contextBridge.exposeInMainWorld('kgolf', {
 		ipcRenderer.removeAllListeners('main-log');
 		ipcRenderer.on('main-log', (_e, payload) => cb(payload));
 	},
-	getApiBaseUrl: () => ipcRenderer.invoke('config:getApiBaseUrl')
+	getApiBaseUrl: () => ipcRenderer.invoke('config:getApiBaseUrl'),
+	printBill: (printData: {
+		seatName: string;
+		customerName?: string;
+		roomName?: string;
+		date: string;
+		items: Array<{ name: string; quantity: number; price: number }>;
+		subtotal: number;
+		tax: number;
+		total: number;
+	}) => ipcRenderer.invoke('print:bill', printData)
 });
 
 console.log('[PRELOAD] injected');

@@ -37,6 +37,16 @@ export interface KgolfAPI {
   menuUpdate(id: string, updates: Partial<Omit<MenuItem, 'id' | 'createdAt' | 'updatedAt'>>): Promise<{ success: boolean; data?: MenuItem | null; error?: string }>;
   menuDelete(id: string): Promise<{ success: boolean; data?: boolean; error?: string }>;
   menuToggleAvailability(id: string): Promise<{ success: boolean; data?: MenuItem | null; error?: string }>;
+  printBill(printData: {
+    seatName: string;
+    customerName?: string;
+    roomName?: string;
+    date: string;
+    items: Array<{ name: string; quantity: number; price: number }>;
+    subtotal: number;
+    tax: number;
+    total: number;
+  }): Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {

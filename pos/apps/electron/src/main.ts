@@ -775,4 +775,157 @@ function initAutoUpdater() {
     log.info('[AUTO_UPDATE] Install now requested');
     autoUpdater.quitAndInstall(false, true); // (isSilent, isForceRunAfter)
   });
+
+  // IPC handler for printing seat bills
+  ipcMain.handle('print:bill', async (_evt: any, printData: any) => {
+    log.info('[PRINT] Print bill requested:', { 
+      seatName: printData.seatName, 
+      itemCount: printData.items?.length 
+    });
+
+    try {
+      // Create hidden window for printing
+      const printWindow = new BrowserWindow({
+        show: false,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      });
+
+      // Generate HTML content for the bill
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              body {
+                font-family: 'Courier New', monospace;
+                margin: 20px;
+                font-size: 12pt;
+              }
+              .header {
+                text-align: center;
+                font-size: 18pt;
+                font-weight: bold;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+              }
+              .info {
+                margin-bottom: 15px;
+              }
+              .info-line {
+                margin: 5px 0;
+              }
+              .items {
+                border-top: 2px solid #000;
+                border-bottom: 2px solid #000;
+                padding: 10px 0;
+                margin: 15px 0;
+              }
+              .item {
+                display: flex;
+                justify-content: space-between;
+                margin: 8px 0;
+              }
+              .item-name {
+                flex: 1;
+              }
+              .item-price {
+                text-align: right;
+                min-width: 80px;
+              }
+              .totals {
+                text-align: right;
+                margin-top: 15px;
+              }
+              .total-line {
+                margin: 5px 0;
+              }
+              .grand-total {
+                font-size: 14pt;
+                font-weight: bold;
+                border-top: 2px solid #000;
+                padding-top: 5px;
+                margin-top: 5px;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 30px;
+                font-size: 10pt;
+                color: #666;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">K-GOLF</div>
+            
+            <div class="info">
+              <div class="info-line"><strong>Seat:</strong> ${printData.seatName}</div>
+              ${printData.customerName ? `<div class="info-line"><strong>Customer:</strong> ${printData.customerName}</div>` : ''}
+              ${printData.roomName ? `<div class="info-line"><strong>Room:</strong> ${printData.roomName}</div>` : ''}
+              <div class="info-line"><strong>Date:</strong> ${printData.date}</div>
+            </div>
+            
+            <div class="items">
+              ${printData.items.map((item: any) => `
+                <div class="item">
+                  <span class="item-name">${item.quantity}x ${item.name}</span>
+                  <span class="item-price">$${(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              `).join('')}
+            </div>
+            
+            <div class="totals">
+              <div class="total-line">Subtotal: $${printData.subtotal.toFixed(2)}</div>
+              <div class="total-line">Tax: $${printData.tax.toFixed(2)}</div>
+              <div class="grand-total">Total: $${printData.total.toFixed(2)}</div>
+            </div>
+            
+            <div class="footer">Thank you for your business!</div>
+          </body>
+        </html>
+      `;
+
+      // Load the HTML
+      await printWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent));
+
+      // Wait for content to load
+      await new Promise<void>(resolve => {
+        printWindow.webContents.once('did-finish-load', () => resolve());
+      });
+
+      // Print with dialog (silent: false shows dialog, silent: true auto-prints)
+      // Note: print() method doesn't return a promise in newer Electron versions
+      // Use callback-based approach instead
+      return new Promise((resolve) => {
+        printWindow.webContents.print(
+          {
+            silent: false,        // Show print dialog
+            printBackground: true,
+            margins: {
+              marginType: 'printableArea'
+            }
+          },
+          (success: boolean, failureReason?: string) => {
+            // Clean up
+            printWindow.close();
+
+            if (success) {
+              log.info('[PRINT] Print completed successfully');
+              resolve({ success: true });
+            } else {
+              log.error('[PRINT] Print failed:', failureReason);
+              resolve({ success: false, error: failureReason || 'Print cancelled or failed' });
+            }
+          }
+        );
+      });
+    } catch (error) {
+      log.error('[PRINT] Print failed with exception:', error);
+      return { success: false, error: String(error) };
+    }
+  });
 }

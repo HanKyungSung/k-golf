@@ -171,7 +171,17 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const endIdx = startIdx + limit;
         const paginated = sorted.slice(startIdx, endIdx);
 
-        setBookings(paginated);
+        // Only update state if data actually changed (prevent unnecessary re-renders)
+        setBookings((prev) => {
+          if (prev.length !== paginated.length) return paginated;
+          // Check if any booking changed by comparing IDs and key fields
+          const changed = paginated.some((newB, idx) => {
+            const oldB = prev[idx];
+            return !oldB || oldB.id !== newB.id || oldB.status !== newB.status || oldB.price !== newB.price;
+          });
+          return changed ? paginated : prev;
+        });
+        
         setBookingsPagination({
           total: sorted.length,
           page,
@@ -222,7 +232,17 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           color: ROOM_COLORS[idx % ROOM_COLORS.length],
         }));
         console.log('[BOOKING_CTX] 📍 Setting rooms state:', mappedRooms);
-        setRooms(mappedRooms);
+        
+        // Only update state if data actually changed (prevent unnecessary re-renders)
+        setRooms((prev) => {
+          if (prev.length !== mappedRooms.length) return mappedRooms;
+          // Check if any room changed
+          const changed = mappedRooms.some((newR: Room, idx: number) => {
+            const oldR = prev[idx];
+            return !oldR || oldR.id !== newR.id || oldR.status !== newR.status || oldR.name !== newR.name;
+          });
+          return changed ? mappedRooms : prev;
+        });
       }
     } catch (error) {
       console.error('[BOOKING_CTX] ❌ Error fetching rooms:', error);
@@ -363,9 +383,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
 
-      // Refresh when sync actually completes with data changes
-      // payload.sync.pushed includes both push and pull operations
+      // Only refresh when sync actually completes with data changes
+      // Ignore if it was just menu:pull (menu changes don't affect dashboard)
       if (payload?.sync && payload.sync.pushed > 0) {
+        // Note: We can't tell exactly what changed from the payload,
+        // but we throttle to max once per 2 seconds to reduce flicker.
+        // Future improvement: Add 'types' array to sync payload to check if bookings/rooms changed
         console.log('[BOOKING_CTX] 🔄 Refreshing after sync');
         lastRefresh = now;
         // Fetch rooms first, then bookings (bookings depend on rooms)

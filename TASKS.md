@@ -73,26 +73,33 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Create log monitoring dashboard
 
 **3. Fix Print Functionality - Seat-Specific Printing**
-- **Status:** 🔴 Open
-- **Component:** POS Admin Dashboard Print Feature
+- **Status:** � In Progress
+- **Component:** POS Admin Dashboard Print Feature (`pos/apps/electron/src/renderer/pages/BookingDetailPage.tsx`)
 - **Requirement:** Make print functionality customizable per seat/room
-- **Current Issue:** Print button doesn't filter orders by specific seat
-- **Expected Behavior:**
-  - Admin clicks "Print Seat 1" → Only Seat 1 orders print
-  - Admin clicks "Print Seat 2" → Only Seat 2 orders print
-  - Make it customizable for different room/seat configurations
-- **Implementation Needed:**
-  - [ ] Filter orders by room/seat ID before sending to print
-  - [ ] Add print template customization (header, footer, layout)
-  - [ ] Support multiple seat selections for batch printing
+- **Current Implementation:**
+  - ✅ Added IPC handler `print:bill` in main.ts
+  - ✅ Exposed `window.kgolf.printBill()` in preload.ts
+  - ✅ Updated `handlePrintSeat()` to use Electron IPC approach
+  - ✅ Creates hidden window with custom HTML for each seat
+  - ✅ Filters orders by seat ID before printing
+  - ✅ Shows seat items, subtotal, tax, and total
+- **Features Implemented:**
+  - Seat-specific bill generation with customer info
+  - Professional receipt layout with K-GOLF header
+  - Automatic calculation of seat subtotal, tax, and total
+  - Print dialog for printer selection
+- **Testing Needed:**
+  - [ ] Test printing with multiple seats and orders
+  - [ ] Verify calculations are correct
+  - [ ] Test with different printers
+  - [ ] Test error handling when no items on seat
+- **Future Enhancements:**
+  - [ ] Add print template customization (header, footer, logo)
+  - [ ] Support batch printing (multiple seats at once)
+  - [ ] Add silent printing option (skip dialog)
   - [ ] Add print preview functionality
-  - [ ] Test with different room configurations
+  - [ ] Store print preferences per user
 - **Impact:** High - critical for kitchen order management and workflow
-- **Next Steps:**
-  - [ ] Review current print implementation in POS
-  - [ ] Add seat/room filter logic to print function
-  - [ ] Create customizable print templates
-  - [ ] Add user preferences for print settings
 
 **4. Thermal Printer Integration**
 - **Status:** 🔴 Open

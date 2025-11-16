@@ -306,6 +306,13 @@ export default function BookingDetailPage() {
   };
 
   const handlePrintSeat = (seat: number) => {
+    const seatItems = getItemsForSeat(seat);
+    if (seatItems.length === 0) {
+      alert(`No items for Seat ${seat}`);
+      return;
+    }
+    
+    // Set which seat to print, then trigger print dialog
     setPrintingSeat(seat);
     setTimeout(() => {
       window.print();
@@ -383,8 +390,15 @@ export default function BookingDetailPage() {
     <div className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
       <style>{`
         @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          
           body {
             background: white !important;
+            margin: 0;
+            padding: 20px;
           }
           
           .no-print {
@@ -395,20 +409,26 @@ export default function BookingDetailPage() {
             display: block !important;
           }
 
+          /* Hide all seats by default */
           .seat-section {
             display: none !important;
           }
 
-          ${printingSeat ? `.seat-section-${printingSeat} { display: block !important; }` : '.seat-section { display: block !important; }'}
+          /* Show only the selected seat when printing */
+          ${printingSeat ? `.seat-section-${printingSeat} { display: block !important; page-break-inside: avoid; }` : '.seat-section { display: block !important; page-break-after: always; }'}
           
+          /* Hide grand total when printing specific seat */
+          ${printingSeat ? '.grand-total-section { display: none !important; }' : ''}
+          
+          /* Clean up the receipt area */
           .print-receipt {
             background: white !important;
             color: black !important;
             border: none !important;
             box-shadow: none !important;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 40px;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
           }
           
           .print-receipt * {
@@ -433,6 +453,23 @@ export default function BookingDetailPage() {
           .print-separator {
             border-top: 2px solid #000 !important;
             margin: 20px 0;
+          }
+
+          /* Hide customer info, booking info, menu, and actions cards when printing individual seat */
+          ${printingSeat ? `
+            .print-receipt > div > div:not(.seat-section-${printingSeat}) {
+              display: none !important;
+            }
+          ` : ''}
+
+          /* Ensure proper spacing for items */
+          .seat-section .space-y-3 > * {
+            margin-bottom: 1rem !important;
+          }
+
+          /* Keep items together, don't break across pages */
+          .seat-section > div {
+            page-break-inside: avoid;
           }
         }
         
@@ -555,6 +592,15 @@ export default function BookingDetailPage() {
                             </Button>
                           </div>
 
+                          {/* Print-only seat header with customer info */}
+                          <div className="print-only mb-4">
+                            <h2 className="text-2xl font-bold mb-2">Seat {seat} Bill</h2>
+                            <p><strong>Customer:</strong> {booking?.customerName}</p>
+                            <p><strong>Room:</strong> {booking?.roomName}</p>
+                            <p><strong>Date:</strong> {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
+                            <hr className="my-3 border-black" />
+                          </div>
+
                           {seatItems.map((item) => (
                             <div key={item.id} className="p-4 bg-slate-900/50 rounded-lg space-y-3 border border-slate-700">
                               <div className="flex items-start justify-between">
@@ -650,7 +696,7 @@ export default function BookingDetailPage() {
                     })}
 
                     {/* Grand Total */}
-                    <div className="space-y-2 pt-4 border-t-2 border-amber-500/30">
+                    <div className="space-y-2 pt-4 border-t-2 border-amber-500/30 grand-total-section">
                       <div className="flex justify-between text-slate-300">
                         <span>Subtotal</span>
                         <span>${calculateSubtotal().toFixed(2)}</span>
