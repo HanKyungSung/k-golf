@@ -105,21 +105,106 @@ const DashboardPage: React.FC = () => {
           <p className="text-slate-400 text-sm">Manage bookings, rooms, and view schedule</p>
         </header>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard title="Rooms" value={rooms.length} accent="text-amber-400" />
-          <StatCard title="Active" value={rooms.filter(r=>r.status==='ACTIVE').length} accent="text-emerald-400" />
-            <StatCard title="Active" value={activeBookings.length} accent="text-sky-400" />
-            <StatCard title="Revenue" value={`$${totalRevenue}`} accent="text-fuchsia-400" />
-        </div>
+        {/* Room Status Overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Room Status</CardTitle>
+            <CardDescription>Quick overview of all room statuses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Status Legend */}
+            <div className="flex gap-6 p-4 bg-slate-700/30 rounded-lg mb-6">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-green-500" />
+                <span className="text-sm text-slate-300">Empty Table</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-yellow-500" />
+                <span className="text-sm text-slate-300">Order Entered</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-red-500" />
+                <span className="text-sm text-slate-300">Bill Issued</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              {rooms.map((room) => {
+                const todayBookings = bookings.filter(
+                  (booking) => booking.roomId === String(room.id) && new Date(booking.date).toDateString() === new Date().toDateString(),
+                );
+                const currentBooking = todayBookings[0];
+                const roomStatus = currentBooking ? "ordered" : "empty";
+
+                return (
+                  <div
+                    key={room.id}
+                    className={`border-4 rounded-lg p-4 transition-all hover:scale-[1.02] ${
+                      roomStatus === 'empty' 
+                        ? 'border-green-500 bg-green-50/10' 
+                        : roomStatus === 'ordered' 
+                        ? 'border-yellow-500 bg-yellow-50/10' 
+                        : 'border-red-500 bg-red-50/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`w-4 h-4 rounded-full ${roomStatus === 'empty' ? 'bg-green-500' : roomStatus === 'ordered' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                      <span className={`text-xs px-2 py-1 rounded ${roomStatus === 'empty' ? 'bg-green-500' : roomStatus === 'ordered' ? 'bg-yellow-500' : 'bg-red-500'} text-white`}>
+                        {roomStatus === 'empty' ? 'Empty' : roomStatus === 'ordered' ? 'Order Entered' : 'Bill Issued'}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-semibold mb-3 text-white">{room.name}</h3>
+                    
+                    {currentBooking ? (
+                      <div className="space-y-2">
+                        <div className="p-2 bg-slate-700/50 rounded">
+                          <div className="text-xs text-slate-400">Customer</div>
+                          <div className="text-sm font-semibold text-white truncate">{currentBooking.customerName}</div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="p-2 bg-slate-700/30 rounded">
+                            <div className="text-slate-400">Time</div>
+                            <div className="font-medium text-white">{currentBooking.time}</div>
+                          </div>
+                          <div className="p-2 bg-slate-700/30 rounded">
+                            <div className="text-slate-400">Players</div>
+                            <div className="font-medium text-white">{currentBooking.players}</div>
+                          </div>
+                        </div>
+
+                        <Button size="sm" className="w-full text-xs" onClick={() => navigate(`/booking/${currentBooking.id}`)}>
+                          Manage
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-xs text-slate-400 mb-2">No booking</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full text-xs"
+                          onClick={() => setShowCreateModal(true)}
+                        >
+                          <span className="text-lg mr-1">+</span>
+                          Book
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
         {isAdmin ? (
-          <Tabs defaultValue="bookings" className="space-y-6">
-            <TabsTriggersRow className="grid-cols-5">
-              <TabsTrigger value="bookings">Bookings</TabsTrigger>
-              <TabsTrigger value="rooms">Rooms</TabsTrigger>
+          <Tabs defaultValue="timeline" className="space-y-6">
+            <TabsTriggersRow className="grid-cols-4">
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsTrigger value="rooms">Room Management</TabsTrigger>
               <TabsTrigger value="menu">Menu</TabsTrigger>
-              <TabsTrigger value="tax">Tax Settings</TabsTrigger>
+              <TabsTrigger value="tax">Tax</TabsTrigger>
             </TabsTriggersRow>
             <TabsContent when="bookings">
               <Card>
@@ -229,33 +314,92 @@ const DashboardPage: React.FC = () => {
             <TabsContent when="rooms">
               <Card>
                 <CardHeader>
-                  <CardTitle>Rooms</CardTitle>
-                  <CardDescription>Status + capacity overview (mock)</CardDescription>
+                  <CardTitle>Room Management</CardTitle>
+                  <CardDescription>Control room status and availability</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {rooms.map(r => (
-                      <Card key={r.id} className="border-2 border-slate-700 bg-slate-800/30">
-                        <CardHeader className="pb-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded ${r.color}`}></div>
-                              <CardTitle className="text-sm">{r.name}</CardTitle>
+                  <div className="space-y-4">
+                    {rooms.map((room) => {
+                      const todayBookings = bookings.filter(
+                        (booking) => booking.roomId === String(room.id) && new Date(booking.date).toDateString() === new Date().toDateString(),
+                      );
+
+                      return (
+                        <Card key={room.id} className="bg-slate-700/30 border-slate-600">
+                          <CardHeader>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-4 h-4 rounded ${room.color}`} />
+                                <CardTitle className="text-xl text-white">{room.name}</CardTitle>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <label className="text-slate-400 text-sm">Room Status:</label>
+                                <select 
+                                  value={room.status} 
+                                  onChange={e=>updateRoomStatus(room.id, e.target.value as any)} 
+                                  className="w-[160px] bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                >
+                                  <option value="ACTIVE">Active</option>
+                                  <option value="MAINTENANCE">Maintenance</option>
+                                  <option value="CLOSED">Closed</option>
+                                </select>
+                                <Badge className={`${getStatusColor(room.status)} border-0`}>{room.status}</Badge>
+                              </div>
                             </div>
-                            <Badge className={getStatusColor(r.status)}>{r.status}</Badge>
-                          </div>
-                          <CardDescription>Cap {r.capacity} • ${r.hourlyRate}/h</CardDescription>
-                        </CardHeader>
-                        <CardContent className="pt-0 space-y-2">
-                          <label className="text-[11px] text-slate-400">Update Status</label>
-                            <select value={r.status} onChange={e=>updateRoomStatus(r.id, e.target.value as any)} className="w-full text-xs bg-slate-700/50 border border-slate-600 rounded px-2 py-1 text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-400">
-                              <option value="ACTIVE">Active</option>
-                              <option value="MAINTENANCE">Maintenance</option>
-                              <option value="CLOSED">Closed</option>
-                            </select>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-2 gap-6">
+                              <div>
+                                <h4 className="text-sm font-semibold text-slate-400 mb-3">Room Details</h4>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-slate-400">Capacity:</span>
+                                    <span className="text-white font-medium">{room.capacity} players</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-slate-400">Hourly Rate:</span>
+                                    <span className="text-white font-medium">${room.hourlyRate}/person/hour</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-slate-400">Today's Bookings:</span>
+                                    <span className="text-white font-medium">{todayBookings.length}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div>
+                                <h4 className="text-sm font-semibold text-slate-400 mb-3">Today's Bookings</h4>
+                                {todayBookings.length > 0 ? (
+                                  <div className="space-y-2 max-h-[120px] overflow-y-auto">
+                                    {todayBookings.map((booking) => (
+                                      <div
+                                        key={booking.id}
+                                        onClick={() => navigate(`/booking/${booking.id}`)}
+                                        className="block p-2 bg-slate-600/30 rounded hover:bg-slate-600/50 transition-colors cursor-pointer"
+                                      >
+                                        <div className="flex justify-between items-start">
+                                          <div>
+                                            <div className="text-sm font-medium text-white">{booking.customerName}</div>
+                                            <div className="text-xs text-slate-400">
+                                              {booking.time} • {booking.players} players
+                                            </div>
+                                          </div>
+                                          <Badge className={`${getStatusColor(booking.status)} border-0 text-xs`}>
+                                            {booking.status}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-slate-500 italic">No bookings today</p>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -284,20 +428,114 @@ const DashboardPage: React.FC = () => {
             <TabsContent when="tax">
               <Card>
                 <CardHeader>
-                  <CardTitle>Global Tax Rate Settings</CardTitle>
-                  <CardDescription>Set the default tax rate applied to all bookings</CardDescription>
+                  <CardTitle>Monthly Sales Report</CardTitle>
+                  <CardDescription>View sales summary broken down by payment method</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-slate-300">Current Global Tax Rate</span>
-                        <span className="text-2xl font-bold text-amber-400">{globalTaxRate}%</span>
-                      </div>
-                      <p className="text-xs text-slate-500">This rate is applied to all new bookings by default. Individual bookings can override this rate.</p>
+                    {/* Month Selector */}
+                    <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
+                      <Button size="sm" variant="ghost">←</Button>
+                      <span className="text-base font-semibold text-white">January 2024</span>
+                      <Button size="sm" variant="ghost">→</Button>
                     </div>
+
+                    {/* Sales Summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <Card className="bg-slate-700/30 border-slate-600">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base text-white flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-blue-500" />
+                            Card Sales
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-3xl font-bold text-white mb-2">$12,450</div>
+                          <div className="text-sm text-slate-400">158 transactions</div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-slate-700/30 border-slate-600">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base text-white flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-green-500" />
+                            Cash Sales
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-3xl font-bold text-white mb-2">$3,280</div>
+                          <div className="text-sm text-slate-400">42 transactions</div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-slate-700/30 border-slate-600">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base text-white flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-amber-500" />
+                            Tips
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-3xl font-bold text-white mb-2">$890</div>
+                          <div className="text-sm text-slate-400">67 transactions</div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Total */}
+                    <div className="bg-gradient-to-r from-amber-900/30 to-amber-800/30 border border-amber-700/50 rounded-lg p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-slate-400 mb-1">Total Monthly Revenue</div>
+                          <div className="text-4xl font-bold text-white">$16,620</div>
+                        </div>
+                        <Button size="md">Export Report</Button>
+                      </div>
+                    </div>
+
+                    {/* Daily Breakdown */}
+                    <div>
+                      <h3 className="text-base font-semibold text-white mb-4">Daily Breakdown</h3>
+                      <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                        {Array.from({ length: 31 }, (_, i) => {
+                          const day = i + 1;
+                          const cardAmount = Math.floor(Math.random() * 800) + 200;
+                          const cashAmount = Math.floor(Math.random() * 200) + 50;
+                          const tips = Math.floor(Math.random() * 50) + 10;
+                          const total = cardAmount + cashAmount + tips;
+
+                          return (
+                            <div
+                              key={day}
+                              className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg hover:bg-slate-700/50 transition-colors"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="text-slate-400 font-medium w-20 text-sm">Jan {day}</div>
+                                <div className="flex gap-6 text-xs">
+                                  <span className="text-blue-400">Card: ${cardAmount}</span>
+                                  <span className="text-green-400">Cash: ${cashAmount}</span>
+                                  <span className="text-amber-400">Tips: ${tips}</span>
+                                </div>
+                              </div>
+                              <div className="font-semibold text-white text-sm">${total}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Tax Settings */}
+                    <div className="border-t border-slate-700 pt-6 mt-6">
+                      <h3 className="text-lg font-semibold text-white mb-4">Global Tax Rate Settings</h3>
+                      <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-slate-300">Current Global Tax Rate</span>
+                          <span className="text-2xl font-bold text-amber-400">{globalTaxRate}%</span>
+                        </div>
+                        <p className="text-xs text-slate-500">This rate is applied to all new bookings by default. Individual bookings can override this rate.</p>
+                      </div>
                     
-                    <div className="space-y-4">
+                      <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">Update Tax Rate (%)</label>
                         <div className="flex gap-3">
@@ -364,6 +602,7 @@ const DashboardPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -399,7 +638,14 @@ function StatCard({ title, value, accent }: { title: string; value: string | num
   );
 }
 
-function TimelineView({ weekDays, rooms, bookings, navigateWeek }: CalendarProps) {
+interface TimelineViewProps {
+  weekDays: Date[];
+  rooms: import('../app/BookingContext').Room[];
+  bookings: import('../app/BookingContext').Booking[];
+  navigateWeek: (dir: 'prev' | 'next') => void;
+}
+
+function TimelineView({ weekDays, rooms, bookings, navigateWeek }: TimelineViewProps) {
   const dayStart = 9 * 60, dayEnd = 22 * 60, totalMinutes = dayEnd - dayStart;
   const navigate = useNavigate();
   return (
@@ -419,11 +665,11 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek }: CalendarProps
       </CardHeader>
       <CardContent>
         <div className="flex gap-4 mb-6 flex-wrap">
-          {rooms.map(r => <div key={r.id} className="flex items-center gap-2 text-xs text-slate-300"><div className={`w-4 h-4 rounded ${r.color}`}></div><span>{r.name}</span></div>)}
+          {rooms.map((r: import('../app/BookingContext').Room) => <div key={r.id} className="flex items-center gap-2 text-xs text-slate-300"><div className={`w-4 h-4 rounded ${r.color}`}></div><span>{r.name}</span></div>)}
         </div>
         <div className="space-y-8">
-          {weekDays.map((day, idx) => {
-            const dayBookings = bookings.filter(b => b.date === dateKey(day));
+          {weekDays.map((day: Date, idx: number) => {
+            const dayBookings = bookings.filter((b: import('../app/BookingContext').Booking) => b.date === dateKey(day));
             return (
               <div key={idx} className="space-y-2">
                 <div className="flex items-center gap-3">
@@ -450,8 +696,8 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek }: CalendarProps
                       })}
                     </div>
                   </div>
-                  {rooms.map(room => {
-                    const roomBookings = dayBookings.filter(b => b.roomId === room.id);
+                  {rooms.map((room: import('../app/BookingContext').Room) => {
+                    const roomBookings = dayBookings.filter((b: import('../app/BookingContext').Booking) => b.roomId === room.id);
                     return (
                       <div key={room.id} className="flex items-start gap-3">
                         <div className="min-w-[90px] pt-2">
@@ -463,7 +709,7 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek }: CalendarProps
                               <div key={i} className="flex-1 border-r border-slate-700/40 last:border-r-0"></div>
                             ))}
                           </div>
-                          {roomBookings.map(b => {
+                          {roomBookings.map((b: import('../app/BookingContext').Booking) => {
                             const [h,m] = b.time.split(':').map(Number); const start = h*60+m; const leftPct = ((start - dayStart)/totalMinutes)*100; const widthPct = (b.duration*60/totalMinutes)*100;
                             return (
                               <div key={b.id} className={`${room.color} absolute top-2 bottom-2 rounded-md hover:opacity-80 transition-all cursor-pointer overflow-hidden group shadow-md`} style={{ left: `${leftPct}%`, width: `${widthPct}%` }} onClick={()=>navigate(`/booking/${b.id}`)}>

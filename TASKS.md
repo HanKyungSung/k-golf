@@ -307,15 +307,16 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 **Rationale:** Move booking functionality into Room section for unified workflow
 
 **Timeline Section (Overview Only):**
-- [ ] Display one week of bookings for all rooms
-- [ ] Grid view: Days (columns) × Rooms (rows)
-- [ ] Different color per room for easy identification
-- [ ] Read-only, no interactions needed
+- [x] Display one week of bookings for all rooms ✅ COMPLETED
+- [x] Grid view: Days (columns) × Rooms (rows) ✅ COMPLETED
+- [x] Different color per room for easy identification ✅ COMPLETED
+- [x] Read-only, no interactions needed ✅ COMPLETED
 - [ ] Real-time updates when bookings change
 
 **Room Section (Primary Workspace - move Bookings functionality here):**
-- [ ] Display all rooms with current status color
-- [ ] Click room to view/manage booking details
+- [x] Display all rooms with current status color ✅ COMPLETED (Room Status Overview cards)
+- [x] Click room to view/manage booking details ✅ COMPLETED (Manage/Book buttons)
+- [x] Room Data Display with today's bookings ✅ COMPLETED
 - [ ] Add orders per seat within room
 - [ ] Issue bill (per seat or combined)
 - [ ] Mark payment received (card/cash/tip)
@@ -323,18 +324,31 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - [ ] Real-time status updates across all POS terminals
 
 **Room Data Display:**
-- Booking time and duration
-- Customer name
-- Number of players/seats
-- Current orders by seat
-- Bill status
-- Payment status
+- [x] Booking time and duration ✅ COMPLETED
+- [x] Customer name ✅ COMPLETED
+- [x] Number of players/seats ✅ COMPLETED
+- [x] Current status (empty/ordered/billed) ✅ COMPLETED
+- [ ] Current orders by seat
+- [ ] Bill status
+- [ ] Payment status
 
 **Implementation Priorities:**
-- **Phase 1:** Dashboard restructure (remove Bookings, expand Room section) 🔴 HIGH
-- **Phase 2:** Room workflow with status color coding 🔴 HIGH
+- **Phase 1:** Dashboard restructure (remove Bookings, expand Room section) ✅ COMPLETED
+  - [x] Changed tab structure from 5 to 4 tabs (Timeline/Room/Menu/Tax)
+  - [x] Added Room Status Overview section with color-coded cards
+  - [x] Implemented status legend (green=empty, yellow=ordered, red=billed)
+  - [x] Enhanced Room Management tab with detailed room info
+- **Phase 2:** Room workflow with status color coding ✅ PARTIALLY COMPLETED
+  - [x] Color-coded room status borders and indicators
+  - [x] Room status dropdown in Room Management tab
+  - [ ] Backend integration for status persistence
 - **Phase 3:** Payment tracking (card/cash/tip) 🟡 MEDIUM
-- **Phase 4:** Monthly sales report 🟡 MEDIUM
+- **Phase 4:** Monthly sales report ✅ COMPLETED
+  - [x] Added Monthly Sales Report to Tax tab
+  - [x] Month navigation controls
+  - [x] Card/Cash/Tips breakdown display
+  - [x] Daily breakdown for 31 days (scrollable)
+  - [ ] Connect to real transaction data
 
 **Database Changes Needed:**
 - Add `roomStatus` enum: 'available' | 'ordered' | 'billed' | 'paid'
