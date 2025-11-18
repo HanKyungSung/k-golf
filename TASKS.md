@@ -104,25 +104,26 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Update `bookings:push` (if needed) for payment status
   - [ ] Test bidirectional sync of payment status
 
-- [ ] **Dashboard UI - Room Status Overview**
-  - [ ] Update room status logic in DashboardPage.tsx (line 151)
-  - [ ] Change from `currentBooking ? "ordered" : "empty"` to use `paymentStatus`
-  - [ ] Map payment statuses to room colors:
-    - `paymentStatus=UNPAID` → Yellow (Order Entered)
-    - `paymentStatus=BILLED` → Red (Bill Issued)
-    - `paymentStatus=PAID` → Blue or back to Green (Ready to complete)
-  - [ ] Add action buttons to room cards:
-    - [ ] "Issue Bill" button (UNPAID → BILLED)
-    - [ ] "Mark as Paid" button (BILLED → PAID)
-    - [ ] Show payment method selection on Mark as Paid
-  - [ ] Update room status legend to match new colors
+- [x] **Dashboard UI - Basic Display** ✅ COMPLETED
+  - [x] Add getPaymentStatusColor() helper function
+  - [x] Display payment status badges in booking list (Unpaid/Billed/Paid with icons)
+  - [x] Show payment status in booking detail page header
 
-- [ ] **Booking Detail Page**
-  - [ ] Add payment status section
-  - [ ] Add "Issue Bill" button (updates to BILLED, sets billedAt)
-  - [ ] Add payment collection UI:
+- [x] **Booking Detail Page - Display** ✅ COMPLETED
+  - [x] Add Payment Information card
+  - [x] Display payment status badge
+  - [x] Show payment method (CARD/CASH)
+  - [x] Show billedAt and paidAt timestamps
+  - [x] Display tip amount
+
+- [ ] **Payment Workflow UI (Future Enhancement)**
+  - [ ] Add "Issue Bill" button in detail page (UNPAID → BILLED)
+  - [ ] Add payment collection modal:
     - [ ] Payment method selector (CARD | CASH)
     - [ ] Tip amount input
+    - [ ] "Mark as Paid" button (BILLED → PAID)
+  - [ ] Update room status colors based on payment status
+  - [ ] Add payment action buttons to room cards in dashboard
     - [ ] "Mark as Paid" button (updates to PAID, sets paidAt)
   - [ ] Show payment history (billedAt, paidAt timestamps)
   - [ ] Disable "Complete Booking" until paymentStatus=PAID
