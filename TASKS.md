@@ -40,7 +40,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [x] Add `tipAmount` column (Decimal?, nullable)
   - [x] Create Prisma migration file (20251118075727_add_booking_payment_status)
   - [x] Generate Prisma client with new fields
-  - [ ] Update seed script to use new field names
+  - [x] Update seed script to use new field names (past bookings = COMPLETED/PAID)
 
 - [ ] **API Updates**
   - [ ] Update booking creation endpoint to set `bookingStatus=CONFIRMED`, `paymentStatus=UNPAID`
