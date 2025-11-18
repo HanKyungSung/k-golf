@@ -101,6 +101,15 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  const getPaymentStatusColor = (status?: string) => {
+    switch (status) {
+      case 'UNPAID': return 'bg-red-500/20 text-red-300 border-red-500/30';
+      case 'BILLED': return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+      case 'PAID': return 'bg-green-500/20 text-green-300 border-green-500/30';
+      default: return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
+    }
+  };
+
   return (
     <div data-testid="dashboard" className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
       <AppHeader onTest={()=>{}} onSync={forceSync} />
@@ -248,9 +257,16 @@ const DashboardPage: React.FC = () => {
                     {bookings.map((b: import('../app/BookingContext').Booking) => (
                       <div key={b.id} className="flex items-center justify-between p-4 border border-slate-700 rounded-lg hover:bg-slate-700/30 bg-slate-800/30 cursor-pointer" onClick={()=>navigate(`/booking/${b.id}`)}>
                         <div className="flex-1 min-w-0 pr-4">
-                          <div className="flex items-center gap-3 mb-1">
+                          <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-medium text-white">{b.customerName}</h3>
                             <Badge className={`${getStatusColor(b.status)} capitalize`}>{b.status}</Badge>
+                            {b.paymentStatus && (
+                              <Badge className={`${getPaymentStatusColor(b.paymentStatus)} text-xs`}>
+                                {b.paymentStatus === 'UNPAID' && '💳 Unpaid'}
+                                {b.paymentStatus === 'BILLED' && '📄 Billed'}
+                                {b.paymentStatus === 'PAID' && '✓ Paid'}
+                              </Badge>
+                            )}
                           </div>
                           <div className="text-xs text-slate-400 truncate">{b.customerEmail} • {b.roomName}</div>
                           <div className="text-xs text-slate-500 mt-1">{new Date(b.date).toLocaleDateString()} at {b.time} • {b.players}p • {b.duration}h</div>

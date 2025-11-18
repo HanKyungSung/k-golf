@@ -41,6 +41,12 @@ const statusStyles: Record<string, string> = {
   cancelled: 'bg-red-500/20 text-red-300'
 };
 
+const paymentStatusStyles: Record<string, string> = {
+  UNPAID: 'bg-red-500/20 text-red-300 border-red-500/30',
+  BILLED: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  PAID: 'bg-green-500/20 text-green-300 border-green-500/30'
+};
+
 // Enhanced menu items with full category support
 interface MenuItem {
   id: string;
@@ -498,6 +504,13 @@ export default function BookingDetailPage() {
           </div>
           <div className="flex items-center gap-3">
             <Badge className={`${statusStyles[booking.status]} capitalize text-lg px-4 py-2`}>{booking.status}</Badge>
+            {booking.paymentStatus && (
+              <Badge className={`${paymentStatusStyles[booking.paymentStatus]} text-base px-3 py-1.5`}>
+                {booking.paymentStatus === 'UNPAID' && '💳 Unpaid'}
+                {booking.paymentStatus === 'BILLED' && '📄 Billed'}
+                {booking.paymentStatus === 'PAID' && '✓ Paid'}
+              </Badge>
+            )}
             <Button size="lg" variant="outline" onClick={handleGoBack} className="text-base px-6">
               Back
             </Button>
@@ -784,6 +797,49 @@ export default function BookingDetailPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Payment Information */}
+            {booking.paymentStatus && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment Information</CardTitle>
+                  <CardDescription>Payment status and details</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <InfoBlock
+                      label="Payment Status"
+                      value={
+                        <Badge className={`${paymentStatusStyles[booking.paymentStatus]} text-xs`}>
+                          {booking.paymentStatus}
+                        </Badge>
+                      }
+                    />
+                    {booking.paymentMethod && (
+                      <InfoBlock label="Payment Method" value={booking.paymentMethod} />
+                    )}
+                    {booking.billedAt && (
+                      <InfoBlock 
+                        label="Billed At" 
+                        value={new Date(booking.billedAt).toLocaleString()} 
+                      />
+                    )}
+                    {booking.paidAt && (
+                      <InfoBlock 
+                        label="Paid At" 
+                        value={new Date(booking.paidAt).toLocaleString()} 
+                      />
+                    )}
+                    {booking.tipAmount !== undefined && booking.tipAmount > 0 && (
+                      <InfoBlock 
+                        label="Tip Amount" 
+                        value={`$${booking.tipAmount.toFixed(2)}`} 
+                      />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Menu */}
             <Card className="no-print">
