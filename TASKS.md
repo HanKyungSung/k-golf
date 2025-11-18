@@ -84,11 +84,14 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Test status display and filtering
 
 #### POS Electron App Tasks
-- [ ] **SQLite Schema**
-  - [ ] Update local Booking table schema (rename status → bookingStatus)
-  - [ ] Add new payment columns (paymentStatus, billedAt, paidAt, paymentMethod, tipAmount)
-  - [ ] Add migration for local DB
-  - [ ] Update sync logic to handle new fields
+- [x] **SQLite Schema** ✅ COMPLETED
+  - [x] Add schema versioning system (PRAGMA user_version)
+  - [x] Create migration 1: Add bookingStatus and payment columns
+  - [x] Migrate existing data (status → bookingStatus, CANCELED → CANCELLED)
+  - [x] Set paymentStatus=PAID for completed bookings
+  - [x] Update sync.ts to upsert new fields from backend
+  - [x] Update bookings.ts to create with bookingStatus/paymentStatus
+  - [x] Update main.ts IPC handler to use bookingStatus
 
 - [x] **Type Updates** ✅ COMPLETED
   - [x] Update BookingContext.tsx Booking interface with payment fields
