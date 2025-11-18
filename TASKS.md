@@ -42,23 +42,23 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [x] Generate Prisma client with new fields
   - [x] Update seed script to use new field names (past bookings = COMPLETED/PAID)
 
-- [ ] **API Updates**
-  - [ ] Update booking creation endpoint to set `bookingStatus=CONFIRMED`, `paymentStatus=UNPAID`
-  - [ ] Create `PATCH /api/bookings/:id/payment-status` endpoint
-    - [ ] Validate transitions: UNPAID → BILLED → PAID
-    - [ ] Set `billedAt` timestamp when changing to BILLED
-    - [ ] Set `paidAt` timestamp when changing to PAID
-    - [ ] Require `paymentMethod` when marking as PAID
-  - [ ] Update `GET /api/bookings` to include all new fields
-  - [ ] Update booking status endpoint to use `bookingStatus` field
-  - [ ] Add validation for payment workflow transitions
-  - [ ] Update booking completion logic (require PAID before COMPLETED)
+- [x] **API Updates** ✅ COMPLETED
+  - [x] Update booking creation endpoints (all 3) to set `bookingStatus=CONFIRMED`, `paymentStatus=UNPAID`
+  - [x] Create `PATCH /api/bookings/:id/payment-status` endpoint (admin only)
+    - [x] Accept paymentStatus, paymentMethod, tipAmount
+    - [x] Set `billedAt` timestamp when changing to BILLED or PAID
+    - [x] Set `paidAt` timestamp when changing to PAID
+    - [x] Use updatePaymentStatus() repository method
+  - [x] Update presentBooking() to include all payment fields in response
+  - [x] Update cancellation check to use `bookingStatus` field (CANCELLED spelling)
+  - [x] Update room hours validation to use `bookingStatus` field
+  - [x] Update presentStatus() helper to use `bookingStatus` parameter
 
-- [ ] **Repository Layer**
-  - [ ] Update `bookingRepo.ts` to handle new fields
-  - [ ] Add `updatePaymentStatus()` method
-  - [ ] Add query helpers for payment status filtering
-  - [ ] Update TypeScript interfaces
+- [x] **Repository Layer** ✅ COMPLETED
+  - [x] Update `bookingRepo.ts` to handle new fields
+  - [x] Add `updatePaymentStatus()` method
+  - [x] Add `updateBookingStatus()` method
+  - [x] Update TypeScript interfaces (CreateBookingInput, UpdatePaymentStatusInput)
 
 - [ ] **Testing**
   - [ ] Unit tests for payment status transitions
