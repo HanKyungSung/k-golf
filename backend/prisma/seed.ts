@@ -274,7 +274,15 @@ async function main() {
 						
 						// Status: past bookings are completed, future are confirmed
 						const isPast = startTime < today;
-						const status = isPast ? 'CONFIRMED' : 'CONFIRMED'; // All confirmed for now
+						const bookingStatus = isPast ? 'COMPLETED' : 'CONFIRMED';
+					
+					// Payment status: completed bookings are paid, future are unpaid
+					const paymentStatus = isPast ? 'PAID' : 'UNPAID';
+					
+					// Payment details for completed/paid bookings
+					const paymentMethod = isPast ? (Math.random() > 0.5 ? 'CARD' : 'CASH') : null;
+					const paidAt = isPast ? endTime : null;
+					const billedAt = isPast ? new Date(endTime.getTime() - 5 * 60 * 1000) : null; // 5 min before end
 						
 						// Random booking source: ONLINE, WALK_IN, or PHONE
 						const sources = ['ONLINE', 'WALK_IN', 'PHONE'];
@@ -283,21 +291,25 @@ async function main() {
 						// Created at: random time before start time
 						const createdAt = new Date(startTime.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000); // Up to 7 days before
 						
-						bookingsToCreate.push({
-							roomId: room.id,
-							userId: adminUser.id,
-							customerName: customer.name,
-							customerPhone: customer.phone,
-							customerEmail: customer.email,
-							startTime,
-							endTime,
-							players,
-							price: basePrice,
-							status,
-							bookingSource: bookingSource,
-							createdBy: adminUser.id,
-							createdAt,
-						});
+					bookingsToCreate.push({
+						roomId: room.id,
+						userId: adminUser.id,
+						customerName: customer.name,
+						customerPhone: customer.phone,
+						customerEmail: customer.email,
+						startTime,
+						endTime,
+						players,
+						price: basePrice,
+						bookingStatus,
+						paymentStatus,
+						billedAt,
+						paidAt,
+						paymentMethod,
+						bookingSource: bookingSource,
+						createdBy: adminUser.id,
+						createdAt,
+					});
 					}
 				}
 
