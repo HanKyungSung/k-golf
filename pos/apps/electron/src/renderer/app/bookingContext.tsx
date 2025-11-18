@@ -140,7 +140,8 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
 
           // Handle both old 'status' and new 'bookingStatus' fields for backward compatibility
-          const bookingStatus = b.bookingStatus || b.status || 'confirmed';
+          // Prioritize old 'status' field since it has correct data after migration
+          const bookingStatus = b.status || b.bookingStatus || 'confirmed';
           const normalizedStatus = bookingStatus === 'CANCELED' || bookingStatus === 'CANCELLED' 
             ? 'cancelled' 
             : bookingStatus.toLowerCase();
