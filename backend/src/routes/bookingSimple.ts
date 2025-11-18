@@ -73,7 +73,7 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
     const conflictingBooking = await prisma.booking.findFirst({
       where: {
         roomId: data.roomId,
-        status: { not: 'CANCELED' },
+        bookingStatus: { not: 'CANCELLED' },
         OR: [
           {
             // New booking starts during existing booking
@@ -130,7 +130,8 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
         endTime,
         players: data.players,
         price,
-        status: 'CONFIRMED',
+        bookingStatus: 'CONFIRMED',
+        paymentStatus: 'UNPAID',
         bookingSource: data.bookingSource,
         createdBy: adminId,
         internalNotes: data.internalNotes || null,
