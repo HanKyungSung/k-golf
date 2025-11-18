@@ -12,7 +12,8 @@ export interface CreateBookingInput {
   players: number;
   hours?: number; // Optional if endTime provided
   price: number | string; // stored as Decimal(10,2) in DB
-  status?: string;
+  bookingStatus?: string; // CONFIRMED | COMPLETED | CANCELLED
+  paymentStatus?: string; // UNPAID | BILLED | PAID
   bookingSource: string; // Required: "ONLINE" | "WALK_IN" | "PHONE"
 }
 
@@ -25,7 +26,7 @@ export async function findConflict(roomId: string, startTime: Date, endTime: Dat
   return prisma.booking.findFirst({
     where: {
       roomId,
-      status: { not: 'CANCELED' },
+      bookingStatus: { not: 'CANCELLED' },
       startTime: { lt: endTime },
       endTime: { gt: startTime },
     },
@@ -35,8 +36,7 @@ export async function findConflict(roomId: string, startTime: Date, endTime: Dat
 
 export async function createBooking(data: CreateBookingInput): Promise<Booking> {
   const endTime = data.endTime || (data.hours ? computeEnd(data.startTime, data.hours) : new Date(data.startTime.getTime() + 3600000));
-  // Cast prisma to any until Prisma client is regenerated with the new schema
-  return (prisma as any).booking.create({
+  return prisma.booking.create({
     data: {
       roomId: data.roomId,
       userId: data.userId,
@@ -46,7 +46,8 @@ export async function createBooking(data: CreateBookingInput): Promise<Booking> 
       endTime,
       players: data.players,
       price: data.price,
-      status: data.status || 'CONFIRMED',
+      bookingStatus: data.bookingStatus || 'CONFIRMED',
+      paymentStatus: data.paymentStatus || 'UNPAID',
       bookingSource: data.bookingSource, // Required field, no default
     },
   });
@@ -120,7 +121,7 @@ export async function listRoomBookingsBetween(
       // overlap condition: booking.start < rangeEnd AND booking.end > rangeStart
       startTime: { lt: rangeEnd },
       endTime: { gt: rangeStart },
-      status: { not: 'CANCELED' },
+      bookingStatus: { not: 'CANCELLED' },
     },
     orderBy: { startTime: 'asc' },
   });
@@ -131,5 +132,41 @@ export async function getBooking(id: string): Promise<Booking | null> {
 }
 
 export async function cancelBooking(id: string): Promise<Booking> {
-  return prisma.booking.update({ where: { id }, data: { status: 'CANCELED' } });
+  return prisma.booking.update({ where: { id }, data: { bookingStatus: 'CANCELLED' } });
+}
+
+// Update payment status with optional fields
+export interface UpdatePaymentStatusInput {
+  paymentStatus: 'UNPAID' | 'BILLED' | 'PAID';
+  billedAt?: Date;
+  paidAt?: Date;
+  paymentMethod?: 'CARD' | 'CASH';
+  tipAmount?: number;
+}
+
+export async function updatePaymentStatus(
+  id: string,
+  data: UpdatePaymentStatusInput
+): Promise<Booking> {
+  return prisma.booking.update({
+    where: { id },
+    data: {
+      paymentStatus: data.paymentStatus,
+      billedAt: data.billedAt,
+      paidAt: data.paidAt,
+      paymentMethod: data.paymentMethod,
+      tipAmount: data.tipAmount,
+    },
+  });
+}
+
+// Update booking status
+export async function updateBookingStatus(
+  id: string,
+  bookingStatus: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+): Promise<Booking> {
+  return prisma.booking.update({
+    where: { id },
+    data: { bookingStatus },
+  });
 }
