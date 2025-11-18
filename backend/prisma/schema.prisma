@@ -62,25 +62,30 @@ enum RoomStatus {
 }
 
 model Booking {
-  id            String   @id @default(uuid())
-  room          Room     @relation(fields: [roomId], references: [id])
-  roomId        String
-  user          User?    @relation(fields: [userId], references: [id]) // Nullable: supports guest bookings
-  userId        String?  // Nullable: null for guest bookings, auto-linked on registration
-  customerName  String   // Denormalized snapshot: name at booking time
-  customerPhone String   // Denormalized snapshot: phone at booking time
-  customerEmail String?  // Denormalized snapshot: email at booking time (optional)
-  startTime     DateTime @db.Timestamptz
-  endTime       DateTime @db.Timestamptz
-  players       Int
-  price         Decimal  @db.Decimal(10, 2)
-  status        String   @default("CONFIRMED")
-  bookingSource String   @default("ONLINE") @db.VarChar(50) // "ONLINE" | "WALK_IN" | "PHONE"
-  createdBy     String?  // FK to User.id (admin who created this booking)
-  createdByUser User?    @relation("AdminCreatedBookings", fields: [createdBy], references: [id], onDelete: SetNull)
-  internalNotes String?  @db.Text // Admin-only notes
-  createdAt     DateTime @default(now()) @db.Timestamptz
-  updatedAt     DateTime @updatedAt @db.Timestamptz
+  id              String    @id @default(uuid())
+  room            Room      @relation(fields: [roomId], references: [id])
+  roomId          String
+  user            User?     @relation(fields: [userId], references: [id]) // Nullable: supports guest bookings
+  userId          String?   // Nullable: null for guest bookings, auto-linked on registration
+  customerName    String    // Denormalized snapshot: name at booking time
+  customerPhone   String    // Denormalized snapshot: phone at booking time
+  customerEmail   String?   // Denormalized snapshot: email at booking time (optional)
+  startTime       DateTime  @db.Timestamptz
+  endTime         DateTime  @db.Timestamptz
+  players         Int
+  price           Decimal   @db.Decimal(10, 2)
+  bookingStatus   String    @default("CONFIRMED") // CONFIRMED | COMPLETED | CANCELLED (renamed from status)
+  paymentStatus   String    @default("UNPAID")    // UNPAID | BILLED | PAID
+  billedAt        DateTime? @db.Timestamptz        // When bill was issued
+  paidAt          DateTime? @db.Timestamptz        // When payment was received
+  paymentMethod   String?                          // CARD | CASH
+  tipAmount       Decimal?  @db.Decimal(10, 2)    // Tip amount
+  bookingSource   String    @default("ONLINE") @db.VarChar(50) // "ONLINE" | "WALK_IN" | "PHONE"
+  createdBy       String?   // FK to User.id (admin who created this booking)
+  createdByUser   User?     @relation("AdminCreatedBookings", fields: [createdBy], references: [id], onDelete: SetNull)
+  internalNotes   String?   @db.Text // Admin-only notes
+  createdAt       DateTime  @default(now()) @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @db.Timestamptz
 
   @@index([roomId, startTime])
   @@index([userId, startTime])

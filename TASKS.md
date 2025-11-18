@@ -31,15 +31,15 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - **Documentation:** See README.md "Booking Status Fields" section
 
 #### Backend Tasks
-- [ ] **Database Migration**
-  - [ ] Rename `status` column to `bookingStatus` in Booking model
-  - [ ] Add `paymentStatus` column (String, default "UNPAID")
-  - [ ] Add `billedAt` column (DateTime?, nullable)
-  - [ ] Add `paidAt` column (DateTime?, nullable)
-  - [ ] Add `paymentMethod` column (String?, nullable)
-  - [ ] Add `tipAmount` column (Decimal?, nullable)
-  - [ ] Create Prisma migration file
-  - [ ] Test migration with existing data (backfill strategy)
+- [x] **Database Migration** ✅ COMPLETED
+  - [x] Rename `status` column to `bookingStatus` in Booking model
+  - [x] Add `paymentStatus` column (String, default "UNPAID")
+  - [x] Add `billedAt` column (DateTime?, nullable)
+  - [x] Add `paidAt` column (DateTime?, nullable)
+  - [x] Add `paymentMethod` column (String?, nullable)
+  - [x] Add `tipAmount` column (Decimal?, nullable)
+  - [x] Create Prisma migration file (20251118075727_add_booking_payment_status)
+  - [x] Generate Prisma client with new fields
   - [ ] Update seed script to use new field names
 
 - [ ] **API Updates**
