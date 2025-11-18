@@ -56,6 +56,9 @@ export function initDb(baseDir?: string): InitResult {
   db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
 
+  // Get current schema version
+  const currentVersion = db.pragma('user_version', { simple: true }) as number;
+
   // NOTE: Automatic destructive resets removed. To reset locally now:
   //  - Quit the app
   //  - Delete the SQLite file (pos/apps/electron/data/pos.sqlite*) OR
@@ -142,10 +145,77 @@ export function initDb(baseDir?: string): InitResult {
            );
            CREATE INDEX IF NOT EXISTS idx_OrderItem_booking ON OrderItem(bookingId);`);
 
+  // Run migrations if needed
+  runMigrations(currentVersion);
+
   // Seed menu items if empty
   seedMenuIfEmpty();
 
   return { path: dbPath, newlyCreated };
+}
+
+/**
+ * Run database migrations based on current schema version.
+ * Schema versions:
+ *   0: Initial schema (status field)
+ *   1: Booking status migration (status → bookingStatus + paymentStatus)
+ */
+function runMigrations(currentVersion: number) {
+  if (!db) return;
+
+  const TARGET_VERSION = 1;
+
+  if (currentVersion >= TARGET_VERSION) {
+    log.info(`[DB] Schema version ${currentVersion} is up to date`);
+    return;
+  }
+
+  log.info(`[DB] Running migrations from version ${currentVersion} to ${TARGET_VERSION}`);
+
+  // Migration 1: Add booking status and payment fields
+  if (currentVersion < 1) {
+    log.info('[DB] Running migration 1: Booking status fields');
+    
+    try {
+      db.exec(`
+        -- Add new columns with defaults
+        ALTER TABLE Booking ADD COLUMN bookingStatus TEXT DEFAULT 'CONFIRMED';
+        ALTER TABLE Booking ADD COLUMN paymentStatus TEXT DEFAULT 'UNPAID';
+        ALTER TABLE Booking ADD COLUMN billedAt TEXT;
+        ALTER TABLE Booking ADD COLUMN paidAt TEXT;
+        ALTER TABLE Booking ADD COLUMN paymentMethod TEXT;
+        ALTER TABLE Booking ADD COLUMN tipAmount REAL;
+      `);
+
+      // Migrate existing data: copy status to bookingStatus
+      db.exec(`
+        UPDATE Booking 
+        SET bookingStatus = CASE 
+          WHEN status = 'CANCELED' THEN 'CANCELLED'
+          ELSE COALESCE(status, 'CONFIRMED')
+        END
+        WHERE bookingStatus IS NULL OR bookingStatus = 'CONFIRMED';
+      `);
+
+      // Set payment status for completed bookings
+      db.exec(`
+        UPDATE Booking 
+        SET paymentStatus = 'PAID',
+            paidAt = updatedAt
+        WHERE bookingStatus = 'COMPLETED' AND endTime < datetime('now');
+      `);
+
+      log.info('[DB] ✅ Migration 1 completed: Booking status fields added');
+    } catch (error) {
+      log.error('[DB] ❌ Migration 1 failed:', error);
+      throw error;
+    }
+
+    // Update schema version
+    db.pragma(`user_version = 1`);
+  }
+
+  log.info(`[DB] All migrations completed. Schema version: ${TARGET_VERSION}`);
 }
 
 /**

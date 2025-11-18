@@ -713,11 +713,13 @@ async function pullBookings(apiBase: string, item: SyncQueueItem): Promise<PushO
       const upsertStmt = db.prepare(`
         INSERT INTO Booking (
           id, serverId, roomId, userId, customerName, customerPhone, customerEmail,
-          startTime, endTime, players, price, status, bookingSource, createdBy, 
+          startTime, endTime, players, price, bookingStatus, paymentStatus,
+          billedAt, paidAt, paymentMethod, tipAmount, bookingSource, createdBy, 
           internalNotes, createdAt, updatedAt, dirty
         ) VALUES (
           @id, @serverId, @roomId, @userId, @customerName, @customerPhone, @customerEmail,
-          @startTime, @endTime, @players, @price, @status, @bookingSource, @createdBy,
+          @startTime, @endTime, @players, @price, @bookingStatus, @paymentStatus,
+          @billedAt, @paidAt, @paymentMethod, @tipAmount, @bookingSource, @createdBy,
           @internalNotes, @createdAt, @updatedAt, 0
         )
         ON CONFLICT(id) DO UPDATE SET
@@ -731,7 +733,12 @@ async function pullBookings(apiBase: string, item: SyncQueueItem): Promise<PushO
           endTime = @endTime,
           players = @players,
           price = @price,
-          status = @status,
+          bookingStatus = @bookingStatus,
+          paymentStatus = @paymentStatus,
+          billedAt = @billedAt,
+          paidAt = @paidAt,
+          paymentMethod = @paymentMethod,
+          tipAmount = @tipAmount,
           bookingSource = @bookingSource,
           createdBy = @createdBy,
           internalNotes = @internalNotes,
@@ -764,7 +771,12 @@ async function pullBookings(apiBase: string, item: SyncQueueItem): Promise<PushO
           endTime: booking.endTime,
           players: booking.players || 1,
           price: booking.price || 0,
-          status: booking.status || 'CONFIRMED',
+          bookingStatus: (booking as any).bookingStatus || booking.status || 'CONFIRMED',
+          paymentStatus: (booking as any).paymentStatus || 'UNPAID',
+          billedAt: (booking as any).billedAt || null,
+          paidAt: (booking as any).paidAt || null,
+          paymentMethod: (booking as any).paymentMethod || null,
+          tipAmount: (booking as any).tipAmount || null,
           bookingSource: booking.bookingSource || 'ONLINE',
           createdBy: booking.createdBy || null,
           internalNotes: booking.internalNotes || null,

@@ -52,10 +52,10 @@ export function enqueueBooking(input: EnqueueBookingInput): EnqueueBookingResult
   // Insert local optimistic booking
   const stmt = db.prepare(`INSERT INTO Booking
     (id, serverId, roomId, userId, customerName, customerPhone, customerEmail, 
-     startTime, endTime, players, price, status, bookingSource, createdBy, 
+     startTime, endTime, players, price, bookingStatus, paymentStatus, bookingSource, createdBy, 
      internalNotes, createdAt, updatedAt, dirty)
     VALUES (@id, NULL, @roomId, @userId, @customerName, @customerPhone, @customerEmail,
-            @startTime, @endTime, @players, @price, 'CONFIRMED', @bookingSource, @createdBy,
+            @startTime, @endTime, @players, @price, 'CONFIRMED', 'UNPAID', @bookingSource, @createdBy,
             @internalNotes, @createdAt, @updatedAt, 1)`);
   stmt.run({
     id: bookingId,

@@ -441,8 +441,8 @@ app.whenReady().then(async () => {
       const db = require('./core/db').getDb();
       const now = new Date().toISOString();
       
-      // Update local record and mark as dirty for sync
-      db.prepare('UPDATE Booking SET status = ?, updatedAt = ?, dirty = 1 WHERE id = ?')
+      // Update local record and mark as dirty for sync (use bookingStatus field)
+      db.prepare('UPDATE Booking SET bookingStatus = ?, updatedAt = ?, dirty = 1 WHERE id = ?')
         .run(status, now, id);
       
       // Enqueue sync operation
