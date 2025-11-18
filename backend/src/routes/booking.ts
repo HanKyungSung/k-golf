@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { createBooking, findConflict, listBookings, listUserBookings, listRoomBookingsBetween } from '../repositories/bookingRepo';
-import { getBooking, cancelBooking } from '../repositories/bookingRepo';
+import { getBooking, cancelBooking, updatePaymentStatus } from '../repositories/bookingRepo';
 import { requireAuth } from '../middleware/requireAuth';
 import { PrismaClient, UserRole } from '@prisma/client';
 
@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 const router = Router();
 
 function presentStatus(rawStatus: string, endTime: Date): 'booked' | 'completed' | 'canceled' {
-  if (rawStatus === 'CANCELED') return 'canceled';
+  if (rawStatus === 'CANCELLED') return 'canceled';
   return endTime.getTime() < Date.now() ? 'completed' : 'booked';
 }
 
@@ -26,9 +26,14 @@ function presentBooking(b: any) {
     endTime: b.endTime,
     players: b.players,
     price: b.price,
-    status: presentStatus(b.status, new Date(b.endTime)),
+    status: presentStatus(b.bookingStatus, new Date(b.endTime)),
     bookingSource: b.bookingSource,
     internalNotes: b.internalNotes,
+    paymentStatus: b.paymentStatus,
+    billedAt: b.billedAt,
+    paidAt: b.paidAt,
+    paymentMethod: b.paymentMethod,
+    tipAmount: b.tipAmount,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   };
@@ -90,7 +95,7 @@ router.patch('/:id/cancel', requireAuth, async (req, res) => {
     if (!booking) return res.status(404).json({ error: 'Not found' });
     if (booking.userId !== req.user!.id) return res.status(403).json({ error: 'Forbidden' });
     // Rule: cannot cancel past or already canceled
-    if (booking.status === 'CANCELED') return res.status(400).json({ error: 'Already canceled' });
+    if (booking.bookingStatus === 'CANCELLED') return res.status(400).json({ error: 'Already canceled' });
     if (booking.startTime <= new Date()) return res.status(400).json({ error: 'Cannot cancel past bookings' });
 
     const updated = await cancelBooking(id);
@@ -280,7 +285,7 @@ router.patch('/rooms/:id', requireAuth, async (req, res) => {
         where: {
           roomId: id,
           startTime: { gt: now },
-          status: { not: 'CANCELED' },
+          bookingStatus: { not: 'CANCELLED' },
           OR: [
             { startTime: { lt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(newOpen/60), newOpen%60) } },
             { endTime: { gt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(newClose/60), newClose%60) } },
@@ -642,7 +647,8 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
             endTime,
             players,
             price: pricing.totalPrice,
-            status: 'CONFIRMED',
+            bookingStatus: 'CONFIRMED',
+            paymentStatus: 'UNPAID',
             bookingSource,
             createdBy: req.user!.id,
             internalNotes,
@@ -710,7 +716,8 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
               endTime,
               players,
               price: pricing.totalPrice,
-              status: 'CONFIRMED',
+              bookingStatus: 'CONFIRMED',
+              paymentStatus: 'UNPAID',
               bookingSource,
               createdBy: req.user!.id,
               internalNotes,
@@ -755,7 +762,8 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
         endTime,
         players,
         price: pricing.totalPrice,
-        status: 'CONFIRMED',
+        bookingStatus: 'CONFIRMED',
+        paymentStatus: 'UNPAID',
         bookingSource,
         createdBy: req.user!.id,
         internalNotes,
@@ -795,6 +803,52 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
       error: 'Internal server error',
       message: error.message,
     });
+  }
+});
+
+// Update payment status endpoint (admin only)
+const updatePaymentStatusSchema = z.object({
+  paymentStatus: z.enum(['UNPAID', 'BILLED', 'PAID']),
+  paymentMethod: z.enum(['CARD', 'CASH']).optional(),
+  tipAmount: z.number().optional(),
+});
+
+router.patch('/:id/payment-status', requireAuth, requireAdmin, async (req, res) => {
+  const { id } = req.params as { id: string };
+  
+  try {
+    const parsed = updatePaymentStatusSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ 
+        error: 'Validation failed', 
+        details: parsed.error.flatten() 
+      });
+    }
+
+    const { paymentStatus, paymentMethod, tipAmount } = parsed.data;
+
+    const booking = await getBooking(id);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Set timestamps based on payment status
+    const now = new Date();
+    const billedAt = paymentStatus === 'BILLED' || paymentStatus === 'PAID' ? now : null;
+    const paidAt = paymentStatus === 'PAID' ? now : null;
+
+    const updated = await updatePaymentStatus(id, {
+      paymentStatus,
+      billedAt: billedAt ?? undefined,
+      paidAt: paidAt ?? undefined,
+      paymentMethod,
+      tipAmount,
+    });
+
+    return res.json({ booking: presentBooking(updated) });
+  } catch (error) {
+    console.error('[UPDATE PAYMENT STATUS] Error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
