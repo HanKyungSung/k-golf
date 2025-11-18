@@ -25,6 +25,11 @@ type ApiBooking = {
   players: number;
   price: string | number;
   status: 'booked' | 'completed' | 'canceled';
+  paymentStatus?: 'UNPAID' | 'BILLED' | 'PAID';
+  billedAt?: string;
+  paidAt?: string;
+  paymentMethod?: 'CARD' | 'CASH';
+  tipAmount?: number;
 };
 
 type ApiRoom = { id: string; name: string; capacity: number };

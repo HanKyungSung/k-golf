@@ -30,6 +30,11 @@ export interface Booking {
   players: number;
   price: number;
   status: 'confirmed' | 'completed' | 'cancelled';
+  paymentStatus?: 'UNPAID' | 'BILLED' | 'PAID';
+  billedAt?: string;
+  paidAt?: string;
+  paymentMethod?: 'CARD' | 'CASH';
+  tipAmount?: number;
   notes?: string;
   createdAt?: string;
 }
@@ -134,6 +139,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const endTime = new Date(b.endTime);
           const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
 
+          // Handle both old 'status' and new 'bookingStatus' fields for backward compatibility
+          const bookingStatus = b.bookingStatus || b.status || 'confirmed';
+          const normalizedStatus = bookingStatus === 'CANCELED' || bookingStatus === 'CANCELLED' 
+            ? 'cancelled' 
+            : bookingStatus.toLowerCase();
+
           return {
             id: b.id,
             customerName: b.customerName || 'Guest',
@@ -147,7 +158,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             duration: durationHours,
             players: b.players,
             price: typeof b.price === 'number' ? b.price : parseFloat(b.price || '0'),
-            status: b.status === 'CANCELED' ? 'cancelled' : (b.status || 'confirmed').toLowerCase(),
+            status: normalizedStatus,
+            paymentStatus: b.paymentStatus,
+            billedAt: b.billedAt,
+            paidAt: b.paidAt,
+            paymentMethod: b.paymentMethod,
+            tipAmount: b.tipAmount,
             notes: b.internalNotes || '',
             createdAt: b.createdAt,
           } as Booking;
