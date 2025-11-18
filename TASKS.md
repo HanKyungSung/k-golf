@@ -67,17 +67,17 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Test backward compatibility with existing bookings
 
 #### Frontend Web App Tasks
-- [ ] **Type Updates**
-  - [ ] Update Booking interface to include `bookingStatus` and `paymentStatus`
-  - [ ] Update API response types
-  - [ ] Add payment status type definitions
+- [x] **Type Updates** ✅ COMPLETED
+  - [x] Update Booking interface (ApiBooking) to include payment fields
+  - [x] Add paymentStatus, billedAt, paidAt, paymentMethod, tipAmount fields
+  - [x] Backend already sends 'status' (computed from bookingStatus) for UI compatibility
 
 - [ ] **UI Updates**
-  - [ ] Update booking display to show both statuses
+  - [ ] Update booking display to show payment status
   - [ ] Add payment status badges/indicators
   - [ ] Update admin dashboard to filter by payment status
   - [ ] Add payment status column to booking tables
-  - [ ] Update status update buttons for both fields
+  - [ ] Add payment status update UI (admin only)
 
 - [ ] **Testing**
   - [ ] Test UI with new status fields
@@ -85,15 +85,16 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 #### POS Electron App Tasks
 - [ ] **SQLite Schema**
-  - [ ] Update local Booking table schema
+  - [ ] Update local Booking table schema (rename status → bookingStatus)
+  - [ ] Add new payment columns (paymentStatus, billedAt, paidAt, paymentMethod, tipAmount)
   - [ ] Add migration for local DB
   - [ ] Update sync logic to handle new fields
 
-- [ ] **Type Updates**
-  - [ ] Update BookingContext.tsx Booking interface
-  - [ ] Update `bookingStatus` type from lowercase to uppercase
-  - [ ] Add `paymentStatus` field to interface
-  - [ ] Add supporting fields (billedAt, paidAt, paymentMethod, tipAmount)
+- [x] **Type Updates** ✅ COMPLETED
+  - [x] Update BookingContext.tsx Booking interface with payment fields
+  - [x] Add backward compatibility for old 'status' field in mapper
+  - [x] Handle both CANCELED and CANCELLED spellings
+  - [x] Add paymentStatus, billedAt, paidAt, paymentMethod, tipAmount fields
 
 - [ ] **Sync Engine**
   - [ ] Update `bookings:pull` to sync new fields
