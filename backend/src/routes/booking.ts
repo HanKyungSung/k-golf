@@ -27,6 +27,7 @@ function presentBooking(b: any) {
     players: b.players,
     price: b.price,
     status: presentStatus(b.bookingStatus, new Date(b.endTime)),
+    bookingStatus: b.bookingStatus, // Send raw bookingStatus for POS
     bookingSource: b.bookingSource,
     internalNotes: b.internalNotes,
     paymentStatus: b.paymentStatus,

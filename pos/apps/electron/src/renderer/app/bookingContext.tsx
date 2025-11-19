@@ -55,11 +55,9 @@ interface BookingsPagination {
   totalPages: number;
 }
 
-interface BookingContextValue {
-  // State
+export interface BookingContextValue {
   rooms: Room[];
-  bookings: Booking[];
-  bookingsPagination: BookingsPagination | null;
+  bookings: Booking[]; // All bookings for current date range
   globalTaxRate: number;
   
   // Actions
@@ -67,13 +65,7 @@ interface BookingContextValue {
   updateRoomStatus: (id: string, status: Room['status']) => void;
   updateGlobalTaxRate: (rate: number) => void;
   getBookingById: (id: string) => Booking | undefined;
-  refreshBookings: () => Promise<void>;
-  fetchBookingsPage: (
-    page: number,
-    limit?: number,
-    sortBy?: 'startTime' | 'createdAt',
-    order?: 'asc' | 'desc'
-  ) => Promise<void>;
+  fetchBookings: (options?: { startDate?: string; endDate?: string; roomId?: string }) => Promise<void>;
 }
 
 // ============================================================================
@@ -97,8 +89,7 @@ const SYNC_REFRESH_THROTTLE_MS = 2000;
 export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // State
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [bookingsPagination, setBookingsPagination] = useState<BookingsPagination | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]); // All bookings for current date range
   const [globalTaxRate, setGlobalTaxRate] = useState<number>(() => {
     const saved = localStorage.getItem('global-tax-rate');
     return saved ? parseFloat(saved) : DEFAULT_TAX_RATE;
@@ -112,17 +103,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
    * Fetch bookings from local SQLite cache via IPC
    * Supports pagination, sorting, and filtering
    */
-  const fetchBookingsPage = useCallback(
-    async (
-      page: number = 1,
-      limit: number = 10,
-      sortBy: 'startTime' | 'createdAt' = 'startTime',
-      order: 'asc' | 'desc' = 'desc'
-    ) => {
-      console.log('[BOOKING_CTX] Fetching bookings from SQLite...', { page, limit, sortBy, order });
+  const fetchBookings = useCallback(
+    async (options?: { startDate?: string; endDate?: string; roomId?: string }) => {
+      console.log('[BOOKING_CTX] Fetching bookings from SQLite...', options);
 
       try {
-        const result = await (window as any).kgolf?.listBookings();
+        const result = await (window as any).kgolf?.listBookings(options);
 
         if (!result?.ok || !Array.isArray(result.bookings)) {
           console.warn('[BOOKING_CTX] ❌ Failed to fetch bookings from SQLite');
@@ -170,51 +156,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           } as Booking;
         });
 
-        // Apply sorting
-        const sorted = [...mappedBookings].sort((a, b) => {
-          const aVal =
-            sortBy === 'startTime'
-              ? new Date(a.date + 'T' + a.time).getTime()
-              : new Date(a.createdAt || 0).getTime();
-          const bVal =
-            sortBy === 'startTime'
-              ? new Date(b.date + 'T' + b.time).getTime()
-              : new Date(b.createdAt || 0).getTime();
-          return order === 'asc' ? aVal - bVal : bVal - aVal;
-        });
-
-        // Apply pagination
-        const startIdx = (page - 1) * limit;
-        const endIdx = startIdx + limit;
-        const paginated = sorted.slice(startIdx, endIdx);
-
-        // Only update state if data actually changed (prevent unnecessary re-renders)
-        setBookings((prev) => {
-          if (prev.length !== paginated.length) return paginated;
-          // Check if any booking changed by comparing IDs and key fields
-          const changed = paginated.some((newB, idx) => {
-            const oldB = prev[idx];
-            return !oldB || oldB.id !== newB.id || oldB.status !== newB.status || oldB.price !== newB.price;
-          });
-          return changed ? paginated : prev;
-        });
-        
-        setBookingsPagination({
-          total: sorted.length,
-          page,
-          limit,
-          totalPages: Math.ceil(sorted.length / limit),
-        });
-
-        console.log(
-          '[BOOKING_CTX] Showing',
-          paginated.length,
-          'bookings (page',
-          page,
-          'of',
-          Math.ceil(sorted.length / limit),
-          ')'
-        );
+        setBookings(mappedBookings);
       } catch (error) {
         console.error('[BOOKING_CTX] ❌ Error fetching bookings:', error);
         setBookings([]);
@@ -358,29 +300,26 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [bookings]
   );
 
-  const refreshBookings = useCallback(async () => {
-    await fetchBookingsPage(1, 10, 'startTime', 'desc');
-  }, [fetchBookingsPage]);
+  // No longer needed - components call fetchBookings directly with date ranges
 
   // ============================================================================
   // Effects
   // ============================================================================
 
   /**
-   * On mount: Fetch rooms first, then bookings
-   * Bookings depend on rooms data for display
+   * On mount: Fetch rooms and tax rate
+   * Components will fetch their own bookings with appropriate date ranges
    */
   useEffect(() => {
     const initializeData = async () => {
       await fetchRooms();
       await fetchTaxRate();
-      await refreshBookings();
     };
     initializeData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
-   * Listen for sync events and auto-refresh bookings
+   * Listen for sync events and auto-refresh rooms
    */
   useEffect(() => {
     const kgolf = (window as any).kgolf;
@@ -389,28 +328,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    let lastRefresh = 0;
-
     const handleSyncUpdate = async (payload: any) => {
-      const now = Date.now();
-      const timeSinceLastRefresh = now - lastRefresh;
-
-      // Throttle to avoid excessive refreshes
-      if (timeSinceLastRefresh < SYNC_REFRESH_THROTTLE_MS) {
-        return;
-      }
-
-      // Only refresh when sync actually completes with data changes
-      // Ignore if it was just menu:pull (menu changes don't affect dashboard)
+      // Only refresh rooms when sync completes with data changes
       if (payload?.sync && payload.sync.pushed > 0) {
-        // Note: We can't tell exactly what changed from the payload,
-        // but we throttle to max once per 2 seconds to reduce flicker.
-        // Future improvement: Add 'types' array to sync payload to check if bookings/rooms changed
-        console.log('[BOOKING_CTX] 🔄 Refreshing after sync');
-        lastRefresh = now;
-        // Fetch rooms first, then bookings (bookings depend on rooms)
+        console.log('[BOOKING_CTX] 🔄 Refreshing rooms after sync');
         await fetchRooms();
-        await refreshBookings();
+        // Note: Bookings will be refreshed by components that need them
       }
     };
 
@@ -419,7 +342,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       // Cleanup on unmount
     };
-  }, [refreshBookings, fetchRooms]);
+  }, [fetchRooms]);
 
   // ============================================================================
   // Provider
@@ -430,14 +353,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       value={{
         rooms,
         bookings,
-        bookingsPagination,
         globalTaxRate,
         updateBookingStatus,
         updateRoomStatus,
         updateGlobalTaxRate,
         getBookingById,
-        refreshBookings,
-        fetchBookingsPage,
+        fetchBookings,
       }}
     >
       {children}

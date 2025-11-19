@@ -384,7 +384,7 @@ app.whenReady().then(async () => {
   });
   
   // Booking list/read handlers (SQLite-based)
-  ipcMain.handle('bookings:list', async (_evt: any, options?: { date?: string; roomId?: string }) => {
+  ipcMain.handle('bookings:list', async (_evt: any, options?: { startDate?: string; endDate?: string; roomId?: string }) => {
     const user = getAuthenticatedUser();
     if (!user) return { ok: false, error: 'NOT_AUTHENTICATED' };
     
@@ -393,12 +393,18 @@ app.whenReady().then(async () => {
       let query = 'SELECT * FROM Booking WHERE 1=1';
       const params: any[] = [];
       
-      // Filter by date if provided (no default filter - show all bookings)
-      if (options?.date) {
-        const targetDate = new Date(options.date);
-        const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-        const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
-        query += ' AND startTime >= ? AND startTime < ?';
+      // Filter by date range if provided
+      if (options?.startDate && options?.endDate) {
+        // startDate and endDate should be ISO date strings like '2025-11-17'
+        const startOfRange = new Date(options.startDate + 'T00:00:00.000Z');
+        const endOfRange = new Date(options.endDate + 'T23:59:59.999Z');
+        query += ' AND startTime >= ? AND startTime <= ?';
+        params.push(startOfRange.toISOString(), endOfRange.toISOString());
+      } else if (options?.startDate) {
+        // Single date filter (for backward compatibility or "today" queries)
+        const startOfDay = new Date(options.startDate + 'T00:00:00.000Z');
+        const endOfDay = new Date(options.startDate + 'T23:59:59.999Z');
+        query += ' AND startTime >= ? AND startTime <= ?';
         params.push(startOfDay.toISOString(), endOfDay.toISOString());
       }
       

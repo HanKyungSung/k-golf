@@ -26,7 +26,7 @@ contextBridge.exposeInMainWorld('kgolf', {
 		bookingSource?: string;
 		internalNotes?: string;
 	}) => ipcRenderer.invoke('booking:create', data),
-	listBookings: (options?: { date?: string; roomId?: string }) => ipcRenderer.invoke('bookings:list', options),
+	listBookings: (options?: { startDate?: string; endDate?: string; roomId?: string }) => ipcRenderer.invoke('bookings:list', options),
 	getBooking: (id: string) => ipcRenderer.invoke('bookings:getById', id),
 	updateBookingStatus: (id: string, status: string) => ipcRenderer.invoke('bookings:updateStatus', { id, status }),
 	getQueueSize: () => ipcRenderer.invoke('queue:getSize'),

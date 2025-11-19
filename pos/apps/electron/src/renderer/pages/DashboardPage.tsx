@@ -41,16 +41,18 @@ const DashboardPage: React.FC = () => {
   const user = state.user || {}; const isAdmin = user.role === 'ADMIN';
   const { 
     bookings, 
-    bookingsPagination,
     updateBookingStatus, 
     updateRoomStatus, 
     rooms, 
     globalTaxRate, 
     updateGlobalTaxRate, 
-    refreshBookings,
-    fetchBookingsPage 
+    fetchBookings
   } = useBookingData();
   const navigate = useNavigate();
+  
+  // Local state for timeline and today's bookings
+  const [timelineBookings, setTimelineBookings] = useState<import('../app/BookingContext').Booking[]>([]);
+  const [todayBookings, setTodayBookings] = useState<import('../app/BookingContext').Booking[]>([]);
   
   // Initialize to the start of the current week (Monday)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
@@ -68,14 +70,6 @@ const DashboardPage: React.FC = () => {
   // Create booking modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Pagination state for bookings - track current page
-  const [bookingsPage, setBookingsPage] = useState(1);
-
-  // Fetch bookings when page changes (server-side pagination)
-  React.useEffect(() => {
-    fetchBookingsPage(bookingsPage, 10, 'startTime', 'desc');
-  }, [bookingsPage, fetchBookingsPage]);
-
   // Tax settings state
   const [taxRateInput, setTaxRateInput] = useState<string>(globalTaxRate.toString());
   const [taxSaveMessage, setTaxSaveMessage] = useState<string>('');
@@ -87,7 +81,50 @@ const DashboardPage: React.FC = () => {
 
   const totalRevenue = bookings.reduce((s,b)=>s+b.price,0);
   const activeBookings = bookings.filter(b=>b.status==='confirmed');
-  const navigateWeek = (dir: 'prev'|'next') => setCurrentWeekStart(prev => new Date(prev.getTime() + (dir==='prev'?-7:7)*86400000));
+  
+  const navigateWeek = (dir: 'prev'|'next') => {
+    setCurrentWeekStart(prev => {
+      const newWeekStart = new Date(prev.getTime() + (dir==='prev'?-7:7)*86400000);
+      return newWeekStart;
+    });
+  };
+  
+  // Fetch timeline bookings when week changes
+  React.useEffect(() => {
+    const weekEnd = new Date(currentWeekStart);
+    weekEnd.setDate(currentWeekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    fetchBookings({
+      startDate: currentWeekStart.toISOString(),
+      endDate: weekEnd.toISOString()
+    });
+  }, [currentWeekStart, fetchBookings]);
+  
+  // Update timeline bookings from context bookings
+  React.useEffect(() => {
+    setTimelineBookings(bookings);
+  }, [bookings]);
+  
+  // Fetch today's bookings
+  React.useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    fetchBookings({
+      startDate: today.toISOString(),
+      endDate: endOfDay.toISOString()
+    });
+  }, []);
+  
+  // Update today's bookings from context bookings
+  React.useEffect(() => {
+    const todayStr = new Date().toDateString();
+    const filtered = bookings.filter(b => new Date(b.date).toDateString() === todayStr);
+    setTodayBookings(filtered);
+  }, [bookings]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -153,10 +190,10 @@ const DashboardPage: React.FC = () => {
 
             <div className="grid grid-cols-4 gap-4">
               {rooms.map((room) => {
-                const todayBookings = bookings.filter(
-                  (booking) => booking.roomId === String(room.id) && new Date(booking.date).toDateString() === new Date().toDateString(),
+                const roomTodayBookings = todayBookings.filter(
+                  (booking) => booking.roomId === String(room.id)
                 );
-                const currentBooking = todayBookings[0];
+                const currentBooking = roomTodayBookings[0];
                 const roomStatus = currentBooking ? "ordered" : "empty";
 
                 return (
@@ -286,58 +323,6 @@ const DashboardPage: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                  
-                  {/* Pagination Controls */}
-                  {bookingsPagination && bookingsPagination.totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-6 border-t border-slate-700 mt-6">
-                      <div className="text-sm text-slate-400">
-                        Showing {((bookingsPagination.page - 1) * bookingsPagination.limit) + 1}-{Math.min(bookingsPagination.page * bookingsPagination.limit, bookingsPagination.total)} of {bookingsPagination.total} bookings
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => setBookingsPage(p => Math.max(1, p - 1))}
-                          disabled={bookingsPagination.page === 1}
-                        >
-                          Previous
-                        </Button>
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: Math.min(5, bookingsPagination.totalPages) }, (_, i) => {
-                            let pageNum;
-                            if (bookingsPagination.totalPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (bookingsPagination.page <= 3) {
-                              pageNum = i + 1;
-                            } else if (bookingsPagination.page >= bookingsPagination.totalPages - 2) {
-                              pageNum = bookingsPagination.totalPages - 4 + i;
-                            } else {
-                              pageNum = bookingsPagination.page - 2 + i;
-                            }
-                            return (
-                              <Button
-                                key={pageNum}
-                                size="sm"
-                                variant={bookingsPagination.page === pageNum ? 'default' : 'outline'}
-                                onClick={() => setBookingsPage(pageNum)}
-                                className="w-8 h-8 p-0"
-                              >
-                                {pageNum}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => setBookingsPage(p => Math.min(bookingsPagination!.totalPages, p + 1))}
-                          disabled={bookingsPagination.page === bookingsPagination.totalPages}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -435,7 +420,7 @@ const DashboardPage: React.FC = () => {
               </Card>
             </TabsContent>
             <TabsContent when="timeline">
-              <TimelineView weekDays={weekDays} rooms={rooms} bookings={bookings} navigateWeek={navigateWeek} />
+              <TimelineView weekDays={weekDays} rooms={rooms} bookings={timelineBookings} navigateWeek={navigateWeek} />
             </TabsContent>
             <TabsContent when="menu">
               <Card>
@@ -649,7 +634,25 @@ const DashboardPage: React.FC = () => {
         onClose={() => setShowCreateModal(false)}
         rooms={rooms}
         onSuccess={async () => {
-          await refreshBookings();
+          // Refresh both today's and timeline bookings
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const endOfDay = new Date(today);
+          endOfDay.setHours(23, 59, 59, 999);
+          
+          await fetchBookings({
+            startDate: today.toISOString(),
+            endDate: endOfDay.toISOString()
+          });
+          
+          const weekEnd = new Date(currentWeekStart);
+          weekEnd.setDate(currentWeekStart.getDate() + 6);
+          weekEnd.setHours(23, 59, 59, 999);
+          
+          await fetchBookings({
+            startDate: currentWeekStart.toISOString(),
+            endDate: weekEnd.toISOString()
+          });
         }}
       />
     </div>
