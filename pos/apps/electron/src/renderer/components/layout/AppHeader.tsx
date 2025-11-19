@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../app/authState';
 import { Button } from '../common/Button';
 
@@ -9,6 +9,17 @@ export const AppHeader: React.FC<Props> = ({ onTest, onSync }) => {
   const queueBadgeClasses = queueSize > 0
     ? 'bg-amber-500/20 text-amber-300 border-amber-400/40'
     : 'bg-slate-700/50 text-slate-300 border-slate-600';
+
+  // Current datetime for visualization
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000); // Update every second
+    
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <header className="w-full bg-slate-900/80 backdrop-blur-sm border-b border-slate-700">
@@ -32,6 +43,13 @@ export const AppHeader: React.FC<Props> = ({ onTest, onSync }) => {
             className={`text-[11px] px-2 py-1 rounded border font-medium transition-colors ${queueBadgeClasses}`}
           >
             Queue: {queueSize}
+          </span>
+          <span
+            id="current-datetime"
+            className="text-[11px] px-2 py-1 rounded border border-slate-600 bg-slate-800/60 text-slate-300 font-mono"
+            title="Current local time"
+          >
+            {currentTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
           </span>
         </div>
 
