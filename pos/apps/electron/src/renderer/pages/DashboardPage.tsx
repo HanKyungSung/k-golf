@@ -98,7 +98,7 @@ const DashboardPage: React.FC = () => {
     });
   };
   
-  // Fetch timeline bookings when week changes
+  // Fetch bookings for current week (this covers both timeline and today)
   React.useEffect(() => {
     const weekEnd = new Date(currentWeekStart);
     weekEnd.setDate(currentWeekStart.getDate() + 6);
@@ -114,19 +114,6 @@ const DashboardPage: React.FC = () => {
   React.useEffect(() => {
     setTimelineBookings(bookings);
   }, [bookings]);
-  
-  // Fetch today's bookings
-  React.useEffect(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    fetchBookings({
-      startDate: today.toISOString(),
-      endDate: endOfDay.toISOString()
-    });
-  }, [fetchBookings]);
   
   // Update today's bookings from context bookings
   React.useEffect(() => {
@@ -499,7 +486,13 @@ const DashboardPage: React.FC = () => {
               </Card>
             </TabsContent>
             <TabsContent when="timeline">
-              <TimelineView weekDays={weekDays} rooms={rooms} bookings={timelineBookings} navigateWeek={navigateWeek} />
+              <TimelineView 
+                key={`timeline-${timelineBookings.length}-${timelineBookings[0]?.id || 'empty'}`}
+                weekDays={weekDays} 
+                rooms={rooms} 
+                bookings={timelineBookings} 
+                navigateWeek={navigateWeek} 
+              />
             </TabsContent>
             <TabsContent when="menu">
               <Card>
@@ -785,9 +778,10 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek }: TimelineViewP
         </div>
         <div className="space-y-8">
           {weekDays.map((day: Date, idx: number) => {
-            const dayBookings = bookings.filter((b: import('../app/BookingContext').Booking) => b.date === dateKey(day));
+            const dayKey = dateKey(day);
+            const dayBookings = bookings.filter((b: import('../app/BookingContext').Booking) => b.date === dayKey);
             return (
-              <div key={idx} className="space-y-2">
+              <div key={`${dayKey}-${dayBookings.length}`} className="space-y-2">
                 <div className="flex items-center gap-3">
                   <h3 className="text-sm font-semibold text-white min-w-[120px]">{day.toLocaleDateString('en-US',{weekday:'long'})}</h3>
                   <div className="text-[11px] text-slate-400">{day.toLocaleDateString('en-US',{month:'long',day:'numeric'})}</div>
