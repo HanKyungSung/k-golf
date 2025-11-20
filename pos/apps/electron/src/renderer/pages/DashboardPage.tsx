@@ -53,6 +53,8 @@ const DashboardPage: React.FC = () => {
   // Local state for timeline and today's bookings
   const [timelineBookings, setTimelineBookings] = useState<import('../app/BookingContext').Booking[]>([]);
   const [todayBookings, setTodayBookings] = useState<import('../app/BookingContext').Booking[]>([]);
+  const [currentBookings, setCurrentBookings] = useState<import('../app/BookingContext').Booking[]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   // Initialize to the start of the current week (Monday)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
@@ -125,6 +127,42 @@ const DashboardPage: React.FC = () => {
     const filtered = bookings.filter(b => new Date(b.date).toDateString() === todayStr);
     setTodayBookings(filtered);
   }, [bookings]);
+  
+  // Helper function to check if a booking is currently active
+  const isBookingActive = React.useCallback((booking: import('../app/BookingContext').Booking, now: Date) => {
+    // Parse booking date and time to create start and end times
+    const bookingDate = new Date(booking.date);
+    const [hours, minutes] = booking.time.split(':').map(Number);
+    
+    const startTime = new Date(bookingDate);
+    startTime.setHours(hours, minutes, 0, 0);
+    
+    const endTime = new Date(startTime);
+    endTime.setHours(startTime.getHours() + Math.floor(booking.duration));
+    endTime.setMinutes(startTime.getMinutes() + (booking.duration % 1) * 60);
+    
+    // Check if current time is between start and end, and booking is not cancelled
+    return now >= startTime && now < endTime && booking.status !== 'cancelled';
+  }, []);
+  
+  // Update current time every second and filter currently active bookings
+  React.useEffect(() => {
+    const updateCurrentBookings = () => {
+      const now = new Date();
+      setCurrentTime(now);
+      
+      const active = todayBookings.filter(booking => isBookingActive(booking, now));
+      setCurrentBookings(active);
+    };
+    
+    // Initial update
+    updateCurrentBookings();
+    
+    // Update every 10 seconds for real-time accuracy
+    const timer = setInterval(updateCurrentBookings, 10000);
+    
+    return () => clearInterval(timer);
+  }, [todayBookings, isBookingActive]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -160,8 +198,13 @@ const DashboardPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
-              <CardTitle>Room Status</CardTitle>
-              <CardDescription>Quick overview of all room statuses</CardDescription>
+              <CardTitle className="flex items-center gap-3">
+                Room Status (Real-Time)
+                <span className="text-xs font-normal text-slate-400 font-mono">
+                  {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                </span>
+              </CardTitle>
+              <CardDescription>Live view of currently occupied rooms</CardDescription>
             </div>
             <Button 
               onClick={() => setShowCreateModal(true)}
@@ -190,10 +233,11 @@ const DashboardPage: React.FC = () => {
 
             <div className="grid grid-cols-4 gap-4">
               {rooms.map((room) => {
-                const roomTodayBookings = todayBookings.filter(
+                // Filter for currently active bookings in this room
+                const roomCurrentBookings = currentBookings.filter(
                   (booking) => booking.roomId === String(room.id)
                 );
-                const currentBooking = roomTodayBookings[0];
+                const currentBooking = roomCurrentBookings[0];
                 const roomStatus = currentBooking ? "ordered" : "empty";
 
                 return (
@@ -224,13 +268,18 @@ const DashboardPage: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div className="p-2 bg-slate-700/30 rounded">
-                            <div className="text-slate-400">Time</div>
+                            <div className="text-slate-400">Start Time</div>
                             <div className="font-medium text-white">{currentBooking.time}</div>
                           </div>
                           <div className="p-2 bg-slate-700/30 rounded">
-                            <div className="text-slate-400">Players</div>
-                            <div className="font-medium text-white">{currentBooking.players}</div>
+                            <div className="text-slate-400">Duration</div>
+                            <div className="font-medium text-white">{currentBooking.duration}h</div>
                           </div>
+                        </div>
+
+                        <div className="p-2 bg-slate-700/30 rounded text-xs">
+                          <div className="text-slate-400">Players</div>
+                          <div className="font-medium text-white">{currentBooking.players}</div>
                         </div>
 
                         <Button size="sm" className="w-full text-xs" onClick={() => navigate(`/booking/${currentBooking.id}`)}>
