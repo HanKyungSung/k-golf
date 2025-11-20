@@ -23,38 +23,23 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: CRITICAL 🔥
 
-**1. POS Dashboard - Bookings Not Showing After Creation/Refresh** ✅ FIXED
-- **Status:** 🟢 RESOLVED
-- **Fix:** Multiple timezone bugs in date handling:
-  1. Fixed `BookingContext`: Extract booking date using local timezone methods instead of `toISOString()`
-  2. Fixed `DashboardPage`: Compare dates using local timezone strings
-  3. Fixed `dateKey()`: Return local date string instead of UTC
-  4. Fixed `isBookingActive()`: Create Date objects using local timezone constructor
-- **Result:** Bookings now display correctly in room status cards and timeline
-- **Status:** 🔴 OPEN - CRITICAL BUG
-- **Component:** POS Dashboard
-- **Impact:** Bookings exist in database but don't appear on dashboard until manual data refresh
-- **Symptoms:**
-  - Create new booking → doesn't appear in Room Status Overview
-  - Refresh POS app → bookings fetch but Timeline/Room cards don't update
-  - Timeline shows empty even though bookings exist for the week
-  - Room Status cards show "Empty" even when bookings are active
-- **Root Causes:**
-  1. Date range query in `bookings:list` IPC handler has timezone conversion bug
-  2. Dashboard components not re-rendering when bookings state changes
-  3. Possible stale closure in useEffect dependencies
-- **Investigation Notes:**
-  - Bookings ARE in SQLite database (verified via sqlite3 query)
-  - Bookings ARE being fetched (console shows fetch success)
-  - UI components not updating with fetched data
-  - May be related to React state updates not triggering re-renders
-- **Tasks:**
-  - [ ] Debug why `setBookings()` in BookingContext doesn't trigger component updates
-  - [ ] Check if `bookings` state is properly passed to child components
-  - [ ] Verify `todayBookings` and `currentBookings` state updates trigger re-renders
-  - [ ] Add proper dependency arrays to useEffect hooks
-  - [ ] Test if force re-render fixes the issue (indicates state update problem)
-  - [ ] Consider adding key prop to booking lists to force re-render on data change
+**1. POS Dashboard - Timeline and Room Status Refresh Issues** ✅ FIXED
+- **Status:** 🟢 RESOLVED (2025-11-20)
+- **Issues Fixed:**
+  1. **Timezone bugs in date handling:**
+     - Fixed `BookingContext`: Extract booking date using local timezone methods instead of `toISOString()`
+     - Fixed `DashboardPage`: Compare dates using local timezone strings
+     - Fixed `dateKey()`: Return local date string instead of UTC
+     - Fixed `isBookingActive()`: Create Date objects using local timezone constructor
+  2. **Timeline not showing bookings on initial load:**
+     - Root cause: Two competing fetches (Timeline week fetch + Today fetch) overwriting each other
+     - Solution: Removed duplicate Today fetch, Timeline week fetch now covers both
+     - Today's bookings now filtered from week data instead of separate fetch
+  3. **Timeline component not re-rendering:**
+     - Added dynamic key prop to TimelineView component: `key={timeline-${length}-${firstId}}`
+     - Improved day keys to include booking count: `key={dayKey}-${bookingCount}`
+- **Result:** Bookings now display correctly in room status cards and timeline after restart
+- **Commits:** Multiple fixes culminating in commit 43bbac8
 
 ### Priority: HIGH
 
