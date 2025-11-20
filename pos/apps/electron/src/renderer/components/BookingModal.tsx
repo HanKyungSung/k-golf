@@ -9,6 +9,7 @@ interface BookingModalProps {
   onClose: () => void;
   rooms: Array<{ id: string; name: string; status: string }>;
   onSuccess: () => void;
+  preselectedRoomId?: string; // Optional: pre-select room when opening modal
 }
 
 type Step = 'customer' | 'details';
@@ -22,7 +23,7 @@ interface CustomerMatch {
   bookingCount: number;
 }
 
-export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModalProps) {
+export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoomId }: BookingModalProps) {
   const [currentStep, setCurrentStep] = React.useState<Step>('customer');
   const [bookingSource, setBookingSource] = React.useState<BookingSource>('WALK_IN');
   
@@ -44,6 +45,13 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess }: BookingModal
   
   const [error, setError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // Pre-select room when modal opens with a preselectedRoomId
+  React.useEffect(() => {
+    if (isOpen && preselectedRoomId) {
+      setRoomId(preselectedRoomId);
+    }
+  }, [isOpen, preselectedRoomId]);
 
   const resetForm = () => {
     setCurrentStep('customer');

@@ -71,6 +71,7 @@ const DashboardPage: React.FC = () => {
   
   // Create booking modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [preselectedRoomId, setPreselectedRoomId] = useState<string | undefined>(undefined);
 
   // Tax settings state
   const [taxRateInput, setTaxRateInput] = useState<string>(globalTaxRate.toString());
@@ -207,7 +208,10 @@ const DashboardPage: React.FC = () => {
               <CardDescription>Live view of currently occupied rooms</CardDescription>
             </div>
             <Button 
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => {
+                setPreselectedRoomId(undefined);
+                setShowCreateModal(true);
+              }}
               className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -293,7 +297,10 @@ const DashboardPage: React.FC = () => {
                           size="sm"
                           variant="outline"
                           className="w-full text-xs"
-                          onClick={() => setShowCreateModal(true)}
+                          onClick={() => {
+                            setPreselectedRoomId(room.id);
+                            setShowCreateModal(true);
+                          }}
                         >
                           <span className="text-lg mr-1">+</span>
                           Book
@@ -325,7 +332,10 @@ const DashboardPage: React.FC = () => {
                     </div>
                     <Button 
                       data-testid="dashboard-create-booking-btn"
-                      onClick={() => setShowCreateModal(true)}
+                      onClick={() => {
+                        setPreselectedRoomId(undefined);
+                        setShowCreateModal(true);
+                      }}
                       size="lg"
                       className="text-base px-6"
                     >
@@ -680,8 +690,12 @@ const DashboardPage: React.FC = () => {
       {/* Booking Modal */}
       <BookingModal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => {
+          setShowCreateModal(false);
+          setPreselectedRoomId(undefined);
+        }}
         rooms={rooms}
+        preselectedRoomId={preselectedRoomId}
         onSuccess={async () => {
           // Refresh both today's and timeline bookings
           const today = new Date();
