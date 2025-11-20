@@ -183,12 +183,17 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
     try {
       const normalizedPhone = phone.startsWith('+') ? phone : `+1${phone.replace(/\D/g, '')}`;
       
+      // Convert local date/time to UTC ISO string
+      // The date picker gives YYYY-MM-DD, time picker gives HH:MM in local time
+      const localDateTime = new Date(`${date}T${time}:00`);
+      const startTimeUTC = localDateTime.toISOString();
+      
       const payload = {
         customerName: customerName.trim(),
         customerPhone: normalizedPhone,
         customerEmail: bookingSource === 'ONLINE' && customerEmail ? customerEmail : undefined,
         roomId,
-        startTime: `${date}T${time}:00.000Z`,
+        startTime: startTimeUTC,
         duration,
         players,
         bookingSource,
@@ -206,6 +211,16 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Show detailed conflict information if available
+        if (errorData.conflictingBooking) {
+          const conflictStart = new Date(errorData.conflictingBooking.startTime);
+          const conflictEnd = new Date(errorData.conflictingBooking.endTime);
+          throw new Error(
+            `${errorData.error || 'Booking conflict'}. Existing booking: ${conflictStart.toLocaleString()} - ${conflictEnd.toLocaleTimeString()}`
+          );
+        }
+        
         throw new Error(errorData.error || errorData.details || 'Failed to create booking');
       }
 
@@ -215,6 +230,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
       onSuccess();
       handleClose();
     } catch (err) {
+      console.error('[BOOKING] Error:', err);
       setError(err instanceof Error ? err.message : 'Failed to create booking');
     } finally {
       setIsSubmitting(false);
