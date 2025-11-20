@@ -16,7 +16,13 @@ const timeSlots = Array.from({ length: (22 - 9) * 2 + 1 }, (_, i) => {
   const h = 9 + Math.floor(i / 2); const m = i % 2 === 0 ? '00' : '30'; return `${String(h).padStart(2,'0')}:${m}`;
 });
 const dayRange = (startISO: Date) => Array.from({ length: 7 }, (_, i) => new Date(startISO.getTime() + i * 86400000));
-const dateKey = (d: Date) => d.toISOString().split('T')[0];
+// Convert Date to YYYY-MM-DD in LOCAL timezone (not UTC) to match booking.date format
+const dateKey = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 function isBookingInSlot(b: import('../app/BookingContext').Booking, slot: string) {
   const [sh, sm] = b.time.split(':').map(Number); const startMinutes = sh*60+sm; const [slh, slm] = slot.split(':').map(Number); const slotMinutes = slh*60+slm; const endMinutes = startMinutes + b.duration*60; return slotMinutes >= startMinutes && slotMinutes < endMinutes;
 }
@@ -124,21 +130,26 @@ const DashboardPage: React.FC = () => {
   
   // Update today's bookings from context bookings
   React.useEffect(() => {
-    console.log('[DASHBOARD] 📥 Bookings from context:', bookings.length);
-    const todayStr = new Date().toDateString();
-    const filtered = bookings.filter(b => new Date(b.date).toDateString() === todayStr);
-    console.log('[DASHBOARD] 📅 Today filtered:', filtered.length, 'bookings for', todayStr);
+    const today = new Date();
+    // Get today's date in YYYY-MM-DD format in LOCAL timezone (not UTC)
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayDateStr = `${year}-${month}-${day}`;
+    
+    const filtered = bookings.filter(b => b.date === todayDateStr);
     setTodayBookings(filtered);
   }, [bookings]);
   
   // Helper function to check if a booking is currently active
   const isBookingActive = React.useCallback((booking: import('../app/BookingContext').Booking, now: Date) => {
     // Parse booking date and time to create start and end times
-    const bookingDate = new Date(booking.date);
+    // booking.date is "YYYY-MM-DD" in local timezone
+    const [year, month, day] = booking.date.split('-').map(Number);
     const [hours, minutes] = booking.time.split(':').map(Number);
     
-    const startTime = new Date(bookingDate);
-    startTime.setHours(hours, minutes, 0, 0);
+    // Create start time in LOCAL timezone (not UTC)
+    const startTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
     
     const endTime = new Date(startTime);
     endTime.setHours(startTime.getHours() + Math.floor(booking.duration));
@@ -155,7 +166,6 @@ const DashboardPage: React.FC = () => {
       setCurrentTime(now);
       
       const active = todayBookings.filter(booking => isBookingActive(booking, now));
-      console.log('[DASHBOARD] ⏰ Active bookings:', active.length, 'out of', todayBookings.length, 'today');
       setCurrentBookings(active);
     };
     
@@ -397,8 +407,15 @@ const DashboardPage: React.FC = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {rooms.map((room) => {
-                      const todayBookings = bookings.filter(
-                        (booking) => booking.roomId === String(room.id) && new Date(booking.date).toDateString() === new Date().toDateString(),
+                      // Filter bookings for this room using the same local date logic
+                      const today = new Date();
+                      const year = today.getFullYear();
+                      const month = String(today.getMonth() + 1).padStart(2, '0');
+                      const day = String(today.getDate()).padStart(2, '0');
+                      const todayDateStr = `${year}-${month}-${day}`;
+                      
+                      const roomTodayBookings = bookings.filter(
+                        (booking) => booking.roomId === String(room.id) && booking.date === todayDateStr
                       );
 
                       return (
@@ -439,16 +456,16 @@ const DashboardPage: React.FC = () => {
                                   </div>
                                   <div className="flex justify-between text-sm">
                                     <span className="text-slate-400">Today's Bookings:</span>
-                                    <span className="text-white font-medium">{todayBookings.length}</span>
+                                    <span className="text-white font-medium">{roomTodayBookings.length}</span>
                                   </div>
                                 </div>
                               </div>
 
                               <div>
                                 <h4 className="text-sm font-semibold text-slate-400 mb-3">Today's Bookings</h4>
-                                {todayBookings.length > 0 ? (
+                                {roomTodayBookings.length > 0 ? (
                                   <div className="space-y-2 max-h-[120px] overflow-y-auto">
-                                    {todayBookings.map((booking) => (
+                                    {roomTodayBookings.map((booking) => (
                                       <div
                                         key={booking.id}
                                         onClick={() => navigate(`/booking/${booking.id}`)}

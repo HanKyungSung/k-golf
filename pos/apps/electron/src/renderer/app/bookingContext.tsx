@@ -132,6 +132,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             ? 'cancelled' 
             : bookingStatus.toLowerCase();
 
+          // Extract date in LOCAL timezone (not UTC) to match local "today"
+          const year = startTime.getFullYear();
+          const month = String(startTime.getMonth() + 1).padStart(2, '0');
+          const day = String(startTime.getDate()).padStart(2, '0');
+          const localDateStr = `${year}-${month}-${day}`;
+
           return {
             id: b.id,
             customerName: b.customerName || 'Guest',
@@ -140,7 +146,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             bookingSource: b.bookingSource,
             roomName: room?.name || `Room ${b.roomId}`,
             roomId: b.roomId,
-            date: startTime.toISOString().split('T')[0],
+            date: localDateStr,
             time: startTime.toTimeString().slice(0, 5),
             duration: durationHours,
             players: b.players,
@@ -156,8 +162,6 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           } as Booking;
         });
 
-        console.log('[BOOKING_CTX] 📊 Mapped bookings:', mappedBookings.length, 'bookings');
-        console.log('[BOOKING_CTX] 📊 Sample booking:', mappedBookings[0]);
         setBookings(mappedBookings);
       } catch (error) {
         console.error('[BOOKING_CTX] ❌ Error fetching bookings:', error);

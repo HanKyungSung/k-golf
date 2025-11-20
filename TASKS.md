@@ -23,7 +23,28 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: CRITICAL 🔥
 
-**1. POS Dashboard - Bookings Not Showing After Creation/Refresh**
+**1. Backend Booking Conflict Detection Allows Overlapping Bookings**
+- **Status:** 🔴 OPEN - CRITICAL BUG
+- **Component:** Backend booking validation
+- **Impact:** System accepts conflicting bookings that overlap in time
+- **Example:**
+  - Booking 1: Room 1, 00:00-02:00 (2 hours) ✅ Created
+  - Booking 2: Room 1, 00:30-01:30 (1 hour) ✅ Accepted (SHOULD BE REJECTED!)
+- **Root Cause:** Conflict detection logic in backend not properly checking time overlaps
+- **Tasks:**
+  - [ ] Review booking conflict detection in backend API
+  - [ ] Ensure overlapping time slots are properly rejected
+  - [ ] Add comprehensive overlap test cases (start within, end within, fully contains, fully contained)
+  - [ ] Test edge cases: exact same time, touching boundaries (end = start)
+
+**2. POS Dashboard - Bookings Not Showing After Creation/Refresh** ✅ FIXED
+- **Status:** 🟢 RESOLVED
+- **Fix:** Multiple timezone bugs in date handling:
+  1. Fixed `BookingContext`: Extract booking date using local timezone methods instead of `toISOString()`
+  2. Fixed `DashboardPage`: Compare dates using local timezone strings
+  3. Fixed `dateKey()`: Return local date string instead of UTC
+  4. Fixed `isBookingActive()`: Create Date objects using local timezone constructor
+- **Result:** Bookings now display correctly in room status cards and timeline
 - **Status:** 🔴 OPEN - CRITICAL BUG
 - **Component:** POS Dashboard
 - **Impact:** Bookings exist in database but don't appear on dashboard until manual data refresh
@@ -48,15 +69,6 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [ ] Add proper dependency arrays to useEffect hooks
   - [ ] Test if force re-render fixes the issue (indicates state update problem)
   - [ ] Consider adding key prop to booking lists to force re-render on data change
-
-**2. Date Range Query Timezone Bug in IPC Handler**
-- **Status:** 🟡 PARTIAL FIX - Needs Testing
-- **Component:** POS Main Process (`main.ts`)
-- **Issue:** `bookings:list` handler incorrectly handles ISO date strings
-  - Was appending `T00:00:00.000Z` to already-converted UTC ISO strings
-  - Caused bookings at boundary times to be excluded from queries
-- **Fix Applied:** Use ISO strings directly without re-parsing
-- **Needs:** Restart POS and verify bookings now appear correctly
 
 ### Priority: HIGH
 
