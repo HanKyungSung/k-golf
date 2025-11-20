@@ -395,17 +395,18 @@ app.whenReady().then(async () => {
       
       // Filter by date range if provided
       if (options?.startDate && options?.endDate) {
-        // startDate and endDate should be ISO date strings like '2025-11-17'
-        const startOfRange = new Date(options.startDate + 'T00:00:00.000Z');
-        const endOfRange = new Date(options.endDate + 'T23:59:59.999Z');
+        // startDate and endDate are already ISO strings from the caller (e.g., '2025-11-20T08:00:00.000Z')
+        // Use them directly without adding timezone suffixes
         query += ' AND startTime >= ? AND startTime <= ?';
-        params.push(startOfRange.toISOString(), endOfRange.toISOString());
+        params.push(options.startDate, options.endDate);
       } else if (options?.startDate) {
-        // Single date filter (for backward compatibility or "today" queries)
-        const startOfDay = new Date(options.startDate + 'T00:00:00.000Z');
-        const endOfDay = new Date(options.startDate + 'T23:59:59.999Z');
-        query += ' AND startTime >= ? AND startTime <= ?';
-        params.push(startOfDay.toISOString(), endOfDay.toISOString());
+        // Single date filter - startDate is an ISO string
+        query += ' AND startTime >= ?';
+        params.push(options.startDate);
+        if (options?.endDate) {
+          query += ' AND startTime <= ?';
+          params.push(options.endDate);
+        }
       }
       
       // Filter by room if provided

@@ -21,6 +21,43 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ## 🐛 Active Issues & Bugs
 
+### Priority: CRITICAL 🔥
+
+**1. POS Dashboard - Bookings Not Showing After Creation/Refresh**
+- **Status:** 🔴 OPEN - CRITICAL BUG
+- **Component:** POS Dashboard
+- **Impact:** Bookings exist in database but don't appear on dashboard until manual data refresh
+- **Symptoms:**
+  - Create new booking → doesn't appear in Room Status Overview
+  - Refresh POS app → bookings fetch but Timeline/Room cards don't update
+  - Timeline shows empty even though bookings exist for the week
+  - Room Status cards show "Empty" even when bookings are active
+- **Root Causes:**
+  1. Date range query in `bookings:list` IPC handler has timezone conversion bug
+  2. Dashboard components not re-rendering when bookings state changes
+  3. Possible stale closure in useEffect dependencies
+- **Investigation Notes:**
+  - Bookings ARE in SQLite database (verified via sqlite3 query)
+  - Bookings ARE being fetched (console shows fetch success)
+  - UI components not updating with fetched data
+  - May be related to React state updates not triggering re-renders
+- **Tasks:**
+  - [ ] Debug why `setBookings()` in BookingContext doesn't trigger component updates
+  - [ ] Check if `bookings` state is properly passed to child components
+  - [ ] Verify `todayBookings` and `currentBookings` state updates trigger re-renders
+  - [ ] Add proper dependency arrays to useEffect hooks
+  - [ ] Test if force re-render fixes the issue (indicates state update problem)
+  - [ ] Consider adding key prop to booking lists to force re-render on data change
+
+**2. Date Range Query Timezone Bug in IPC Handler**
+- **Status:** 🟡 PARTIAL FIX - Needs Testing
+- **Component:** POS Main Process (`main.ts`)
+- **Issue:** `bookings:list` handler incorrectly handles ISO date strings
+  - Was appending `T00:00:00.000Z` to already-converted UTC ISO strings
+  - Caused bookings at boundary times to be excluded from queries
+- **Fix Applied:** Use ISO strings directly without re-parsing
+- **Needs:** Restart POS and verify bookings now appear correctly
+
 ### Priority: HIGH
 
 **1. Booking Status Implementation (bookingStatus + paymentStatus)**

@@ -156,6 +156,8 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           } as Booking;
         });
 
+        console.log('[BOOKING_CTX] 📊 Mapped bookings:', mappedBookings.length, 'bookings');
+        console.log('[BOOKING_CTX] 📊 Sample booking:', mappedBookings[0]);
         setBookings(mappedBookings);
       } catch (error) {
         console.error('[BOOKING_CTX] ❌ Error fetching bookings:', error);

@@ -120,12 +120,14 @@ const DashboardPage: React.FC = () => {
       startDate: today.toISOString(),
       endDate: endOfDay.toISOString()
     });
-  }, []);
+  }, [fetchBookings]);
   
   // Update today's bookings from context bookings
   React.useEffect(() => {
+    console.log('[DASHBOARD] 📥 Bookings from context:', bookings.length);
     const todayStr = new Date().toDateString();
     const filtered = bookings.filter(b => new Date(b.date).toDateString() === todayStr);
+    console.log('[DASHBOARD] 📅 Today filtered:', filtered.length, 'bookings for', todayStr);
     setTodayBookings(filtered);
   }, [bookings]);
   
@@ -153,6 +155,7 @@ const DashboardPage: React.FC = () => {
       setCurrentTime(now);
       
       const active = todayBookings.filter(booking => isBookingActive(booking, now));
+      console.log('[DASHBOARD] ⏰ Active bookings:', active.length, 'out of', todayBookings.length, 'today');
       setCurrentBookings(active);
     };
     
