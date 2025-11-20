@@ -23,21 +23,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: CRITICAL 🔥
 
-**1. Backend Booking Conflict Detection Allows Overlapping Bookings**
-- **Status:** 🔴 OPEN - CRITICAL BUG
-- **Component:** Backend booking validation
-- **Impact:** System accepts conflicting bookings that overlap in time
-- **Example:**
-  - Booking 1: Room 1, 00:00-02:00 (2 hours) ✅ Created
-  - Booking 2: Room 1, 00:30-01:30 (1 hour) ✅ Accepted (SHOULD BE REJECTED!)
-- **Root Cause:** Conflict detection logic in backend not properly checking time overlaps
-- **Tasks:**
-  - [ ] Review booking conflict detection in backend API
-  - [ ] Ensure overlapping time slots are properly rejected
-  - [ ] Add comprehensive overlap test cases (start within, end within, fully contains, fully contained)
-  - [ ] Test edge cases: exact same time, touching boundaries (end = start)
-
-**2. POS Dashboard - Bookings Not Showing After Creation/Refresh** ✅ FIXED
+**1. POS Dashboard - Bookings Not Showing After Creation/Refresh** ✅ FIXED
 - **Status:** 🟢 RESOLVED
 - **Fix:** Multiple timezone bugs in date handling:
   1. Fixed `BookingContext`: Extract booking date using local timezone methods instead of `toISOString()`
