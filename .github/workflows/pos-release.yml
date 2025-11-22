@@ -111,7 +111,6 @@ jobs:
         with:
           name: pos-${{ matrix.os }}-${{ matrix.arch }}
           path: pos/apps/electron/release/
-          retention-days: 1
 
   release:
     name: Create GitHub Release
