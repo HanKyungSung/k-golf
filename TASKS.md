@@ -898,6 +898,11 @@ model Booking {
   - Updated release guide with auto-update section
   - Complete explanation of pipeline changes
   - Troubleshooting and best practices
+[x] Added version display in POS app header (2025-11-22):
+  - Version badge next to clock using VERSION.txt
+  - Automatic version copying during build process
+  - Text loader configuration for esbuild
+  - Proper .gitignore for generated files
 
 **Documentation:**
 - Release Process: `/docs/pos_release_guide.md`
