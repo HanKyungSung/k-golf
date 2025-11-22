@@ -166,7 +166,11 @@ jobs:
           body: ${{ steps.release_notes.outputs.body }}
           files: |
             release-macos-arm64/*.dmg
+            release-macos-arm64/*.dmg.blockmap
+            release-macos-arm64/*.yml
             release-windows/*.exe
+            release-windows/*.exe.blockmap
+            release-windows/*.yml
           draft: false
           prerelease: ${{ github.event.inputs.prerelease || false }}
           make_latest: true
