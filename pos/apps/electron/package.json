@@ -51,12 +51,14 @@
     }
   },
   "scripts": {
-    "dev": "ELECTRON_DEV=1 concurrently -k \"tsc -w\" \"npm:bundle:renderer\" \"npm:copyhtml:watch\" \"wait-on dist/main.js dist/renderer/index.js dist/renderer/index.html && electron dist/main.js\"",
-    "build": "tsc -p tsconfig.build.json && npm run copyhtml && npm run bundle:renderer:prod",
+    "dev": "ELECTRON_DEV=1 concurrently -k \"tsc -w\" \"npm:bundle:renderer\" \"npm:copyhtml:watch\" \"npm:copyversion:watch\" \"wait-on dist/main.js dist/renderer/index.js dist/renderer/index.html && electron dist/main.js\"",
+    "build": "tsc -p tsconfig.build.json && npm run copyhtml && npm run copyversion && npm run bundle:renderer:prod",
+    "copyversion": "cpy ../../VERSION.txt src/renderer/ --flat",
+    "copyversion:watch": "npm run copyversion && chokidar ../../VERSION.txt -c 'npm run copyversion'",
     "start": "node dist/main.js",
     "rebuild:native": "electron-rebuild -f --only better-sqlite3,keytar",
-    "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch",
-    "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --minify --outfile=dist/renderer/index.js",
+    "bundle:renderer": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --loader:.txt=text --outfile=dist/renderer/index.js --sourcemap --watch",
+    "bundle:renderer:prod": "esbuild src/renderer/index.tsx --bundle --format=esm --platform=browser --loader:.txt=text --minify --outfile=dist/renderer/index.js",
     "copyhtml": "mkdirp dist/renderer && cpy src/renderer/index.html dist/renderer --flat",
     "copyhtml:watch": "npm run copyhtml && chokidar src/renderer/index.html -c 'npm run copyhtml'",
     "pack": "electron-builder --dir",

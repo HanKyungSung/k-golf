@@ -1,0 +1,6 @@
+# Build output
+dist/
+release/
+
+# Generated file (copied during build)
+src/renderer/VERSION.txt
