@@ -166,6 +166,7 @@ jobs:
           body: ${{ steps.release_notes.outputs.body }}
           files: |
             release-macos-arm64/*.dmg
+            release-macos-arm64/*.zip
             release-macos-arm64/*.dmg.blockmap
             release-macos-arm64/latest-mac.yml
             release-windows/*.exe

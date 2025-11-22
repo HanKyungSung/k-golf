@@ -2,14 +2,13 @@
 
 ## 🎉 What's New
 
-- Feature 1: Description
-- Feature 2: Description
-- Improvement 1: Description
+- Version badge: Display app version next to clock in header
+- Auto-update system: Automatic updates with background downloads
 
 ## 🐛 Bug Fixes
 
-- Fix 1: Description
-- Fix 2: Description
+- Fixed auto-update: Added ZIP target for macOS (electron-updater requirement)
+- Fixed build pipeline: Include all update metadata files (.yml, .blockmap)
 
 ## 📦 Installation
 

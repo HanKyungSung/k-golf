@@ -24,6 +24,19 @@
 - This ensures the project's task tracking and documentation stay synchronized with actual progress
 - **Before committing or completing work** (if user wants to commit), verify all related documentation is updated
 
+## POS Release Process
+
+- **When creating a new POS release**, always:
+  1. Update `pos/VERSION.txt` with the new version number
+  2. Update `pos/apps/electron/package.json` version field
+  3. Update `pos/RELEASE_NOTES_TEMPLATE.md` with:
+     - New features added
+     - Bug fixes included
+     - Any breaking changes or important notes
+  4. Commit all version and release note changes
+  5. Create and push the git tag: `git tag pos-vX.X.X && git push origin main && git push origin pos-vX.X.X`
+- This ensures consistent versioning and proper release documentation
+
 ## Communication Style
 
 - Use visual aids (diagrams, flowcharts, ASCII art) whenever possible to enhance understanding
