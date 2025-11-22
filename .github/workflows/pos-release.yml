@@ -169,6 +169,7 @@ jobs:
             release-windows/*.exe
           draft: false
           prerelease: ${{ github.event.inputs.prerelease || false }}
+          make_latest: true
           generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
