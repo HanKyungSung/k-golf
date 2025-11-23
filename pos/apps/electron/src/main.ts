@@ -15,8 +15,6 @@
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { app, BrowserWindow, ipcMain, session } = require('electron');
 const os = require('node:os')
-// Import auto-updater
-import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 
 // Load environment variables (supports .env in project root of electron app during dev)
@@ -216,9 +214,6 @@ async function createWindow() {
 app.whenReady().then(async () => {
   const { path: dbPath, newlyCreated } = initDb();
   console.log('[MAIN] DB initialized at', dbPath, 'new?', newlyCreated);
-  
-  // Initialize auto-updater
-  initAutoUpdater();
   
   // Register menu IPC handlers
   registerMenuHandlers();
@@ -676,112 +671,6 @@ if (process.env.ELECTRON_DEV) {
     emitToAll('main-log', { level: 'debug', message: args });
   };
 }
-
-/**
- * Auto-Updater Configuration
- * Checks for updates on startup and every 4 hours
- */
-function initAutoUpdater() {
-  // Skip auto-update in development mode
-  if (process.env.ELECTRON_DEV) {
-    log.info('[AUTO_UPDATE] Skipping in development mode');
-    return;
-  }
-
-  // Configure logger
-  autoUpdater.logger = log;
-  (autoUpdater.logger as any).transports.file.level = 'info';
-  log.info('[AUTO_UPDATE] Initializing auto-updater');
-
-  // Configure update behavior
-  autoUpdater.autoDownload = true; // Automatically download updates
-  autoUpdater.autoInstallOnAppQuit = true; // Install on quit (silent)
-
-  // Event: Checking for update
-  autoUpdater.on('checking-for-update', () => {
-    log.info('[AUTO_UPDATE] Checking for updates...');
-    emitToAll('update:checking', {});
-  });
-
-  // Event: Update available
-  autoUpdater.on('update-available', (info) => {
-    log.info('[AUTO_UPDATE] Update available:', info.version);
-    emitToAll('update:available', { version: info.version, releaseNotes: info.releaseNotes });
-  });
-
-  // Event: Update not available
-  autoUpdater.on('update-not-available', (info) => {
-    log.info('[AUTO_UPDATE] Update not available. Current version:', info.version);
-    emitToAll('update:not-available', { version: info.version });
-  });
-
-  // Event: Download progress
-  autoUpdater.on('download-progress', (progress) => {
-    log.info(`[AUTO_UPDATE] Download progress: ${progress.percent.toFixed(2)}% (${progress.transferred}/${progress.total} bytes)`);
-    emitToAll('update:download-progress', {
-      percent: progress.percent,
-      transferred: progress.transferred,
-      total: progress.total,
-      bytesPerSecond: progress.bytesPerSecond
-    });
-  });
-
-  // Event: Update downloaded
-  autoUpdater.on('update-downloaded', (info) => {
-    log.info('[AUTO_UPDATE] Update downloaded:', info.version);
-    emitToAll('update:downloaded', { version: info.version });
-    
-    // Notify user that update is ready
-    // The update will be installed on next app restart (autoInstallOnAppQuit: true)
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length > 0) {
-      windows[0].webContents.send('update:ready', {
-        version: info.version,
-        message: 'Update downloaded. Will install on next restart.'
-      });
-    }
-  });
-
-  // Event: Error
-  autoUpdater.on('error', (error) => {
-    log.error('[AUTO_UPDATE] Error:', error);
-    emitToAll('update:error', { message: error.message });
-  });
-
-  // Check for updates on startup (after 10 seconds delay)
-  setTimeout(() => {
-    log.info('[AUTO_UPDATE] Performing initial update check');
-    autoUpdater.checkForUpdates().catch(err => {
-      log.error('[AUTO_UPDATE] Initial check failed:', err);
-    });
-  }, 10000);
-
-  // Check for updates every 12 hours
-  const CHECK_INTERVAL = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
-  setInterval(() => {
-    log.info('[AUTO_UPDATE] Performing periodic update check');
-    autoUpdater.checkForUpdates().catch(err => {
-      log.error('[AUTO_UPDATE] Periodic check failed:', err);
-    });
-  }, CHECK_INTERVAL);
-
-  // IPC handler for manual update check
-  ipcMain.handle('update:check', async () => {
-    try {
-      log.info('[AUTO_UPDATE] Manual update check requested');
-      const result = await autoUpdater.checkForUpdates();
-      return { ok: true, updateInfo: result?.updateInfo };
-    } catch (error: any) {
-      log.error('[AUTO_UPDATE] Manual check failed:', error);
-      return { ok: false, error: error.message };
-    }
-  });
-
-  // IPC handler to install update now (quit and install)
-  ipcMain.handle('update:installNow', () => {
-    log.info('[AUTO_UPDATE] Install now requested');
-    autoUpdater.quitAndInstall(false, true); // (isSilent, isForceRunAfter)
-  });
 
   // IPC handler for printing seat bills
   ipcMain.handle('print:bill', async (_evt: any, printData: any) => {
