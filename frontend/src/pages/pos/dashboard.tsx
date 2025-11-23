@@ -234,8 +234,9 @@ export default function POSDashboard() {
               <CardDescription>Live view of currently occupied rooms</CardDescription>
             </div>
             <Button 
-              onClick={() => navigate('/booking')}
+              onClick={() => navigate('/admin')}
               className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold flex items-center gap-2"
+              title="Go to Admin Panel to create bookings"
             >
               <Plus className="h-4 w-4" />
               <span>Create Booking</span>
