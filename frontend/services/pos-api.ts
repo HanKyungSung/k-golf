@@ -5,7 +5,10 @@
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
 
-console.log('[POS API] API_BASE:', API_BASE);
+// Logged once on module load
+if (typeof window !== 'undefined') {
+  console.log('[POS API] API_BASE:', API_BASE);
+}
 
 interface ApiResponse<T> {
   ok: boolean;
@@ -56,14 +59,11 @@ export async function listBookings(filters?: BookingFilters): Promise<Booking[]>
   if (filters?.limit) params.append('limit', filters.limit.toString());
 
   const url = `${API_BASE}/api/bookings?${params.toString()}`;
-  console.log('[POS API] Fetching bookings from:', url);
 
   const res = await fetch(url, {
     credentials: 'include',
     headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' }
   });
-
-  console.log('[POS API] Bookings response status:', res.status);
 
   if (!res.ok) {
     const errorText = await res.text();
@@ -72,7 +72,10 @@ export async function listBookings(filters?: BookingFilters): Promise<Booking[]>
   }
   
   const json = await res.json();
-  console.log('[POS API] Bookings response:', json);
+  // Only log on first successful load
+  if (json.bookings && json.bookings.length > 0) {
+    console.log('[POS API] Loaded', json.bookings.length, 'bookings');
+  }
   return json.bookings || [];
 }
 
@@ -157,14 +160,11 @@ export interface Room {
 
 export async function listRooms(): Promise<Room[]> {
   const url = `${API_BASE}/api/bookings/rooms`;
-  console.log('[POS API] Fetching rooms from:', url);
 
   const res = await fetch(url, {
     credentials: 'include',
     headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' }
   });
-
-  console.log('[POS API] Rooms response status:', res.status);
 
   if (!res.ok) {
     const errorText = await res.text();
@@ -173,7 +173,9 @@ export async function listRooms(): Promise<Room[]> {
   }
   
   const json = await res.json();
-  console.log('[POS API] Rooms response:', json);
+  if (json.rooms && json.rooms.length > 0) {
+    console.log('[POS API] Loaded', json.rooms.length, 'rooms');
+  }
   return json.rooms || [];
 }
 

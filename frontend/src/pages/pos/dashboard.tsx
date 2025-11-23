@@ -44,15 +44,11 @@ export default function POSDashboard() {
   async function loadData() {
     try {
       setLoading(true);
-      console.log('[POS Dashboard] Loading data...');
       
       const [bookingsData, roomsData] = await Promise.all([
         listBookings(),
         listRooms()
       ]);
-      
-      console.log('[POS Dashboard] Bookings data:', bookingsData);
-      console.log('[POS Dashboard] Rooms data:', roomsData);
       
       // Transform bookings to add derived fields (date, time, roomName)
       const transformedBookings = bookingsData.map(b => {
@@ -69,7 +65,7 @@ export default function POSDashboard() {
         };
       });
       
-      console.log('[POS Dashboard] Transformed bookings:', transformedBookings);
+      console.log('[POS Dashboard] Loaded', transformedBookings.length, 'bookings and', roomsData.length, 'rooms');
       setBookings(transformedBookings);
       setRooms(roomsData);
     } catch (err) {
@@ -174,7 +170,8 @@ export default function POSDashboard() {
     );
   }
 
-  console.log('[POS Dashboard] Render - bookings:', bookings.length, 'rooms:', rooms.length);
+  // Removed excessive render logging - React re-renders are normal
+  // console.log('[POS Dashboard] Render - bookings:', bookings.length, 'rooms:', rooms.length);
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
