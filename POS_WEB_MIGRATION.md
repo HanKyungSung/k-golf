@@ -405,7 +405,8 @@ server {
 - ✅ Tax rate editor (read & write working)
 
 **Not Yet Implemented:**
-- ❌ Menu management functionality (placeholder exists, backend endpoints missing)
+- ❌ Booking detail page (placeholder only - needs full migration from Electron)
+- ❌ Menu management page (placeholder only - needs full migration from Electron)
 - ❌ Print queue (deferred to future phase)
 
 ---
@@ -618,46 +619,121 @@ model MenuItem {
 
 ---
 
-## Menu Management Status
+## Phase 1.6: Remaining Page Migration Status
+
+### 🔴 Booking Detail Page (INCOMPLETE)
 
 **Current State:**
-- ❌ Menu management is **not yet implemented** in the POS dashboard
-- ✅ Placeholder page exists at `frontend/src/pages/pos/menu-management.tsx`
-- ✅ API service layer has menu endpoints defined in `pos-api.ts`
-- ❌ No menu tab in the dashboard (only Bookings, Rooms, Tax Settings)
-- ❌ Backend menu endpoints don't exist yet
+- ❌ `frontend/src/pages/pos/booking-detail.tsx` is a **placeholder** (40 lines)
+- ✅ Electron reference exists: `pos/apps/electron/src/renderer/pages/BookingDetailPage.tsx` (1000+ lines)
 
-**Implementation Plan (Future Phase):**
-1. Add "Menu" tab to POS dashboard alongside Bookings, Rooms, Tax
-2. Migrate menu management UI from Electron POS (`pos/apps/electron/src/renderer/pages/MenuManagementPage.tsx`)
-3. Implement backend menu API endpoints:
-   - `GET /api/menu/items` - List all menu items
-   - `POST /api/menu/items` - Create menu item
-   - `PATCH /api/menu/items/:id` - Update menu item
-   - `DELETE /api/menu/items/:id` - Delete menu item
-4. Connect frontend to backend via `pos-api.ts` service layer
-5. Test CRUD operations (create, read, update, delete menu items)
+**Missing Features:**
+- ❌ Full booking information display (customer, room, time, status)
+- ❌ Order management with seat-based billing (split bills across seats)
+- ❌ Menu item selection and ordering per seat
+- ❌ Item quantity controls (add/remove quantities)
+- ❌ Seat management (add/remove seats, up to 10 seats)
+- ❌ Move items between seats
+- ❌ Cost splitting (split single item cost across multiple seats)
+- ❌ Seat-specific receipt printing
+- ❌ Grand total receipt printing
+- ❌ Payment status tracking (UNPAID/BILLED/PAID)
+- ❌ Tax rate per-booking override (custom tax rate for specific booking)
+- ❌ Booking status actions (Complete/Cancel buttons)
+- ❌ localStorage persistence (orders and seats persist across refreshes)
+- ❌ Real-time clock display
+- ❌ Print stylesheets for receipts
 
-**Priority:** MEDIUM (Not critical for initial launch - can use admin panel for now)
+**Implementation Plan:**
+1. Migrate full BookingDetailPage from Electron (1000+ lines)
+2. Adapt UI components (remove Electron-specific parts)
+3. Replace `window.kgolf.*` IPC calls with REST API calls
+4. Implement localStorage persistence for orders/seats
+5. Add print stylesheets for browser printing
+6. Test order management flows (add items, move, split, print)
 
-**Estimated Effort:** 4-6 hours (2 hours frontend tab + 2 hours backend + 1-2 hours testing)
+**Priority:** HIGH (Critical POS feature - staff need booking detail management)
+
+**Estimated Effort:** 8-12 hours (6 hours migration + 3 hours testing + 2-3 hours bug fixes)
 
 ---
 
-## Next Steps
+### 🟡 Menu Management Page (INCOMPLETE)
 
+**Current State:**
+- ❌ `frontend/src/pages/pos/menu-management.tsx` is a **placeholder** (40 lines)
+- ✅ Electron reference exists: `pos/apps/electron/src/renderer/pages/MenuManagementPage.tsx` (500+ lines)
+
+**Missing Features:**
+- ❌ Menu items list with search/filter
+- ❌ Category filtering (hours, food, drinks, appetizers, desserts)
+- ❌ Create new menu item form
+- ❌ Edit existing menu item
+- ❌ Delete menu item (with confirmation)
+- ❌ Toggle availability (enable/disable items)
+- ❌ Price validation
+- ❌ Stats dashboard (total items, available count, average price)
+- ❌ Backend API endpoints (GET/POST/PATCH/DELETE `/api/menu/items`)
+
+**Implementation Plan:**
+1. Migrate MenuManagementPage from Electron (500+ lines)
+2. Adapt UI components (filters, search, CRUD forms)
+3. Implement backend menu API endpoints:
+   - `GET /api/menu/items` - List with category filter
+   - `POST /api/menu/items` - Create menu item
+   - `PATCH /api/menu/items/:id` - Update menu item
+   - `DELETE /api/menu/items/:id` - Delete menu item
+4. Connect frontend to backend via `pos-api.ts`
+5. Test all CRUD operations
+6. Test filtering and search
+
+**Priority:** MEDIUM (Can use admin panel temporarily, but POS staff need quick access)
+
+**Estimated Effort:** 6-8 hours (3 hours frontend + 2 hours backend + 2-3 hours testing)
+
+---
+
+### Impact Assessment
+
+**User Reported Issue:**
+> "I can't see some pages correctly. I don't think it is fully migrated"
+
+**Root Cause:**
+- Dashboard tab is complete ✅
+- Booking detail page is placeholder ❌
+- Menu management page is placeholder ❌
+
+**Impact:**
+- Staff cannot manage individual booking details from POS
+- Staff cannot add/edit menu items from POS (must use admin panel)
+- Clicking on bookings in timeline leads to empty placeholder page
+
+**Recommended Action:**
+1. **Immediate:** Migrate booking-detail page (HIGH priority - core POS feature)
+2. **Next:** Migrate menu-management page (MEDIUM priority - has workaround via admin panel)
+3. **Then:** Test complete POS workflow end-to-end
+
+---
+
+## Next Steps - Priority Order
+
+### 🔴 HIGH PRIORITY
 1. ✅ Phase 1 Frontend Migration Complete
 2. ✅ Phase 1.5 Backend API Refinement Complete
-   - ✅ GET /api/bookings/:id - Get single booking
-   - ✅ PATCH /api/bookings/:id/status - Update booking status
-   - ✅ GET /api/settings/global_tax_rate - Get tax rate
-   - ✅ PUT /api/settings/global_tax_rate - Update tax rate
 3. ✅ Timeline view implemented (matching Electron POS)
-4. ✅ All POS core functionality working (bookings, rooms, tax)
-5. 🔄 **CURRENT:** Testing and debugging
-6. ⬜ Phase 1.6: Add menu management functionality (optional, can use admin panel)
-7. ⬜ Phase 2: Deploy to production and test with staff
-8. ⬜ (Future Phase 3) Plan print queue implementation if needed
+4. 🔄 **CURRENT:** Phase 1.6 - Booking Detail Page Migration (8-12 hours)
+   - **CRITICAL:** Required for POS operations - order management, bill splitting, receipt printing
+   - Staff cannot manage bookings without this page
+
+### � MEDIUM PRIORITY
+5. ⬜ Phase 1.7 - Menu Management Page Migration (6-8 hours)
+   - **WORKAROUND AVAILABLE:** Can use admin panel for menu management
+   - POS staff would prefer quick access from POS interface
+
+### 🟢 LOW PRIORITY
+6. ⬜ Phase 1.8: Complete end-to-end testing
+7. ⬜ Phase 2: Production deployment and staff training
+8. ⬜ (Future Phase 3) Print queue implementation if needed
 
 ---
 

@@ -35,15 +35,22 @@ export default function POSDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Load data on mount
+  // Load data on mount and poll every 5 seconds
   useEffect(() => {
-    loadData();
+    loadData(true); // Initial load with loading spinner
     loadTaxRate();
+    
+    // Poll for updates every 5 seconds (without loading spinner)
+    const pollInterval = setInterval(() => {
+      loadData(false);
+    }, 5000);
+    
+    return () => clearInterval(pollInterval);
   }, []);
 
-  async function loadData() {
+  async function loadData(showLoading = true) {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       
       const [bookingsData, roomsData] = await Promise.all([
         listBookings(),
@@ -70,9 +77,12 @@ export default function POSDashboard() {
       setRooms(roomsData);
     } catch (err) {
       console.error('[POS Dashboard] Failed to load data:', err);
-      alert(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      // Only show alert on initial load, not during polling
+      if (showLoading) {
+        alert(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }
 
