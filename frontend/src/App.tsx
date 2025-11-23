@@ -7,6 +7,7 @@ import DashboardPage from './pages/dashboard'
 import LoginPage from './pages/login'
 import SignUpPage from './pages/signup'
 import VerifyPage from './pages/verify'
+import POSRoutes from './pages/pos'
 import { AuthProvider } from '../hooks/use-auth'
 import { Toaster } from '@/components/ui/toaster'
 import { ThemeProvider } from '../components/theme-provider'
@@ -26,6 +27,7 @@ function AppRoutes() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/booking" element={<BookingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/pos/*" element={<POSRoutes />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/verify" element={<VerifyPage />} />

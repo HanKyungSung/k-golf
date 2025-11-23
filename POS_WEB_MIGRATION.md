@@ -715,6 +715,363 @@ model MenuItem {
 
 ---
 
+## Phase 1.6: Booking Detail Page Migration - Detailed Tasks
+
+### Overview
+Migrate full booking detail page from Electron POS (~1000 lines) with complete order management system.
+
+### Task Breakdown (Estimated 8-12 hours total)
+
+#### ✅ Task 1.6.1: Fix Navigation & Routing (30 mins) - COMPLETED
+**Status:** ✅ Done  
+**Changes Made:**
+- Added `/pos/*` route to main App.tsx
+- Fixed navigation paths in dashboard (changed `/pos/booking-detail/${id}` → `/pos/booking/${id}`)
+- Updated menu navigation paths
+- Imported POSRoutes into App.tsx
+
+**Files Modified:**
+- `frontend/src/App.tsx` - Added POS routes
+- `frontend/src/pages/pos/dashboard.tsx` - Fixed navigation paths
+
+---
+
+#### 🔄 Task 1.6.2: Basic Component Structure (1-2 hours) - IN PROGRESS
+**Status:** 🔄 In Progress (50% complete)  
+**What's Done:**
+- ✅ Created basic imports (UI components, API functions, icons)
+- ✅ Set up state management (booking, rooms, menu, orders, seats)
+- ✅ Added dialog state management (add item, move, split, tax edit, print)
+- ✅ Implemented data loading (booking, rooms, menu, tax rate)
+- ✅ Added localStorage persistence hooks
+- ✅ Basic loading/error states
+- ✅ Header with status badges and back button
+
+**What's Remaining:**
+- ❌ Order management functions (add, remove, update quantity)
+- ❌ Seat management functions (add/remove seats, move items, split costs)
+- ❌ Full UI rendering (customer info, booking info, order list, menu)
+- ❌ All dialog implementations
+
+**Files:**
+- `frontend/src/pages/pos/booking-detail.tsx` (currently 230 lines, need ~1000 lines)
+
+---
+
+#### ⬜ Task 1.6.3: Order Management Functions (2-3 hours)
+**Status:** ⬜ Not Started  
+**Scope:**
+1. **Add Item to Seat**
+   - Select menu item from menu tabs
+   - Choose which seat to add to
+   - Create OrderItem with unique ID
+
+2. **Update Quantity**
+   - Increment/decrement quantity
+   - Remove item if quantity reaches 0
+   - Update totals automatically
+
+3. **Remove Order Item**
+   - Delete confirmation (optional)
+   - Remove from orderItems array
+   - Update localStorage
+
+4. **Move Item Between Seats**
+   - Select item to move
+   - Choose target seat
+   - Update seat assignment
+   - Recalculate seat totals
+
+5. **Split Cost Across Seats**
+   - Select item to split
+   - Choose multiple seats (checkboxes)
+   - Calculate split price per seat
+   - Create duplicate items with splitPrice
+
+**Functions to Implement:**
+```typescript
+- addItemToSeat(menuItem: MenuItem, seat: number)
+- updateItemQuantity(orderItemId: string, change: number)
+- removeOrderItem(orderItemId: string)
+- moveItemToSeat(orderItemId: string, newSeat: number)
+- splitItemAcrossSeats(orderItem: OrderItem, seats: number[])
+```
+
+---
+
+#### ⬜ Task 1.6.4: Seat Management (1-2 hours)
+**Status:** ⬜ Not Started  
+**Scope:**
+1. **Add/Remove Seats**
+   - Button controls to adjust number of seats (1-10)
+   - Validation: can't remove seat if items assigned to it
+   - Show seat count indicator
+
+2. **Seat Validation**
+   - Check if seat has items before removal
+   - Show warning message if trying to remove occupied seat
+
+3. **Auto-initialize Seats**
+   - Load saved seat count from localStorage
+   - Add booking hours to seat 1 automatically on first load
+   - Prevent re-initialization on subsequent loads
+
+**Functions to Implement:**
+```typescript
+- canReduceSeats(): boolean
+- handleReduceSeats()
+- handleAddSeat()
+```
+
+---
+
+#### ⬜ Task 1.6.5: Calculation Functions (30 mins)
+**Status:** ⬜ Not Started  
+**Scope:**
+- Calculate subtotal per seat
+- Calculate tax per seat
+- Calculate total per seat
+- Calculate grand totals (all seats)
+- Support custom tax rate per booking
+
+**Functions to Implement:**
+```typescript
+- calculateSeatSubtotal(seat: number): number
+- calculateSeatTax(seat: number): number
+- calculateSeatTotal(seat: number): number
+- calculateSubtotal(): number
+- calculateTax(): number
+- calculateTotal(): number
+```
+
+---
+
+#### ⬜ Task 1.6.6: UI Rendering - Customer & Booking Info (1 hour)
+**Status:** ⬜ Not Started  
+**Scope:**
+1. **Customer Information Card**
+   - Avatar with customer initial
+   - Name, email, phone
+   - Located in right sidebar
+
+2. **Booking Information Card**
+   - Room (with color indicator)
+   - Date, start time, duration
+   - Number of players
+   - Booking source
+   - Notes (if any)
+   - Located in right sidebar
+
+3. **Payment Information Card** (if applicable)
+   - Payment status badge
+   - Payment method
+   - Billed/Paid timestamps
+   - Tip amount
+   - Located in right sidebar
+
+**Components:**
+- InfoBlock helper component for consistent formatting
+
+---
+
+#### ⬜ Task 1.6.7: UI Rendering - Order List (2 hours)
+**Status:** ⬜ Not Started  
+**Scope:**
+1. **Seat Management Card**
+   - Show current number of seats
+   - Plus/minus buttons to adjust
+   - Seat count display
+
+2. **Current Order Card**
+   - Print All button in header
+   - Organized by seats with color indicators
+   - Each seat section shows:
+     - Seat header with color dot and print button
+     - List of order items with:
+       - Item name, description, price
+       - Quantity controls (+/-)
+       - Action buttons (Move, Split, Delete)
+     - Seat subtotal, tax, and total
+
+3. **Grand Total Section**
+   - Overall subtotal
+   - Tax (with global/custom indicator and edit button)
+   - Grand total
+   - Displayed at bottom of order list
+
+**Styling:**
+- Dark theme matching dashboard
+- Amber accents for prices and highlights
+- Color-coded seats (10 different colors)
+- Clear visual hierarchy
+
+---
+
+#### ⬜ Task 1.6.8: UI Rendering - Menu Tabs (1 hour)
+**Status:** ⬜ Not Started  
+**Scope:**
+1. **Menu Card in Sidebar**
+   - Tab navigation (Hours, Food, Drinks, Appetizers, Desserts)
+   - Click to view category items
+
+2. **Menu Item Display**
+   - Item name (bold)
+   - Description (small text)
+   - Price (amber color)
+   - Click item to open "Add to Seat" dialog
+
+3. **Category Filtering**
+   - Filter menu items by category
+   - Only show available items
+
+**Functions:**
+```typescript
+- getItemsByCategory(category: string): MenuItem[]
+- handleMenuItemClick(menuItem: MenuItem)
+```
+
+---
+
+#### ⬜ Task 1.6.9: Dialog Implementations (2-3 hours)
+**Status:** ⬜ Not Started  
+**Scope:**
+
+**1. Add Item Dialog**
+- Show selected menu item name
+- Grid of seat buttons (color-coded)
+- Click seat to add item
+- Cancel button
+
+**2. Move Item Dialog**
+- Show item name being moved
+- Grid of seat buttons (excluding current seat)
+- Click seat to move item
+- Cancel button
+
+**3. Split Cost Dialog**
+- Show item name and original price
+- Checkbox list of all seats
+- Show calculated price per seat (live update)
+- Split preview section
+- Confirm/Cancel buttons
+
+**4. Tax Rate Edit Dialog**
+- Show current rate (global or custom)
+- Input field for new rate (0-100)
+- Quick select buttons (0%, 5%, 8%, 10%, 13%, 15%, 20%, 25%)
+- Reset to Global button (if custom rate set)
+- Save/Cancel buttons
+
+**5. Booking Status Actions**
+- Complete/Cancel buttons (conditional based on status)
+- Confirmation dialogs
+- Update booking status via API
+- Refresh data after status change
+
+---
+
+#### ⬜ Task 1.6.10: Print Functionality (1-2 hours)
+**Status:** ⬜ Not Started  
+**Scope:**
+1. **Print Stylesheets**
+   - Hide UI elements (buttons, navigation, dialogs)
+   - Show print-only header/footer
+   - Optimize layout for receipt printing
+
+2. **Print Individual Seat Receipt**
+   - Show only selected seat items
+   - Include customer info and booking details
+   - Seat totals (subtotal, tax, total)
+   - Print timestamp
+
+3. **Print All Seats (Grand Receipt)**
+   - Show all seats and items
+   - Each seat section with page break
+   - Grand total at end
+   - Print timestamp
+
+4. **Print Handlers**
+   - `handlePrintSeat(seat: number)` - Set printing seat, trigger print
+   - `handlePrintReceipt()` - Print all seats
+   - Clean up printing state after print dialog
+
+**CSS Features:**
+- `@media print` styles
+- Hide `.no-print` classes
+- Show `.print-only` classes
+- Page break control
+- Color preservation (`print-color-adjust: exact`)
+
+---
+
+#### ⬜ Task 1.6.11: Testing & Bug Fixes (1-2 hours)
+**Status:** ⬜ Not Started  
+**Testing Checklist:**
+- [ ] Navigation to booking detail page works
+- [ ] Booking data loads correctly
+- [ ] Menu items load correctly
+- [ ] Add item to seat works
+- [ ] Quantity increment/decrement works
+- [ ] Remove item works
+- [ ] Add/remove seats works
+- [ ] Seat validation prevents removing occupied seats
+- [ ] Move item between seats works
+- [ ] Split cost across seats works
+- [ ] Split price calculation correct
+- [ ] Seat totals calculate correctly
+- [ ] Grand total calculates correctly
+- [ ] Tax rate edit works (custom and reset to global)
+- [ ] Print individual seat works
+- [ ] Print all seats works
+- [ ] Print stylesheets display correctly
+- [ ] Complete/Cancel booking status works
+- [ ] localStorage persistence works (orders and seats)
+- [ ] Page refresh preserves orders and seats
+- [ ] Responsive layout works on tablets
+- [ ] Error handling for API failures
+- [ ] Loading states display properly
+
+**Known Issues to Address:**
+- Menu items need backend API endpoint (if not exists)
+- Booking hours auto-add needs menu item with matching duration
+- Print layout may need adjustment for thermal printers
+
+---
+
+### Summary - Task 1.6 Completion Checklist
+
+**Infrastructure (1 hour):**
+- [x] ✅ 1.6.1: Navigation & Routing
+- [x] 🔄 1.6.2: Basic Component Structure (50% done)
+
+**Core Functionality (5-7 hours):**
+- [ ] ⬜ 1.6.3: Order Management Functions
+- [ ] ⬜ 1.6.4: Seat Management
+- [ ] ⬜ 1.6.5: Calculation Functions
+
+**UI Implementation (4-5 hours):**
+- [ ] ⬜ 1.6.6: Customer & Booking Info UI
+- [ ] ⬜ 1.6.7: Order List UI
+- [ ] ⬜ 1.6.8: Menu Tabs UI
+- [ ] ⬜ 1.6.9: Dialog Implementations
+- [ ] ⬜ 1.6.10: Print Functionality
+
+**Quality Assurance (1-2 hours):**
+- [ ] ⬜ 1.6.11: Testing & Bug Fixes
+
+**Total Estimated Time:** 11-16 hours  
+**Adjusted for Complexity:** 8-12 hours (with experienced developer)
+
+---
+
+### Next Phase After 1.6
+
+**Phase 1.7: Menu Management Page Migration** (6-8 hours)
+- Lower priority - has admin panel workaround
+- Can be deferred if time constrained
+
+---
+
 ## Next Steps - Priority Order
 
 ### 🔴 HIGH PRIORITY

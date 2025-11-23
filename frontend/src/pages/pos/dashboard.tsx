@@ -278,7 +278,7 @@ export default function POSDashboard() {
                         <Button 
                           size="sm" 
                           className="w-full text-xs" 
-                          onClick={() => navigate(`/pos/booking-detail/${currentBooking.id}`)}
+                          onClick={() => navigate(`/pos/booking/${currentBooking.id}`)}
                         >
                           Manage
                         </Button>
@@ -330,8 +330,8 @@ export default function POSDashboard() {
                 <div className="space-y-4 text-sm">
                   <p className="text-slate-300">Menu management allows you to add, edit, and manage food and drink items.</p>
                   <div className="flex gap-3">
-                    <Button size="sm" onClick={() => navigate('/pos/menu-management')}>Open Menu Management</Button>
-                    <Button size="sm" variant="outline" onClick={() => navigate('/pos/menu-management')}>Quick Edit</Button>
+                    <Button size="sm" onClick={() => navigate('/pos/menu')}>Open Menu Management</Button>
+                    <Button size="sm" variant="outline" onClick={() => navigate('/pos/menu')}>Quick Edit</Button>
                   </div>
                   <p className="text-[11px] text-slate-500">Future enhancements: category CRUD, bulk availability toggles, price history, printing labels.</p>
                 </div>
@@ -397,7 +397,7 @@ export default function POSDashboard() {
                                   {roomTodayBookings.map((booking) => (
                                     <div
                                       key={booking.id}
-                                      onClick={() => navigate(`/pos/booking-detail/${booking.id}`)}
+                                      onClick={() => navigate(`/pos/booking/${booking.id}`)}
                                       className="block p-2 bg-slate-600/30 rounded hover:bg-slate-600/50 transition-colors cursor-pointer"
                                     >
                                       <div className="flex justify-between items-start">
