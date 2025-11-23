@@ -83,7 +83,7 @@ export default function POSDashboard() {
       console.error('[POS Dashboard] Failed to load data:', err);
       // Only show alert on initial load, not during polling
       if (showLoading) {
-        alert(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error');
+        alert(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
     } finally {
       if (showLoading) setLoading(false);
@@ -108,7 +108,7 @@ export default function POSDashboard() {
       await loadData();
     } catch (err) {
       console.error('Failed to update booking:', err);
-      alert(`Failed to update booking: ${err instanceof Error ? err.message : 'Unknown error');
+      alert(`Failed to update booking: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }
 
@@ -143,16 +143,6 @@ export default function POSDashboard() {
     setSelectedBookingId(null);
     // Refresh data when returning from booking detail
     loadData(false);
-  }
-
-  // If a booking is selected, show the detail view instead of dashboard
-  if (selectedBookingId) {
-    return (
-      <POSBookingDetail 
-        bookingId={selectedBookingId} 
-        onBack={closeBookingDetail}
-      />
-    );
   }
 
   // Current bookings (happening right now)
@@ -193,6 +183,17 @@ export default function POSDashboard() {
     await logout();
     navigate('/login');
   };
+
+  // If a booking is selected, show the detail view instead of dashboard
+  // IMPORTANT: This must come AFTER all hooks (useMemo, useEffect, etc.) to avoid hook order issues
+  if (selectedBookingId) {
+    return (
+      <POSBookingDetail 
+        bookingId={selectedBookingId} 
+        onBack={closeBookingDetail}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -341,7 +342,8 @@ export default function POSDashboard() {
           <TabsContent value="timeline">
             <TimelineView 
               bookings={bookings} 
-              rooms={rooms} 
+              rooms={rooms}
+              onBookingClick={openBookingDetail}
             />
           </TabsContent>
 
@@ -532,9 +534,10 @@ export default function POSDashboard() {
 interface TimelineViewProps {
   bookings: Booking[];
   rooms: Room[];
+  onBookingClick: (bookingId: string) => void;
 }
 
-function TimelineView({ bookings, rooms }: TimelineViewProps) {
+function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
   const navigate = useNavigate();
   const dayStart = 9 * 60; // 9 AM in minutes
   const dayEnd = 22 * 60;  // 10 PM in minutes
@@ -680,7 +683,7 @@ function TimelineView({ bookings, rooms }: TimelineViewProps) {
                               key={booking.id}
                               className={`${roomColor} absolute top-2 bottom-2 rounded-md hover:opacity-80 transition-all cursor-pointer overflow-hidden group shadow-md`}
                               style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                              onClick={() => openBookingDetail(booking.id)}
+                              onClick={() => onBookingClick(booking.id)}
                             >
                               <div className="h-full flex flex-col justify-center px-2">
                                 <div className="text-white text-[10px] font-semibold truncate">
