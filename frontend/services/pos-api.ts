@@ -255,7 +255,8 @@ export async function getGlobalTaxRate(): Promise<number> {
   if (!res.ok) return 8; // default fallback
   
   const json = await res.json();
-  return parseFloat(json.value) || 8;
+  // Backend returns { taxRate: number, key: string, updatedAt?: string }
+  return json.taxRate || 8;
 }
 
 export async function updateGlobalTaxRate(rate: number): Promise<void> {
@@ -266,7 +267,8 @@ export async function updateGlobalTaxRate(rate: number): Promise<void> {
       'Content-Type': 'application/json',
       'x-pos-admin-key': 'pos-dev-key-change-in-production'
     },
-    body: JSON.stringify({ value: rate.toString() })
+    // Backend expects { taxRate: number }
+    body: JSON.stringify({ taxRate: rate })
   });
 
   if (!res.ok) throw new Error('Failed to update tax rate');

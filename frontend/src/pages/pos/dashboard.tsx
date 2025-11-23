@@ -48,7 +48,23 @@ export default function POSDashboard() {
         listBookings(),
         listRooms()
       ]);
-      setBookings(bookingsData);
+      
+      // Transform bookings to add derived fields (date, time, roomName)
+      const transformedBookings = bookingsData.map(b => {
+        const start = new Date(b.startTime);
+        const end = new Date(b.endTime);
+        const room = roomsData.find(r => r.id === b.roomId);
+        
+        return {
+          ...b,
+          date: start.toISOString().split('T')[0], // YYYY-MM-DD
+          time: start.toTimeString().slice(0, 5), // HH:MM
+          duration: (end.getTime() - start.getTime()) / (1000 * 60 * 60), // hours
+          roomName: room?.name || 'Unknown Room',
+        };
+      });
+      
+      setBookings(transformedBookings);
       setRooms(roomsData);
     } catch (err) {
       console.error('Failed to load data:', err);
@@ -69,10 +85,13 @@ export default function POSDashboard() {
 
   async function updateBookingStatus(id: string, status: string) {
     try {
-      await apiUpdateBookingStatus(id, status);
+      // Convert lowercase status to uppercase for backend API
+      const upperStatus = status.toUpperCase();
+      await apiUpdateBookingStatus(id, upperStatus);
       await loadData();
     } catch (err) {
       console.error('Failed to update booking:', err);
+      alert(`Failed to update booking: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }
 
@@ -267,29 +286,19 @@ export default function POSDashboard() {
         </Card>
 
         {/* Tabs for different management views */}
-        <Tabs defaultValue="bookings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
+        <Tabs defaultValue="timeline" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="rooms">Room Management</TabsTrigger>
+            <TabsTrigger value="menu">Menu</TabsTrigger>
             <TabsTrigger value="tax">Tax Settings</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="bookings">
+          <TabsContent value="timeline">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Today's Bookings</CardTitle>
-                    <CardDescription>Manage lifecycle: confirmed → completed/cancelled</CardDescription>
-                  </div>
-                  <Button 
-                    onClick={() => navigate('/booking')}
-                    size="lg"
-                    className="text-base px-6"
-                  >
-                    + Create Booking
-                  </Button>
-                </div>
+                <CardTitle>Timeline View</CardTitle>
+                <CardDescription>Today's bookings with timeline schedule (simplified)</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -356,6 +365,25 @@ export default function POSDashboard() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="menu">
+            <Card>
+              <CardHeader>
+                <CardTitle>Menu Management</CardTitle>
+                <CardDescription>Administer food & drink items</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 text-sm">
+                  <p className="text-slate-300">Menu management allows you to add, edit, and manage food and drink items.</p>
+                  <div className="flex gap-3">
+                    <Button size="sm" onClick={() => navigate('/pos/menu-management')}>Open Menu Management</Button>
+                    <Button size="sm" variant="outline" onClick={() => navigate('/pos/menu-management')}>Quick Edit</Button>
+                  </div>
+                  <p className="text-[11px] text-slate-500">Future enhancements: category CRUD, bulk availability toggles, price history, printing labels.</p>
                 </div>
               </CardContent>
             </Card>
