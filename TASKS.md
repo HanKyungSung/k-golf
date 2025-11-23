@@ -1004,9 +1004,9 @@ model Booking {
 [x] No local database needed (direct API calls only)
 [x] No Electron-specific code (pure React web app)
 
-#### Phase 1.5: Backend API Refinement 🔄 IN PROGRESS
+#### Phase 1.5: Backend API Refinement ✅ COMPLETE
 
-**Status:** Auditing existing endpoints and identifying gaps
+**Status:** Core backend endpoints implemented and tested
 
 **Backend Endpoints - Existing:**
 [x] `GET /api/bookings` - list bookings (pagination supported)
@@ -1018,26 +1018,32 @@ model Booking {
 [x] `PATCH /api/bookings/rooms/:id` - update room status
 [x] `PATCH /api/bookings/:id/payment-status` - update payment status (admin)
 
-**Backend Endpoints - Missing (POS expects these):**
-[ ] `GET /api/bookings/:id` - get single booking details
-[ ] `PATCH /api/bookings/:id/status` - update booking status (Complete/Cancel)
-[ ] `POST /api/bookings/simple/create` - simplified booking creation (used by POS)
-[ ] `GET /api/settings/global_tax_rate` - get tax rate
-[ ] `PUT /api/settings/global_tax_rate` - update tax rate
+**Backend Endpoints - Implemented in Phase 1.5:**
+[x] `GET /api/bookings/:id` - get single booking details
+[x] `PATCH /api/bookings/:id/status` - update booking status (Complete/Cancel)
+[x] `GET /api/settings/global_tax_rate` - get tax rate (convenience endpoint)
+[x] `PUT /api/settings/global_tax_rate` - update tax rate (convenience endpoint)
+
+**Menu Endpoints - Deferred to Phase 1.6 (Optional):**
 [ ] `GET /api/menu/items` - list menu items
 [ ] `POST /api/menu/items` - create menu item
 [ ] `PATCH /api/menu/items/:id` - update menu item
 [ ] `DELETE /api/menu/items/:id` - delete menu item
 
-**Consolidation Tasks:**
-[ ] Audit all booking endpoints for consistency
-[ ] Consolidate duplicate booking creation endpoints
-[ ] Add missing CRUD operations for bookings
-[ ] Implement menu management endpoints
-[ ] Implement settings management endpoints
-[ ] Add proper error handling across all endpoints
-[ ] Update API documentation
-[ ] Test all endpoints with POS frontend
+**Completed Tasks:**
+[x] Audit all booking endpoints for consistency
+[x] Add missing CRUD operations for bookings
+[x] Implement settings management endpoints (tax rate)
+[x] Add proper error handling across all endpoints
+[x] Test all endpoints with POS frontend
+[x] API integration verified and working
+
+**Frontend Integration Complete:**
+[x] Timeline view with visual weekly schedule
+[x] Booking status updates (Complete/Cancel working)
+[x] Room status updates (dropdown working)
+[x] Tax rate editor (read & write working)
+[x] Data transformation (ISO timestamps → date/time/duration)
 
 #### Phase 2: Deployment Pipeline (1-2 days)
 

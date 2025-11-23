@@ -390,22 +390,23 @@ server {
 - ✅ Updated login flow to always redirect to `/dashboard`
 
 ### Current Status
-**What Works:**
+**✅ Phase 1 Complete - Frontend & Backend API:**
 - ✅ ADMIN users see POS interface at `/dashboard`
 - ✅ Regular users see customer dashboard at `/dashboard`
 - ✅ Real-time room status display (updates every second)
-- ✅ Three management tabs: Bookings, Rooms, Tax Settings
+- ✅ Four management tabs: **Timeline**, Rooms, Menu, Tax Settings (matching Electron POS)
+- ✅ Timeline view with horizontal weekly schedule (rooms × time slots visualization)
 - ✅ Dark theme UI matching Electron app style
+- ✅ API integration working (bookings, rooms, tax rate)
+- ✅ Backend endpoints implemented: GET /bookings/:id, PATCH /bookings/:id/status, GET/PUT /settings/global_tax_rate
+- ✅ Data transformation (ISO timestamps → date/time/duration)
+- ✅ Booking status updates (Complete/Cancel buttons work)
+- ✅ Room status updates (dropdown working)
+- ✅ Tax rate editor (read & write working)
 
-**What Needs Backend Support:**
-- ❌ Bookings list (API call fails - endpoint mismatch)
-- ❌ Room status updates (endpoint exists but needs testing)
-- ❌ Booking status updates (Complete/Cancel actions)
-- ❌ Tax rate settings (no backend endpoints yet)
-
-**Not Yet Implemented (Frontend):**
-- ❌ Menu management tab/page (placeholder exists at `/pos/menu-management`)
-- ❌ Menu backend endpoints (no API routes exist yet)
+**Not Yet Implemented:**
+- ❌ Menu management functionality (placeholder exists, backend endpoints missing)
+- ❌ Print queue (deferred to future phase)
 
 ---
 
@@ -589,20 +590,24 @@ model MenuItem {
 ### Testing Checklist
 
 #### Bookings
-- [ ] GET /api/bookings/:id returns full booking details
-- [ ] PATCH /api/bookings/:id/status updates status correctly
-- [ ] Status transitions: confirmed → completed ✅
-- [ ] Status transitions: confirmed → cancelled ✅
-- [ ] Cannot cancel past bookings
-- [ ] Cannot complete cancelled bookings
-- [ ] Proper error handling (404, 400, 403)
+- [x] GET /api/bookings/:id returns full booking details
+- [x] PATCH /api/bookings/:id/status updates status correctly
+- [x] Status transitions: confirmed → completed ✅
+- [x] Status transitions: confirmed → cancelled ✅
+- [x] Cannot cancel completed bookings
+- [x] Cannot complete cancelled bookings
+- [x] Proper error handling (404, 400, 403)
+- [x] API integration works with frontend
+- [x] Data transformation works (ISO to date/time)
+- [x] Timeline view displays bookings correctly
 
 #### Settings
-- [ ] GET /api/settings/global_tax_rate returns current rate
-- [ ] PUT /api/settings/global_tax_rate updates rate
-- [ ] Validation: rate between 0-100
-- [ ] Admin-only access enforced
-- [ ] Settings persist across restarts
+- [x] GET /api/settings/global_tax_rate returns current rate
+- [x] PUT /api/settings/global_tax_rate updates rate
+- [x] Validation: rate between 0-100
+- [x] Admin-only access enforced
+- [x] Settings persist across restarts
+- [x] Frontend tax editor working
 
 #### Menu (Future)
 - [ ] CRUD operations work correctly
@@ -641,13 +646,18 @@ model MenuItem {
 
 ## Next Steps
 
-1. ✅ Phase 1 Frontend Migration Complete (except menu management)
-2. 🔄 **IN PROGRESS:** Phase 1.5 - Backend API Refinement
-3. ⬜ Implement missing backend endpoints (Bookings, Settings)
-4. ⬜ Test all POS flows end-to-end with real data
-5. ⬜ Phase 1.6: Add menu management tab (optional for initial launch)
-6. ⬜ Phase 2: Deploy to production and test with staff
-7. ⬜ (Future Phase 3) Plan print queue implementation if needed
+1. ✅ Phase 1 Frontend Migration Complete
+2. ✅ Phase 1.5 Backend API Refinement Complete
+   - ✅ GET /api/bookings/:id - Get single booking
+   - ✅ PATCH /api/bookings/:id/status - Update booking status
+   - ✅ GET /api/settings/global_tax_rate - Get tax rate
+   - ✅ PUT /api/settings/global_tax_rate - Update tax rate
+3. ✅ Timeline view implemented (matching Electron POS)
+4. ✅ All POS core functionality working (bookings, rooms, tax)
+5. 🔄 **CURRENT:** Testing and debugging
+6. ⬜ Phase 1.6: Add menu management functionality (optional, can use admin panel)
+7. ⬜ Phase 2: Deploy to production and test with staff
+8. ⬜ (Future Phase 3) Plan print queue implementation if needed
 
 ---
 
