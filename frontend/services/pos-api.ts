@@ -96,10 +96,10 @@ export async function createBooking(data: {
   customerPhone: string;
   customerEmail?: string;
   roomId: string;
-  startTimeIso: string;
+  startTime: string; // ISO datetime string
   players: number;
   duration: number;
-  source?: string;
+  bookingSource: 'WALK_IN' | 'PHONE' | 'ONLINE';
 }): Promise<Booking> {
   const res = await fetch(`${API_BASE}/api/bookings/simple/create`, {
     method: 'POST',

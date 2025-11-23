@@ -17,6 +17,7 @@ import {
   type Room
 } from '@/services/pos-api';
 import POSBookingDetail from './booking-detail';
+import { BookingModal } from './booking-modal';
 
 export default function POSDashboard() {
   const { user, logout } = useAuth();
@@ -32,6 +33,10 @@ export default function POSDashboard() {
   
   // Component navigation state
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  
+  // Booking modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [preselectedRoomId, setPreselectedRoomId] = useState<string | undefined>(undefined);
 
   // Auto-refresh current time every second
   useEffect(() => {
@@ -234,9 +239,8 @@ export default function POSDashboard() {
               <CardDescription>Live view of currently occupied rooms</CardDescription>
             </div>
             <Button 
-              onClick={() => navigate('/admin')}
+              onClick={() => setShowCreateModal(true)}
               className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold flex items-center gap-2"
-              title="Go to Admin Panel to create bookings"
             >
               <Plus className="h-4 w-4" />
               <span>Create Booking</span>
@@ -527,6 +531,21 @@ export default function POSDashboard() {
         </Card>
       </main>
       )}
+      
+      {/* Booking Modal */}
+      <BookingModal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setPreselectedRoomId(undefined);
+        }}
+        rooms={rooms}
+        onSuccess={() => {
+          // Refresh bookings after successful creation
+          loadData();
+        }}
+        preselectedRoomId={preselectedRoomId}
+      />
     </div>
   );
 }

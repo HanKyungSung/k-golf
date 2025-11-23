@@ -23,7 +23,41 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: CRITICAL 🔥
 
-**1. POS Dashboard - Timeline and Room Status Refresh Issues** ✅ FIXED
+**1. Web POS - Room Status Cards Showing Incorrect Bookings** 🔴 URGENT
+- **Status:** 🔴 CRITICAL - Requires Immediate Fix
+- **Reported:** 2025-11-23
+- **Component:** Web POS Dashboard (`frontend/src/pages/pos/dashboard.tsx`)
+- **Issue:** Room status cards displaying wrong or missing booking information
+- **Impact:** HIGH - Staff cannot see accurate room status, blocks production use
+- **Symptoms:**
+  - Room cards show incorrect bookings
+  - Customer name/time/duration not matching actual bookings
+  - Possible empty rooms showing occupied or vice versa
+- **Likely Root Causes:**
+  1. **Timezone Issue:** Similar to Timeline bug (fixed Nov 20) - UTC vs local time comparison
+  2. **Room ID Mismatch:** Room IDs might be strings ('1', '2', '3', '4') vs UUIDs from database
+  3. **Date Filtering:** Today's bookings filter using wrong date comparison method
+  4. **Booking Status:** Filtering by wrong field (status vs bookingStatus)
+- **Investigation Steps:**
+  - [ ] Check booking data fetch and filtering logic (lines ~200-300)
+  - [ ] Verify room ID matching between bookings array and room cards
+  - [ ] Check timezone handling (use local methods like Timeline fix)
+  - [ ] Verify "today's bookings" filter logic
+  - [ ] Console.log bookings to see actual data
+  - [ ] Compare with Electron POS room status logic
+- **Reference Fix:** Timeline timezone bug (commit 43bbac8, 2025-11-20)
+  - Used `getFullYear()`, `getMonth()`, `getDate()` instead of `toISOString()`
+  - Created Date objects using local timezone constructor
+  - Avoided UTC conversion
+- **Estimated Fix Time:** 30 mins - 1 hour
+- **Testing After Fix:**
+  - [ ] Room cards show correct bookings for today
+  - [ ] Status colors accurate (green/yellow/red)
+  - [ ] Empty rooms display "No booking today"
+  - [ ] Updates when new booking created
+  - [ ] Works across all 4 rooms
+
+**2. POS Dashboard - Timeline and Room Status Refresh Issues** ✅ FIXED
 - **Status:** 🟢 RESOLVED (2025-11-20)
 - **Issues Fixed:**
   1. **Timezone bugs in date handling:**
@@ -343,7 +377,28 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: MEDIUM
 
-**5. Print Functionality Issues**
+**5. Web POS Input Styling Issue**
+- **Status:** 🟡 Known Issue (Non-Critical)
+- **Component:** Web POS Booking Modal (`frontend/src/pages/pos/booking-modal.tsx`)
+- **Issue:** Input fields (customer name, email, duration, players) missing padding despite explicit className
+- **Current State:**
+  - Added explicit `h-9 px-3 py-2` classes to all Input components
+  - Styling fix not working in browser (functionality unaffected)
+  - Users can still enter data and create bookings successfully
+- **Technical Details:**
+  - Base Input component has `px-3 py-1` in shadcn/ui
+  - Custom classes added: `h-9 px-3 py-2 bg-slate-900/50 border-slate-600 text-white focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500`
+  - Potential Tailwind CSS specificity or merging issue
+- **Next Steps:**
+  - [ ] Investigate Tailwind className merging behavior
+  - [ ] Try using cn() utility to properly merge classes
+  - [ ] Check if custom bg color overrides padding
+  - [ ] Consider using inline styles as workaround
+  - [ ] Test with different Tailwind JIT compilation settings
+- **Impact:** LOW - Cosmetic only, does not affect functionality
+- **Priority:** Low - Can be fixed in future maintenance release
+
+**6. Print Functionality Issues**
 - **Status:** 🟡 Needs Refinement
 - **Component:** POS Booking Detail (`pos/apps/electron/src/renderer/pages/BookingDetailPage.tsx`)
 - **Issues:**
