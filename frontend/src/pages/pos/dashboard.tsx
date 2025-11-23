@@ -184,17 +184,6 @@ export default function POSDashboard() {
     navigate('/login');
   };
 
-  // If a booking is selected, show the detail view instead of dashboard
-  // IMPORTANT: This must come AFTER all hooks (useMemo, useEffect, etc.) to avoid hook order issues
-  if (selectedBookingId) {
-    return (
-      <POSBookingDetail 
-        bookingId={selectedBookingId} 
-        onBack={closeBookingDetail}
-      />
-    );
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -211,6 +200,7 @@ export default function POSDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
+      {/* Header - Always visible */}
       <header className="border-b border-slate-700 bg-slate-800">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-amber-400">K-Golf POS</h1>
@@ -221,7 +211,16 @@ export default function POSDashboard() {
         </div>
       </header>
 
-      <main className="max-w-[1800px] mx-auto px-6 py-8 space-y-6 w-full">
+      {/* Main Content - Switch between Dashboard and Booking Detail */}
+      {selectedBookingId ? (
+        // Show booking detail view
+        <POSBookingDetail 
+          bookingId={selectedBookingId} 
+          onBack={closeBookingDetail}
+        />
+      ) : (
+        // Show dashboard tabs view
+        <main className="max-w-[1800px] mx-auto px-6 py-8 space-y-6 w-full">
         {/* Real-Time Room Status */}
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -526,6 +525,7 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
       </main>
+      )}
     </div>
   );
 }
