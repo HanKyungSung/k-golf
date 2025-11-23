@@ -188,7 +188,7 @@ export default function POSDashboard() {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-[1800px] mx-auto px-6 py-8 space-y-6 w-full">
         {/* Real-Time Room Status */}
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
