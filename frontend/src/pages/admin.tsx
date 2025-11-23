@@ -142,7 +142,7 @@ export default function AdminPage() {
                   variant="outline"
                   className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 bg-transparent"
                 >
-                  User View
+                  Dashboard
                 </Button>
               </Link>
               <Button

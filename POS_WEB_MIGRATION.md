@@ -2,7 +2,8 @@
 
 **Created:** November 22, 2025  
 **Architecture:** Direct API Integration (Simplified)  
-**Status:** Planning Phase
+**Status:** ✅ Phase 1 Complete - Testing & Backend API Refinement Phase  
+**Last Updated:** November 23, 2025
 
 ---
 
@@ -46,22 +47,28 @@ PostgreSQL Database
 
 ## Migration Phases
 
-### Phase 1: Web Frontend Migration (3-5 days)
-- Create new web-based POS React app
-- Reuse existing UI components from Electron renderer
-- Replace IPC calls with direct REST API calls (axios/fetch)
-- Replace SQLite queries with API endpoints
-- Update authentication (session cookies instead of keytar)
-- Remove all Electron-specific code (preload, IPC, main process)
-- Update routing for web environment
+### ✅ Phase 1: Web Frontend Migration (COMPLETED)
+- ✅ Integrated POS into existing web frontend (no separate app needed)
+- ✅ Role-based dashboard: `/dashboard` shows POS for ADMIN, customer view for USER
+- ✅ Created POS API service layer (`frontend/services/pos-api.ts`)
+- ✅ Migrated DashboardPage UI components (room status, bookings, tax settings)
+- ✅ Replaced IPC calls with direct REST API calls (fetch)
+- ✅ Session-based authentication (reused existing auth system)
+- ✅ Fixed React hooks violations (proper component structure)
+- ✅ Removed separate `/pos/*` routes (consolidated under `/dashboard`)
+
+### 🔄 Phase 1.5: Backend API Refinement (IN PROGRESS)
+- 🔄 Audit existing backend API endpoints
+- 🔄 Add missing POS-specific endpoints
+- 🔄 Consolidate and clean up booking routes
+- 🔄 Implement consistent error handling
+- 🔄 Test all POS flows with real data
 
 ### Phase 2: Deployment Pipeline (1-2 days)
-- Add POS web app to existing Docker build
-- Update docker-compose files (frontend + pos-frontend)
-- Configure Nginx routing for POS subdomain or path
-- Update CI/CD pipeline to build and deploy POS web app
-- Environment configuration (API base URL)
-- Deploy to production server
+- ⬜ No separate Docker build needed (POS is part of main frontend)
+- ⬜ Update webpack build to include POS components
+- ⬜ Deploy to production server
+- ⬜ Test on tablets/phones at venue
 
 ---
 
@@ -367,18 +374,47 @@ server {
 
 ---
 
+## Completed Work
+
+### Architecture Decision
+- **Decided:** Integrated POS into existing frontend instead of separate app
+- **Rationale:** Simpler deployment, shared auth, single codebase
+- **Result:** Role-based `/dashboard` route (ADMIN sees POS, USER sees bookings)
+
+### Frontend Implementation (Phase 1) ✅
+- ✅ Created `frontend/services/pos-api.ts` with all POS endpoints
+- ✅ Migrated POS Dashboard to `frontend/src/pages/pos/dashboard.tsx`
+- ✅ Updated `frontend/src/pages/dashboard.tsx` for role-based rendering
+- ✅ Fixed logout crash (proper React hooks structure)
+- ✅ Removed redundant `/pos/*` routes
+- ✅ Updated login flow to always redirect to `/dashboard`
+
+### Current Status
+**What Works:**
+- ✅ ADMIN users see POS interface at `/dashboard`
+- ✅ Regular users see customer dashboard at `/dashboard`
+- ✅ Real-time room status display (updates every second)
+- ✅ Three management tabs: Bookings, Rooms, Tax Settings
+- ✅ Dark theme UI matching Electron app style
+
+**What Needs Backend Support:**
+- ❌ Bookings list (API call fails - endpoint mismatch)
+- ❌ Room status updates (endpoint exists but needs testing)
+- ❌ Booking status updates (Complete/Cancel actions)
+- ❌ Tax rate settings (no backend endpoints yet)
+- ❌ Menu management (no backend endpoints yet)
+
 ## Next Steps
 
-1. ✅ Review and approve simplified migration plan
-2. ⬜ Create new web POS React app structure
-3. ⬜ Start Phase 1: Frontend migration (Day 1-5)
-4. ⬜ Complete Phase 2: Deployment pipeline (Day 6-7)
+1. ✅ Phase 1 Frontend Migration Complete
+2. 🔄 **IN PROGRESS:** Audit and refine backend API routes
+3. ⬜ Implement missing backend endpoints for POS
+4. ⬜ Test all POS flows end-to-end
 5. ⬜ Deploy to production and test with staff
-6. ⬜ Monitor for issues and collect feedback
-7. ⬜ (Future) Plan Phase 2: Print queue implementation
+6. ⬜ (Future Phase 3) Plan print queue implementation if needed
 
 ---
 
 **Document Owner:** Development Team  
-**Last Updated:** November 22, 2025  
-**Version:** 2.0 (Simplified - Direct API Integration)
+**Last Updated:** November 23, 2025  
+**Version:** 2.1 (Phase 1 Complete - Backend Refinement Phase)

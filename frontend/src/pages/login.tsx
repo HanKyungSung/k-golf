@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [errorText, setErrorText] = useState<string | null>(null)
-  const { login, loginWithGoogle } = useAuth() as any
+  const { login, loginWithGoogle, user } = useAuth() as any
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const navigate = useNavigate()
 
@@ -25,6 +25,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password)
+      // Always redirect to /dashboard - it will show different content based on role
       navigate('/dashboard')
     } catch (error) {
       console.error("Login failed:", error)
@@ -48,6 +49,12 @@ export default function LoginPage() {
     } finally {
       setIsGoogleLoading(false)
     }
+  }
+
+  // Redirect to dashboard if already logged in (it will show role-appropriate view)
+  if (user) {
+    navigate('/dashboard', { replace: true })
+    return null
   }
 
   return (

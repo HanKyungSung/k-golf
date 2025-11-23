@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "@/hooks/use-toast"
+import POSDashboard from "./pos/dashboard"
 
 const getStatusBadge = (status: 'booked'|'completed'|'canceled') => {
   switch (status) {
@@ -34,7 +35,7 @@ type ApiBooking = {
 
 type ApiRoom = { id: string; name: string; capacity: number };
 
-const DashboardPage = () => {
+const CustomerDashboard = () => {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [bookings, setBookings] = React.useState<ApiBooking[]>([])
@@ -215,6 +216,17 @@ const DashboardPage = () => {
       </main>
     </div>
   )
+}
+
+const DashboardPage = () => {
+  const { user } = useAuth()
+  
+  // Show POS dashboard for ADMIN, customer dashboard for regular users
+  if (user?.role === 'ADMIN') {
+    return <POSDashboard />
+  }
+  
+  return <CustomerDashboard />
 }
 
 export default DashboardPage
