@@ -16,6 +16,7 @@ import {
   type Booking,
   type Room
 } from '@/services/pos-api';
+import POSBookingDetail from './booking-detail';
 
 export default function POSDashboard() {
   const { user, logout } = useAuth();
@@ -28,6 +29,9 @@ export default function POSDashboard() {
   const [taxRate, setTaxRate] = useState(8);
   const [editingTax, setEditingTax] = useState(false);
   const [tempTaxRate, setTempTaxRate] = useState('8');
+  
+  // Component navigation state
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
   // Auto-refresh current time every second
   useEffect(() => {
@@ -79,7 +83,7 @@ export default function POSDashboard() {
       console.error('[POS Dashboard] Failed to load data:', err);
       // Only show alert on initial load, not during polling
       if (showLoading) {
-        alert(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        alert(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error');
       }
     } finally {
       if (showLoading) setLoading(false);
@@ -104,7 +108,7 @@ export default function POSDashboard() {
       await loadData();
     } catch (err) {
       console.error('Failed to update booking:', err);
-      alert(`Failed to update booking: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      alert(`Failed to update booking: ${err instanceof Error ? err.message : 'Unknown error');
     }
   }
 
@@ -128,6 +132,27 @@ export default function POSDashboard() {
     } catch (err) {
       console.error('Failed to update tax rate:', err);
     }
+  }
+
+  // Handle booking detail navigation
+  function openBookingDetail(bookingId: string) {
+    setSelectedBookingId(bookingId);
+  }
+
+  function closeBookingDetail() {
+    setSelectedBookingId(null);
+    // Refresh data when returning from booking detail
+    loadData(false);
+  }
+
+  // If a booking is selected, show the detail view instead of dashboard
+  if (selectedBookingId) {
+    return (
+      <POSBookingDetail 
+        bookingId={selectedBookingId} 
+        onBack={closeBookingDetail}
+      />
+    );
   }
 
   // Current bookings (happening right now)
@@ -278,7 +303,7 @@ export default function POSDashboard() {
                         <Button 
                           size="sm" 
                           className="w-full text-xs" 
-                          onClick={() => navigate(`/pos/booking/${currentBooking.id}`)}
+                          onClick={() => openBookingDetail(currentBooking.id)}
                         >
                           Manage
                         </Button>
@@ -397,7 +422,7 @@ export default function POSDashboard() {
                                   {roomTodayBookings.map((booking) => (
                                     <div
                                       key={booking.id}
-                                      onClick={() => navigate(`/pos/booking/${booking.id}`)}
+                                      onClick={() => openBookingDetail(booking.id)}
                                       className="block p-2 bg-slate-600/30 rounded hover:bg-slate-600/50 transition-colors cursor-pointer"
                                     >
                                       <div className="flex justify-between items-start">
@@ -655,7 +680,7 @@ function TimelineView({ bookings, rooms }: TimelineViewProps) {
                               key={booking.id}
                               className={`${roomColor} absolute top-2 bottom-2 rounded-md hover:opacity-80 transition-all cursor-pointer overflow-hidden group shadow-md`}
                               style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                              onClick={() => navigate(`/pos/booking/${booking.id}`)}
+                              onClick={() => openBookingDetail(booking.id)}
                             >
                               <div className="h-full flex flex-col justify-center px-2">
                                 <div className="text-white text-[10px] font-semibold truncate">

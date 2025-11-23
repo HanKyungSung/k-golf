@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +16,11 @@ import {
   type Room,
   type MenuItem 
 } from '@/services/pos-api';
+
+interface POSBookingDetailProps {
+  bookingId: string;
+  onBack: () => void;
+}
 
 // Simple icon components (inline SVGs for icons not in lucide-react)
 const MoveRight = ({ className = '' }: { className?: string }) => (
@@ -53,10 +57,7 @@ const seatColors = [
 
 const MAX_SEATS = 10;
 
-export default function POSBookingDetail() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  
+export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetailProps) {
   // State
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -85,14 +86,14 @@ export default function POSBookingDetail() {
   // Load data on mount
   useEffect(() => {
     loadData();
-  }, [id]);
+  }, [bookingId]);
 
   // Load saved orders and seats from localStorage
   useEffect(() => {
-    if (!id) return;
-    const savedOrders = localStorage.getItem(`booking-${id}-orders`);
-    const savedSeats = localStorage.getItem(`booking-${id}-seats`);
-    const savedTaxRate = localStorage.getItem(`booking-${id}-taxRate`);
+    if (!bookingId) return;
+    const savedOrders = localStorage.getItem(`booking-${bookingId}-orders`);
+    const savedSeats = localStorage.getItem(`booking-${bookingId}-seats`);
+    const savedTaxRate = localStorage.getItem(`booking-${bookingId}-taxRate`);
 
     if (savedOrders) {
       try {
@@ -117,21 +118,21 @@ export default function POSBookingDetail() {
         console.error('[BookingDetail] Failed to load saved tax rate:', e);
       }
     }
-  }, [id]);
+  }, [bookingId]);
 
   // Save to localStorage whenever orders or seats change
   useEffect(() => {
-    if (!id) return;
+    if (!bookingId) return;
     if (orderItems.length > 0 || numberOfSeats > 1) {
-      localStorage.setItem(`booking-${id}-orders`, JSON.stringify(orderItems));
-      localStorage.setItem(`booking-${id}-seats`, JSON.stringify(numberOfSeats));
+      localStorage.setItem(`booking-${bookingId}-orders`, JSON.stringify(orderItems));
+      localStorage.setItem(`booking-${bookingId}-seats`, JSON.stringify(numberOfSeats));
     }
-  }, [orderItems, numberOfSeats, id]);
+  }, [orderItems, numberOfSeats, bookingId]);
 
   // Initialize seats based on booking hours
   useEffect(() => {
     if (booking && menu.length > 0 && !seatsInitialized.current) {
-      const savedOrders = localStorage.getItem(`booking-${id}-orders`);
+      const savedOrders = localStorage.getItem(`booking-${bookingId}-orders`);
       
       // Add booking hours as a menu item to seat 1 if no saved orders
       if (!savedOrders || JSON.parse(savedOrders).length === 0) {
@@ -152,16 +153,16 @@ export default function POSBookingDetail() {
       
       seatsInitialized.current = true;
     }
-  }, [booking, menu, id]);
+  }, [booking, menu, bookingId]);
 
   async function loadData() {
     try {
       setLoading(true);
       
-      console.log('[BookingDetail] Loading data for booking ID:', id);
+      console.log('[BookingDetail] Loading data for booking ID:', bookingId);
       
       const [bookingData, roomsData, menuData, taxRate] = await Promise.all([
-        getBooking(id!),
+        getBooking(bookingId),
         listRooms(),
         listMenuItems().catch(() => [] as MenuItem[]), // Menu might not exist yet
         getGlobalTaxRate()
@@ -181,7 +182,7 @@ export default function POSBookingDetail() {
     } catch (err) {
       console.error('[BookingDetail] Failed to load data:', err);
       alert(`Failed to load booking: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      navigate('/dashboard');
+      onBack();
     } finally {
       setLoading(false);
     }
@@ -353,7 +354,7 @@ export default function POSBookingDetail() {
 
   const changeStatus = async (status: string) => {
     try {
-      await apiUpdateBookingStatus(id!, status);
+      await apiUpdateBookingStatus(bookingId, status);
       await loadData();
     } catch (err) {
       console.error('Failed to update booking status:', err);
@@ -488,7 +489,7 @@ export default function POSBookingDetail() {
                 {booking.paymentStatus === 'PAID' && '✓ Paid'}
               </Badge>
             )}
-            <Button size="lg" variant="outline" onClick={() => navigate('/dashboard')} className="text-base px-6">
+            <Button size="lg" variant="outline" onClick={onBack} className="text-base px-6">
               Back
             </Button>
           </div>
@@ -1107,7 +1108,7 @@ export default function POSBookingDetail() {
                 variant="outline"
                 onClick={() => {
                   setBookingTaxRate(null);
-                  localStorage.removeItem(`booking-${id}-taxRate`);
+                  localStorage.removeItem(`booking-${bookingId}-taxRate`);
                   setShowTaxEditDialog(false);
                 }}
                 className="border-red-500/30 text-red-300 hover:bg-red-500/10"
@@ -1130,7 +1131,7 @@ export default function POSBookingDetail() {
                   return;
                 }
                 setBookingTaxRate(rate);
-                localStorage.setItem(`booking-${id}-taxRate`, rate.toString());
+                localStorage.setItem(`booking-${bookingId}-taxRate`, rate.toString());
                 setShowTaxEditDialog(false);
               }}
             >
