@@ -88,6 +88,79 @@ router.get('/mine', requireAuth, async (req, res) => {
   res.json({ bookings: bookings.map(presentBooking) });
 });
 
+// Get single booking by ID
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const booking = await getBooking(id);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    res.json({ booking: presentBooking(booking) });
+  } catch (error) {
+    console.error('[GET BOOKING] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update booking status (admin only)
+const updateStatusSchema = z.object({
+  status: z.enum(['CONFIRMED', 'COMPLETED', 'CANCELLED']),
+});
+
+router.patch('/:id/status', requireAuth, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const parsed = updateStatusSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ 
+        error: 'Validation failed', 
+        details: parsed.error.flatten() 
+      });
+    }
+
+    const { status } = parsed.data;
+
+    const booking = await getBooking(id);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Business rules for status transitions
+    if (status === 'CANCELLED') {
+      // Cannot cancel completed bookings
+      if (booking.bookingStatus === 'COMPLETED') {
+        return res.status(400).json({ error: 'Cannot cancel completed bookings' });
+      }
+    }
+
+    if (status === 'COMPLETED') {
+      // Cannot complete cancelled bookings
+      if (booking.bookingStatus === 'CANCELLED') {
+        return res.status(400).json({ error: 'Cannot complete cancelled bookings' });
+      }
+    }
+
+    // Update booking status
+    const updated = await prisma.booking.update({
+      where: { id },
+      data: { 
+        bookingStatus: status,
+        updatedAt: new Date(),
+      },
+    });
+
+    return res.json({ 
+      booking: presentBooking(updated),
+      message: `Booking ${status.toLowerCase()} successfully` 
+    });
+  } catch (error) {
+    console.error('[UPDATE BOOKING STATUS] Error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Cancel a booking (own bookings only for now)
 router.patch('/:id/cancel', requireAuth, async (req, res) => {
   const { id } = req.params as { id: string };

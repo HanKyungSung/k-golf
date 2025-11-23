@@ -250,4 +250,82 @@ router.delete('/:key', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Convenience endpoints for global_tax_rate (POS compatibility)
+ */
+
+/**
+ * GET /api/settings/global_tax_rate
+ * Get the global tax rate as a number (convenience endpoint for POS)
+ */
+router.get('/global_tax_rate', async (req: Request, res: Response) => {
+  try {
+    const setting = await prisma.setting.findUnique({
+      where: { key: 'global_tax_rate' },
+    });
+
+    if (!setting) {
+      // Return default tax rate if not set
+      return res.json({ taxRate: 8, key: 'global_tax_rate', default: true });
+    }
+
+    const taxRate = parseFloat(setting.value);
+    res.json({ taxRate, key: setting.key, updatedAt: setting.updatedAt });
+  } catch (error) {
+    console.error('[Settings API] Error fetching global_tax_rate:', error);
+    res.status(500).json({ error: 'Failed to fetch tax rate' });
+  }
+});
+
+/**
+ * PUT /api/settings/global_tax_rate
+ * Update the global tax rate (admin only, convenience endpoint for POS)
+ */
+router.put('/global_tax_rate', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { taxRate } = req.body;
+    const user = (req as any).user;
+
+    // Only admins can update settings
+    if (user?.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // Validate tax rate
+    if (typeof taxRate !== 'number' || taxRate < 0 || taxRate > 100) {
+      return res.status(400).json({ error: 'Tax rate must be a number between 0 and 100' });
+    }
+
+    // Upsert the setting
+    const updated = await prisma.setting.upsert({
+      where: { key: 'global_tax_rate' },
+      update: {
+        value: taxRate.toString(),
+        valueType: 'number',
+        updatedBy: user.id,
+        updatedAt: new Date(),
+      },
+      create: {
+        key: 'global_tax_rate',
+        value: taxRate.toString(),
+        valueType: 'number',
+        description: 'Global tax rate percentage applied to all bookings',
+        category: 'billing',
+        isPublic: false,
+        updatedBy: user.id,
+      },
+    });
+
+    res.json({ 
+      taxRate: parseFloat(updated.value), 
+      key: updated.key, 
+      updatedAt: updated.updatedAt,
+      message: 'Tax rate updated successfully' 
+    });
+  } catch (error) {
+    console.error('[Settings API] Error updating global_tax_rate:', error);
+    res.status(500).json({ error: 'Failed to update tax rate' });
+  }
+});
+
 export default router;
