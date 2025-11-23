@@ -402,19 +402,255 @@ server {
 - ❌ Room status updates (endpoint exists but needs testing)
 - ❌ Booking status updates (Complete/Cancel actions)
 - ❌ Tax rate settings (no backend endpoints yet)
-- ❌ Menu management (no backend endpoints yet)
+
+**Not Yet Implemented (Frontend):**
+- ❌ Menu management tab/page (placeholder exists at `/pos/menu-management`)
+- ❌ Menu backend endpoints (no API routes exist yet)
+
+---
+
+## Phase 1.5: Backend API Audit & Refinement
+
+### Current State Analysis
+
+#### Existing Booking Endpoints
+
+✅ **Working:**
+- `GET /api/bookings` - List all bookings with pagination
+- `GET /api/bookings/rooms` - List all rooms
+- `GET /api/bookings/mine` - User's own bookings
+- `PATCH /api/bookings/:id/cancel` - Cancel a booking
+- `POST /api/bookings` - Create booking (user-facing)
+- `POST /api/bookings/admin/create` - Admin create booking (complex)
+- `PATCH /api/bookings/rooms/:id` - Update room status
+- `PATCH /api/bookings/:id/payment-status` - Update payment status (admin)
+- `GET /api/bookings/availability` - Check availability
+
+#### Missing Endpoints (POS Expects)
+
+❌ **Not Implemented:**
+- `GET /api/bookings/:id` - Get single booking details
+- `PATCH /api/bookings/:id/status` - Update booking status (Complete/Cancel)
+- `POST /api/bookings/simple/create` - Simplified booking creation
+- `GET /api/settings/global_tax_rate` - Get tax rate
+- `PUT /api/settings/global_tax_rate` - Update tax rate
+- `GET /api/menu/items` - List menu items
+- `POST /api/menu/items` - Create menu item
+- `PATCH /api/menu/items/:id` - Update menu item
+- `DELETE /api/menu/items/:id` - Delete menu item
+
+### Proposed API Structure
+
+#### 1. Bookings API (Consolidate)
+
+**Current Issues:**
+- Three booking creation endpoints: `POST /api/bookings`, `POST /api/bookings/admin/create`, `POST /api/bookings/simple/create` (doesn't exist)
+- Missing single booking GET
+- Missing status update endpoint
+
+**Proposed Structure:**
+```
+GET    /api/bookings           # List (with filters: status, date, room)
+GET    /api/bookings/:id       # Get single booking
+POST   /api/bookings           # Create (keep existing, user-facing)
+POST   /api/bookings/admin     # Admin create (rename from /admin/create)
+PATCH  /api/bookings/:id       # Update booking details
+PATCH  /api/bookings/:id/status          # Update status (Complete/Cancel)
+PATCH  /api/bookings/:id/payment-status  # Update payment (existing)
+DELETE /api/bookings/:id/cancel          # Keep for backward compatibility
+```
+
+**Implementation:**
+- Add `GET /api/bookings/:id` - Return full booking details
+- Add `PATCH /api/bookings/:id/status` - Accept `{ status: 'confirmed' | 'completed' | 'cancelled' }`
+- Rename `POST /api/bookings/admin/create` → `POST /api/bookings/admin` (cleaner)
+- Consider deprecating `/simple/create` (just use `/admin` with simpler payload)
+
+#### 2. Rooms API (Existing, No Changes Needed)
+
+```
+GET    /api/bookings/rooms       # List all rooms
+PATCH  /api/bookings/rooms/:id   # Update room status
+```
+
+**Status:** ✅ Working as-is
+
+#### 3. Settings API (New)
+
+**Purpose:** Manage global settings like tax rate
+
+**Proposed Structure:**
+```
+GET    /api/settings                    # List all settings (future-proof)
+GET    /api/settings/:key               # Get specific setting
+PUT    /api/settings/:key               # Update setting
+GET    /api/settings/global_tax_rate    # Convenience endpoint
+PUT    /api/settings/global_tax_rate    # Convenience endpoint
+```
+
+**Implementation:**
+- Reuse existing `Setting` table (already exists from Phase 0.6f)
+- Add admin-only middleware
+- Return `{ key: string, value: string }` format
+- Tax rate stored as string, parse to number on client
+
+#### 4. Menu API (New)
+
+**Purpose:** Manage menu items (food, drinks, hours)
+
+**Proposed Structure:**
+```
+GET    /api/menu/items           # List all menu items
+GET    /api/menu/items/:id       # Get single item
+POST   /api/menu/items           # Create item (admin)
+PATCH  /api/menu/items/:id       # Update item (admin)
+DELETE /api/menu/items/:id       # Delete item (admin)
+```
+
+**Database Schema:**
+```prisma
+model MenuItem {
+  id          String   @id @default(cuid())
+  name        String
+  category    String   // HOURS, FOOD, DRINKS, APPETIZERS, DESSERTS
+  price       Decimal  @db.Decimal(10, 2)
+  available   Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+```
+
+**Implementation:**
+- Already exists in backend schema (from Phase 0.9.3)
+- Add REST endpoints (currently only sync endpoint exists)
+- Add validation (price > 0, category enum)
+- Add filtering by category and availability
+
+### Implementation Plan
+
+#### Step 1: Bookings API Enhancement (Priority: HIGH)
+1. Add `GET /api/bookings/:id` endpoint
+2. Add `PATCH /api/bookings/:id/status` endpoint
+3. Update `/api/bookings` to accept filters (status, date range, roomId)
+4. Test with POS frontend
+
+#### Step 2: Settings API Implementation (Priority: HIGH)
+1. Create `/api/settings` routes file
+2. Implement GET/PUT for generic settings
+3. Add convenience endpoints for `global_tax_rate`
+4. Add admin middleware
+5. Test with POS tax settings tab
+
+#### Step 3: Menu API Implementation (Priority: MEDIUM)
+1. Create `/api/menu` routes file
+2. Implement full CRUD operations
+3. Add category filtering
+4. Add validation and error handling
+5. Test with POS menu management (future feature)
+
+#### Step 4: Testing & Documentation (Priority: MEDIUM)
+1. Write integration tests for new endpoints
+2. Update API documentation
+3. Test all POS flows end-to-end
+4. Verify data consistency
+
+### API Response Format
+
+#### Success Response
+```json
+{
+  "booking": { /* booking object */ },
+  "message": "Booking updated successfully"
+}
+```
+
+#### Error Response
+```json
+{
+  "error": "Booking not found",
+  "statusCode": 404
+}
+```
+
+#### Validation Error
+```json
+{
+  "error": {
+    "formErrors": [],
+    "fieldErrors": {
+      "status": ["Invalid status value"]
+    }
+  },
+  "statusCode": 400
+}
+```
+
+### Testing Checklist
+
+#### Bookings
+- [ ] GET /api/bookings/:id returns full booking details
+- [ ] PATCH /api/bookings/:id/status updates status correctly
+- [ ] Status transitions: confirmed → completed ✅
+- [ ] Status transitions: confirmed → cancelled ✅
+- [ ] Cannot cancel past bookings
+- [ ] Cannot complete cancelled bookings
+- [ ] Proper error handling (404, 400, 403)
+
+#### Settings
+- [ ] GET /api/settings/global_tax_rate returns current rate
+- [ ] PUT /api/settings/global_tax_rate updates rate
+- [ ] Validation: rate between 0-100
+- [ ] Admin-only access enforced
+- [ ] Settings persist across restarts
+
+#### Menu (Future)
+- [ ] CRUD operations work correctly
+- [ ] Category filtering works
+- [ ] Price validation (> 0)
+- [ ] Availability toggle works
+- [ ] Admin-only access enforced
+
+---
+
+## Menu Management Status
+
+**Current State:**
+- ❌ Menu management is **not yet implemented** in the POS dashboard
+- ✅ Placeholder page exists at `frontend/src/pages/pos/menu-management.tsx`
+- ✅ API service layer has menu endpoints defined in `pos-api.ts`
+- ❌ No menu tab in the dashboard (only Bookings, Rooms, Tax Settings)
+- ❌ Backend menu endpoints don't exist yet
+
+**Implementation Plan (Future Phase):**
+1. Add "Menu" tab to POS dashboard alongside Bookings, Rooms, Tax
+2. Migrate menu management UI from Electron POS (`pos/apps/electron/src/renderer/pages/MenuManagementPage.tsx`)
+3. Implement backend menu API endpoints:
+   - `GET /api/menu/items` - List all menu items
+   - `POST /api/menu/items` - Create menu item
+   - `PATCH /api/menu/items/:id` - Update menu item
+   - `DELETE /api/menu/items/:id` - Delete menu item
+4. Connect frontend to backend via `pos-api.ts` service layer
+5. Test CRUD operations (create, read, update, delete menu items)
+
+**Priority:** MEDIUM (Not critical for initial launch - can use admin panel for now)
+
+**Estimated Effort:** 4-6 hours (2 hours frontend tab + 2 hours backend + 1-2 hours testing)
+
+---
 
 ## Next Steps
 
-1. ✅ Phase 1 Frontend Migration Complete
-2. 🔄 **IN PROGRESS:** Audit and refine backend API routes
-3. ⬜ Implement missing backend endpoints for POS
-4. ⬜ Test all POS flows end-to-end
-5. ⬜ Deploy to production and test with staff
-6. ⬜ (Future Phase 3) Plan print queue implementation if needed
+1. ✅ Phase 1 Frontend Migration Complete (except menu management)
+2. 🔄 **IN PROGRESS:** Phase 1.5 - Backend API Refinement
+3. ⬜ Implement missing backend endpoints (Bookings, Settings)
+4. ⬜ Test all POS flows end-to-end with real data
+5. ⬜ Phase 1.6: Add menu management tab (optional for initial launch)
+6. ⬜ Phase 2: Deploy to production and test with staff
+7. ⬜ (Future Phase 3) Plan print queue implementation if needed
 
 ---
 
 **Document Owner:** Development Team  
 **Last Updated:** November 23, 2025  
-**Version:** 2.1 (Phase 1 Complete - Backend Refinement Phase)
+**Version:** 2.2 (Phase 1.5 - Backend API Audit)
