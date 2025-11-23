@@ -959,6 +959,205 @@ model Booking {
   - **Windows**: "More info" → "Run anyway"
 - Manual updates: Download and reinstall when needed
 
+### 0.11 POS to Web Migration & Print Bridge – 📋 PLANNED
+
+**Status:** Planning phase - see `/POS_WEB_MIGRATION.md` for full plan  
+**Timeline:** 13-18 days (2-3 weeks)  
+**Architecture:** Backend-managed print queue with standalone bridge service
+
+#### Phase 1: Backend Print Queue Infrastructure (3-4 days)
+
+**Database Schema:**
+[ ] Add PrintJob model (Prisma schema)
+  - Fields: id, type, status, venueId, bridgeId, seatName, items (JSON), totals, timestamps
+  - Statuses: pending, printing, completed, failed
+  - Indexes: status+createdAt, venueId+status
+[ ] Add PrintBridge model (Prisma schema)
+  - Fields: id, name, venueId, status, lastPing, printerType
+  - Track connected print bridges and their health
+[ ] Create Prisma migration: `npx prisma migrate dev --name add_print_queue`
+[ ] Generate Prisma client with new models
+
+**Print Queue Service:**
+[ ] Create `backend/src/services/printQueueService.ts`
+[ ] Implement enqueuePrintJob() - Queue new print jobs
+[ ] Implement markJobPrinting() - Update job status when bridge claims it
+[ ] Implement markJobCompleted() - Mark job as successfully printed
+[ ] Implement markJobFailed() - Handle print failures with retry logic
+[ ] Implement getPendingJobs() - Fetch jobs for bridges
+[ ] Add EventEmitter for real-time job notifications
+
+**REST API Endpoints:**
+[ ] Create `backend/src/routes/print.ts`
+[ ] POST /api/print/receipt (requireAuth, requireStaffRole)
+  - Accept print job from frontend
+  - Validate required fields (seatName, items, totals)
+  - Enqueue job and broadcast to bridges
+[ ] GET /api/print/jobs (requireAuth)
+  - Monitor print queue status
+  - Optional venueId filter for multi-venue
+[ ] POST /api/print/jobs/:id/complete (internal - from bridge)
+[ ] POST /api/print/jobs/:id/fail (internal - from bridge)
+
+**WebSocket Server:**
+[ ] Create `backend/src/services/printWebSocketServer.ts`
+[ ] Initialize Socket.IO server with /api/print/socket path
+[ ] Handle bridge:register event (save bridge to database)
+[ ] Handle bridge:ping event (update lastPing timestamp)
+[ ] Handle print:success event (mark job completed)
+[ ] Handle print:failed event (mark job failed, increment retry)
+[ ] Broadcast print:job events to connected bridges
+[ ] Handle bridge disconnect (mark status offline)
+
+**Integration:**
+[ ] Update `backend/src/server.ts` to init WebSocket server
+[ ] Register print routes in Express app
+[ ] Test WebSocket connection with mock client
+[ ] Test print job lifecycle (enqueue → broadcast → complete)
+
+#### Phase 2: Web Frontend Migration (4-5 days)
+
+**Storage Layer Migration:**
+[ ] Create `frontend/src/services/db-web.ts` (IndexedDB wrapper)
+[ ] Implement initDb() with schema version 1
+[ ] Create object stores: bookings, syncQueue, menuItems, rooms, metadata
+[ ] Implement CRUD operations for each store
+[ ] Migrate existing localStorage data to IndexedDB
+
+**Print Service:**
+[ ] Create `frontend/src/services/printService.ts`
+[ ] Implement printReceipt() - POST to /api/print/receipt
+[ ] Add print job interface matching backend schema
+[ ] Handle errors and display user-friendly messages
+
+**Update Components:**
+[ ] Replace IPC calls with direct REST API calls in BookingContext
+[ ] Update BookingDetailPage print handlers to use new printService
+[ ] Remove Electron-specific code (window.kgolf.*)
+[ ] Test print flow: Click print → Queue job → Success notification
+
+**Service Worker (Offline Support):**
+[ ] Create `frontend/public/sw.js`
+[ ] Implement cache-first strategy for static assets
+[ ] Add background sync for print queue
+[ ] Register service worker in index.html
+[ ] Test offline queueing and sync when back online
+
+**Auth Migration:**
+[ ] Replace keytar with Web Crypto API
+[ ] Encrypt tokens before storing in localStorage
+[ ] Implement secure token storage and retrieval
+[ ] Test auth flow in browser
+
+#### Phase 3: Print Bridge Service (3-4 days)
+
+**Create Bridge Package:**
+[ ] Create `print-bridge/` directory at root level
+[ ] Initialize npm package (`npm init`)
+[ ] Install dependencies: socket.io-client, node-thermal-printer
+[ ] Create TypeScript config (`tsconfig.json`)
+
+**Implement Bridge Logic:**
+[ ] Create `print-bridge/src/index.ts`
+[ ] Initialize thermal printer connection (USB/Network)
+[ ] Connect to backend via WebSocket
+[ ] Handle bridge:registered event
+[ ] Handle print:job event → Format and print receipt
+[ ] Emit print:success or print:failed events
+[ ] Implement heartbeat (bridge:ping every 30s)
+[ ] Add graceful shutdown (SIGINT handler)
+
+**Receipt Formatting:**
+[ ] Implement printReceipt() function
+[ ] Format header (venue name, logo)
+[ ] Format customer/seat info
+[ ] Format line items with quantities and prices
+[ ] Format totals (subtotal, tax, total)
+[ ] Format footer (thank you message)
+[ ] Add paper cut command
+
+**Configuration:**
+[ ] Create `.env.example` file
+[ ] Document required env vars (BACKEND_URL, PRINTER_PORT, BRIDGE_NAME, VENUE_ID)
+[ ] Add validation for required config
+[ ] Test with different printer types (Epson, Star)
+
+**Packaging:**
+[ ] Add build script to compile TypeScript
+[ ] Create executable entry point
+[ ] Test as standalone script (`node dist/index.js`)
+[ ] Document installation steps for venue computer
+[ ] Create Windows service setup (optional)
+[ ] Create systemd service setup (optional)
+
+#### Phase 4: Testing & Deployment (3-5 days)
+
+**Local Testing:**
+[ ] Test backend print queue API with Postman
+[ ] Test WebSocket connection with test client
+[ ] Test print bridge with real thermal printer
+[ ] Test web frontend print button
+[ ] Test offline queueing and sync
+[ ] Test reconnection handling (bridge disconnect/reconnect)
+
+**Integration Testing:**
+[ ] End-to-end: Web → Backend → Bridge → Printer
+[ ] Multi-device: Multiple tablets printing simultaneously
+[ ] Failure recovery: Bridge offline then back online
+[ ] Queue persistence: Backend restart with pending jobs
+[ ] Concurrent prints: Multiple jobs in queue
+
+**Production Deployment:**
+[ ] Deploy backend with WebSocket support
+[ ] Update CORS settings for WebSocket
+[ ] Deploy web frontend (existing pipeline)
+[ ] Install bridge service on venue computer
+[ ] Configure printer connection (USB/Network)
+[ ] Test production setup with real workflow
+
+**Monitoring:**
+[ ] Set up logging for print operations
+[ ] Add error tracking (Sentry)
+[ ] Create admin dashboard for print queue monitoring
+[ ] Add alerts for bridge offline > 5 minutes
+[ ] Monitor print success rate
+
+**Documentation:**
+[ ] Update README with new architecture
+[ ] Create print bridge installation guide
+[ ] Document troubleshooting steps
+[ ] Create operator manual for print workflow
+[ ] Document environment variables
+
+#### Rollout Strategy
+
+**Week 1-2: Development**
+[ ] Complete Phase 1 & 2 (backend + frontend)
+[ ] Daily testing and iteration
+
+**Week 3: Bridge Development & Testing**
+[ ] Complete Phase 3 (print bridge)
+[ ] Test with real thermal printer
+[ ] Fix any issues
+
+**Week 4: Integration & Deployment**
+[ ] Complete Phase 4 (integration testing)
+[ ] Deploy to production
+[ ] Train staff on new workflow
+
+**Week 5-6: Parallel Run**
+[ ] Keep Electron app as fallback
+[ ] Use web POS as primary
+[ ] Monitor for issues
+[ ] Collect feedback
+
+**Week 7+: Full Migration**
+[ ] Retire Electron app
+[ ] Web POS only
+[ ] Monitor and optimize
+
+---
+
 ### 0.11 Logging & Monitoring Enhancement
 
 **Sync Logging Requirements:**
