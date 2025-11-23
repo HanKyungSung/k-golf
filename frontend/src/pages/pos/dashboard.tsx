@@ -655,7 +655,7 @@ function TimelineView({ bookings, rooms }: TimelineViewProps) {
                               key={booking.id}
                               className={`${roomColor} absolute top-2 bottom-2 rounded-md hover:opacity-80 transition-all cursor-pointer overflow-hidden group shadow-md`}
                               style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                              onClick={() => navigate(`/pos/booking-detail/${booking.id}`)}
+                              onClick={() => navigate(`/pos/booking/${booking.id}`)}
                             >
                               <div className="h-full flex flex-col justify-center px-2">
                                 <div className="text-white text-[10px] font-semibold truncate">
