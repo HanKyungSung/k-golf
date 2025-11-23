@@ -3,7 +3,9 @@
  * Direct REST API calls to backend (no IPC, no local database)
  */
 
-const API_BASE = process.env.REACT_APP_API_BASE || '';
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+
+console.log('[POS API] API_BASE:', API_BASE);
 
 interface ApiResponse<T> {
   ok: boolean;
@@ -53,14 +55,24 @@ export async function listBookings(filters?: BookingFilters): Promise<Booking[]>
   if (filters?.page) params.append('page', filters.page.toString());
   if (filters?.limit) params.append('limit', filters.limit.toString());
 
-  const res = await fetch(`${API_BASE}/api/bookings?${params.toString()}`, {
+  const url = `${API_BASE}/api/bookings?${params.toString()}`;
+  console.log('[POS API] Fetching bookings from:', url);
+
+  const res = await fetch(url, {
     credentials: 'include',
     headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' }
   });
 
-  if (!res.ok) throw new Error('Failed to fetch bookings');
+  console.log('[POS API] Bookings response status:', res.status);
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('[POS API] Bookings error:', errorText);
+    throw new Error(`Failed to fetch bookings: ${res.status} ${errorText}`);
+  }
   
   const json = await res.json();
+  console.log('[POS API] Bookings response:', json);
   return json.bookings || [];
 }
 
@@ -144,14 +156,24 @@ export interface Room {
 }
 
 export async function listRooms(): Promise<Room[]> {
-  const res = await fetch(`${API_BASE}/api/bookings/rooms`, {
+  const url = `${API_BASE}/api/bookings/rooms`;
+  console.log('[POS API] Fetching rooms from:', url);
+
+  const res = await fetch(url, {
     credentials: 'include',
     headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' }
   });
 
-  if (!res.ok) throw new Error('Failed to fetch rooms');
+  console.log('[POS API] Rooms response status:', res.status);
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('[POS API] Rooms error:', errorText);
+    throw new Error(`Failed to fetch rooms: ${res.status} ${errorText}`);
+  }
   
   const json = await res.json();
+  console.log('[POS API] Rooms response:', json);
   return json.rooms || [];
 }
 

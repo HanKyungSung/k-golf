@@ -44,10 +44,15 @@ export default function POSDashboard() {
   async function loadData() {
     try {
       setLoading(true);
+      console.log('[POS Dashboard] Loading data...');
+      
       const [bookingsData, roomsData] = await Promise.all([
         listBookings(),
         listRooms()
       ]);
+      
+      console.log('[POS Dashboard] Bookings data:', bookingsData);
+      console.log('[POS Dashboard] Rooms data:', roomsData);
       
       // Transform bookings to add derived fields (date, time, roomName)
       const transformedBookings = bookingsData.map(b => {
@@ -64,10 +69,12 @@ export default function POSDashboard() {
         };
       });
       
+      console.log('[POS Dashboard] Transformed bookings:', transformedBookings);
       setBookings(transformedBookings);
       setRooms(roomsData);
     } catch (err) {
-      console.error('Failed to load data:', err);
+      console.error('[POS Dashboard] Failed to load data:', err);
+      alert(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
