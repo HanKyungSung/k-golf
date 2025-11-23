@@ -959,202 +959,145 @@ model Booking {
   - **Windows**: "More info" → "Run anyway"
 - Manual updates: Download and reinstall when needed
 
-### 0.11 POS to Web Migration & Print Bridge – 📋 PLANNED
+### 0.11 POS to Web Migration – 📋 IN PLANNING
 
 **Status:** Planning phase - see `/POS_WEB_MIGRATION.md` for full plan  
-**Timeline:** 13-18 days (2-3 weeks)  
-**Architecture:** Backend-managed print queue with standalone bridge service
+**Timeline:** 4-7 days (1 week)  
+**Architecture:** Direct API integration (no local database, no sync queue)
 
-#### Phase 1: Backend Print Queue Infrastructure (3-4 days)
+#### Phase 1: Web Frontend Migration (3-5 days)
 
-**Database Schema:**
-[ ] Add PrintJob model (Prisma schema)
-  - Fields: id, type, status, venueId, bridgeId, seatName, items (JSON), totals, timestamps
-  - Statuses: pending, printing, completed, failed
-  - Indexes: status+createdAt, venueId+status
-[ ] Add PrintBridge model (Prisma schema)
-  - Fields: id, name, venueId, status, lastPing, printerType
-  - Track connected print bridges and their health
-[ ] Create Prisma migration: `npx prisma migrate dev --name add_print_queue`
-[ ] Generate Prisma client with new models
+**Create New Web POS App:**
+[ ] Set up new React project for web POS (or reuse existing frontend structure)
+[ ] Copy/adapt UI components from `pos/apps/electron/src/renderer/`
+[ ] Set up routing (react-router-dom)
+[ ] Configure build tools (Vite or webpack)
 
-**Print Queue Service:**
-[ ] Create `backend/src/services/printQueueService.ts`
-[ ] Implement enqueuePrintJob() - Queue new print jobs
-[ ] Implement markJobPrinting() - Update job status when bridge claims it
-[ ] Implement markJobCompleted() - Mark job as successfully printed
-[ ] Implement markJobFailed() - Handle print failures with retry logic
-[ ] Implement getPendingJobs() - Fetch jobs for bridges
-[ ] Add EventEmitter for real-time job notifications
+**Replace Electron-Specific Code:**
+[ ] Remove all IPC calls (`window.kgolf.*`)
+[ ] Replace with direct API calls (axios or fetch)
+[ ] Remove preload.ts and main.ts references
+[ ] Update imports to remove Electron dependencies
 
-**REST API Endpoints:**
-[ ] Create `backend/src/routes/print.ts`
-[ ] POST /api/print/receipt (requireAuth, requireStaffRole)
-  - Accept print job from frontend
-  - Validate required fields (seatName, items, totals)
-  - Enqueue job and broadcast to bridges
-[ ] GET /api/print/jobs (requireAuth)
-  - Monitor print queue status
-  - Optional venueId filter for multi-venue
-[ ] POST /api/print/jobs/:id/complete (internal - from bridge)
-[ ] POST /api/print/jobs/:id/fail (internal - from bridge)
+**API Integration:**
+[ ] Create API service layer (`src/services/api.ts`)
+[ ] Implement booking operations (list, create, update, cancel)
+[ ] Implement room operations (list, update status)
+[ ] Implement menu operations (list items, create orders)
+[ ] Implement auth (login, logout, session management)
+[ ] Add error handling and loading states
 
-**WebSocket Server:**
-[ ] Create `backend/src/services/printWebSocketServer.ts`
-[ ] Initialize Socket.IO server with /api/print/socket path
-[ ] Handle bridge:register event (save bridge to database)
-[ ] Handle bridge:ping event (update lastPing timestamp)
-[ ] Handle print:success event (mark job completed)
-[ ] Handle print:failed event (mark job failed, increment retry)
-[ ] Broadcast print:job events to connected bridges
-[ ] Handle bridge disconnect (mark status offline)
+**Authentication:**
+[ ] Use session cookies (HttpOnly) - same as customer frontend
+[ ] Remove keytar (OS keychain) dependency
+[ ] Implement login page
+[ ] Handle session expiry gracefully
+[ ] Add role-based access (admin/staff)
 
-**Integration:**
-[ ] Update `backend/src/server.ts` to init WebSocket server
-[ ] Register print routes in Express app
-[ ] Test WebSocket connection with mock client
-[ ] Test print job lifecycle (enqueue → broadcast → complete)
+**UI Updates:**
+[ ] Ensure responsive design for tablets/phones
+[ ] Test all booking flows
+[ ] Test menu management
+[ ] Test room status updates
+[ ] Update print functionality to use browser print dialog
 
-#### Phase 2: Web Frontend Migration (4-5 days)
+**Remove Database Code:**
+[ ] Remove all SQLite queries
+[ ] Remove better-sqlite3 dependency
+[ ] Remove sync queue logic
+[ ] Remove offline storage code
+[ ] Simplify to direct API calls only
 
-**Storage Layer Migration:**
-[ ] Create `frontend/src/services/db-web.ts` (IndexedDB wrapper)
-[ ] Implement initDb() with schema version 1
-[ ] Create object stores: bookings, syncQueue, menuItems, rooms, metadata
-[ ] Implement CRUD operations for each store
-[ ] Migrate existing localStorage data to IndexedDB
+#### Phase 2: Deployment Pipeline (1-2 days)
 
-**Print Service:**
-[ ] Create `frontend/src/services/printService.ts`
-[ ] Implement printReceipt() - POST to /api/print/receipt
-[ ] Add print job interface matching backend schema
-[ ] Handle errors and display user-friendly messages
+**Docker Setup:**
+[ ] Create Dockerfile for POS web app (similar to frontend)
+[ ] Add pos-frontend service to docker-compose.yml
+[ ] Configure build process
+[ ] Set environment variables (API_BASE_URL)
 
-**Update Components:**
-[ ] Replace IPC calls with direct REST API calls in BookingContext
-[ ] Update BookingDetailPage print handlers to use new printService
-[ ] Remove Electron-specific code (window.kgolf.*)
-[ ] Test print flow: Click print → Queue job → Success notification
+**Nginx Configuration:**
+[ ] Add POS route to Nginx config
+  - Option A: Subdomain (pos.k-golf.inviteyou.ca)
+  - Option B: Path (/pos/)
+[ ] Update SSL certificates if using subdomain
+[ ] Test routing configuration
 
-**Service Worker (Offline Support):**
-[ ] Create `frontend/public/sw.js`
-[ ] Implement cache-first strategy for static assets
-[ ] Add background sync for print queue
-[ ] Register service worker in index.html
-[ ] Test offline queueing and sync when back online
-
-**Auth Migration:**
-[ ] Replace keytar with Web Crypto API
-[ ] Encrypt tokens before storing in localStorage
-[ ] Implement secure token storage and retrieval
-[ ] Test auth flow in browser
-
-#### Phase 3: Print Bridge Service (3-4 days)
-
-**Create Bridge Package:**
-[ ] Create `print-bridge/` directory at root level
-[ ] Initialize npm package (`npm init`)
-[ ] Install dependencies: socket.io-client, node-thermal-printer
-[ ] Create TypeScript config (`tsconfig.json`)
-
-**Implement Bridge Logic:**
-[ ] Create `print-bridge/src/index.ts`
-[ ] Initialize thermal printer connection (USB/Network)
-[ ] Connect to backend via WebSocket
-[ ] Handle bridge:registered event
-[ ] Handle print:job event → Format and print receipt
-[ ] Emit print:success or print:failed events
-[ ] Implement heartbeat (bridge:ping every 30s)
-[ ] Add graceful shutdown (SIGINT handler)
-
-**Receipt Formatting:**
-[ ] Implement printReceipt() function
-[ ] Format header (venue name, logo)
-[ ] Format customer/seat info
-[ ] Format line items with quantities and prices
-[ ] Format totals (subtotal, tax, total)
-[ ] Format footer (thank you message)
-[ ] Add paper cut command
-
-**Configuration:**
-[ ] Create `.env.example` file
-[ ] Document required env vars (BACKEND_URL, PRINTER_PORT, BRIDGE_NAME, VENUE_ID)
-[ ] Add validation for required config
-[ ] Test with different printer types (Epson, Star)
-
-**Packaging:**
-[ ] Add build script to compile TypeScript
-[ ] Create executable entry point
-[ ] Test as standalone script (`node dist/index.js`)
-[ ] Document installation steps for venue computer
-[ ] Create Windows service setup (optional)
-[ ] Create systemd service setup (optional)
-
-#### Phase 4: Testing & Deployment (3-5 days)
-
-**Local Testing:**
-[ ] Test backend print queue API with Postman
-[ ] Test WebSocket connection with test client
-[ ] Test print bridge with real thermal printer
-[ ] Test web frontend print button
-[ ] Test offline queueing and sync
-[ ] Test reconnection handling (bridge disconnect/reconnect)
-
-**Integration Testing:**
-[ ] End-to-end: Web → Backend → Bridge → Printer
-[ ] Multi-device: Multiple tablets printing simultaneously
-[ ] Failure recovery: Bridge offline then back online
-[ ] Queue persistence: Backend restart with pending jobs
-[ ] Concurrent prints: Multiple jobs in queue
+**CI/CD Pipeline:**
+[ ] Update GitHub Actions workflow
+[ ] Add POS build step
+[ ] Add POS deployment step
+[ ] Test automated deployment
 
 **Production Deployment:**
-[ ] Deploy backend with WebSocket support
-[ ] Update CORS settings for WebSocket
-[ ] Deploy web frontend (existing pipeline)
-[ ] Install bridge service on venue computer
-[ ] Configure printer connection (USB/Network)
-[ ] Test production setup with real workflow
-
-**Monitoring:**
-[ ] Set up logging for print operations
-[ ] Add error tracking (Sentry)
-[ ] Create admin dashboard for print queue monitoring
-[ ] Add alerts for bridge offline > 5 minutes
-[ ] Monitor print success rate
+[ ] Deploy to production server
+[ ] Test on tablets and phones
+[ ] Verify API connectivity
+[ ] Train staff on web interface
 
 **Documentation:**
-[ ] Update README with new architecture
-[ ] Create print bridge installation guide
-[ ] Document troubleshooting steps
-[ ] Create operator manual for print workflow
-[ ] Document environment variables
+[ ] Update README with POS web app info
+[ ] Document deployment process
+[ ] Create user guide for staff
+[ ] Document API endpoints used
 
 #### Rollout Strategy
 
-**Week 1-2: Development**
-[ ] Complete Phase 1 & 2 (backend + frontend)
-[ ] Daily testing and iteration
+**Week 1: Development**
+[ ] Complete Phase 1 (frontend migration)
+[ ] Test locally with backend API
+[ ] Fix integration issues
 
-**Week 3: Bridge Development & Testing**
-[ ] Complete Phase 3 (print bridge)
-[ ] Test with real thermal printer
-[ ] Fix any issues
-
-**Week 4: Integration & Deployment**
-[ ] Complete Phase 4 (integration testing)
+**Week 2: Deployment**
+[ ] Complete Phase 2 (deployment pipeline)
 [ ] Deploy to production
-[ ] Train staff on new workflow
-
-**Week 5-6: Parallel Run**
-[ ] Keep Electron app as fallback
-[ ] Use web POS as primary
+[ ] Test on actual devices (tablets/phones)
 [ ] Monitor for issues
-[ ] Collect feedback
 
-**Week 7+: Full Migration**
-[ ] Retire Electron app
-[ ] Web POS only
-[ ] Monitor and optimize
+**Week 3+: Adoption**
+[ ] Train staff on web POS
+[ ] Collect feedback
+[ ] Optional: Keep Electron app as backup for 2-4 weeks
+[ ] Monitor usage and performance
+
+---
+
+### 0.12 Print Queue & Thermal Printer Integration – 🔮 FUTURE
+
+**Status:** Deferred to Phase 2 (after web POS migration complete)  
+**Timeline:** TBD (estimated 10-12 days)  
+**Architecture:** Backend print queue + standalone bridge service
+
+This feature will be implemented after the web POS is stable and in use. See `/POS_WEB_MIGRATION.md` for detailed architecture notes.
+
+#### Future Tasks (Not Started)
+
+**Backend Print Queue Infrastructure:**
+[ ] Add PrintJob and PrintBridge models to Prisma schema
+[ ] Create print queue service with job lifecycle management
+[ ] Add REST API endpoints (POST /api/print/receipt, GET /api/print/jobs)
+[ ] Implement WebSocket server for real-time job broadcasting
+[ ] Test print queue with mock printer
+
+**Print Bridge Service:**
+[ ] Create standalone Node.js package
+[ ] Implement WebSocket connection to backend
+[ ] Add thermal printer support (node-thermal-printer)
+[ ] Format receipts with ESC/POS commands
+[ ] Package as Windows service / systemd service
+[ ] Test with real thermal printer (Epson/Star)
+
+**Web POS Integration:**
+[ ] Add print service to web POS
+[ ] Replace browser print with queue-based printing
+[ ] Add print job status monitoring
+[ ] Handle print errors gracefully
+
+**Deployment:**
+[ ] Install bridge service on venue computer
+[ ] Configure printer connection (USB/Network)
+[ ] Test end-to-end print flow
+[ ] Monitor print success rate
 
 ---
 
