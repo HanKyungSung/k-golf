@@ -23,7 +23,28 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: CRITICAL 🔥
 
-**1. Web POS - Room Status Cards Showing Incorrect Bookings** ✅ FIXED
+**1. Web POS - Booking Detail Actions Panel Empty** 🔴 URGENT
+- **Status:** 🔴 OPEN - Requires Immediate Fix
+- **Reported:** 2025-11-25
+- **Component:** Web POS Booking Detail (`frontend/src/pages/pos/booking-detail.tsx`)
+- **Issue:**
+  - Actions panel shows no buttons for active bookings
+  - Checking `booking.status === 'confirmed'` but API returns `'booked'`
+  - Field mismatch: code checks `status` which has presentStatus values ('booked'/'completed'/'canceled')
+  - Should check `booking.bookingStatus` for raw values ('CONFIRMED'/'COMPLETED'/'CANCELLED')
+- **Root Cause:**
+  - Backend `presentBooking()` returns both fields:
+    - `status`: computed display value ('booked'|'completed'|'canceled')
+    - `bookingStatus`: raw database value ('CONFIRMED'|'COMPLETED'|'CANCELLED')
+  - Web UI checks wrong field with wrong values
+- **Fix Required:**
+  - Change conditions from `booking.status === 'confirmed'` to `booking.bookingStatus === 'CONFIRMED'`
+  - Update all 3 status checks: CONFIRMED, COMPLETED, CANCELLED (uppercase)
+  - Affects lines ~843, 857, 862 in booking-detail.tsx
+- **Impact:** Staff cannot complete or cancel bookings from booking detail page
+- **Priority:** CRITICAL - Blocks core POS workflow
+
+**2. Web POS - Room Status Cards Showing Incorrect Bookings** ✅ FIXED
 - **Status:** � RESOLVED (2025-11-25)
 - **Reported:** 2025-11-23
 - **Component:** Web POS Dashboard (`frontend/src/pages/pos/dashboard.tsx`)

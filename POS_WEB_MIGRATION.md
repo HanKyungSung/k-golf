@@ -1171,13 +1171,20 @@ The menu management page is still a placeholder and needs full migration from El
 
 ## Phase 1.6 Completion Summary (November 25, 2025)
 
-### ✅ Booking Detail Page - COMPLETE
+### ✅ Booking Detail Page - COMPLETE (With Bug Identified)
 
 **Status:** Phase 1.6 fully completed - all features verified and working
 
 **File:** `frontend/src/pages/pos/booking-detail.tsx` (850+ lines)
 
 **Source:** Migrated from `pos/apps/electron/src/renderer/pages/BookingDetailPage.tsx`
+
+**⚠️ Critical Bug Found (November 25, 2025):**
+- **Issue:** Actions panel buttons not showing for active bookings
+- **Cause:** Field mismatch - checking `booking.status === 'confirmed'` but should check `booking.bookingStatus === 'CONFIRMED'`
+- **Impact:** Staff cannot complete/cancel bookings from detail page
+- **Fix:** Tracked in TASKS.md as CRITICAL priority
+- **Lines affected:** ~843, 857, 862 in booking-detail.tsx
 
 **Integration:** Fully integrated with POS dashboard
 - Dashboard passes `bookingId` prop to detail page
