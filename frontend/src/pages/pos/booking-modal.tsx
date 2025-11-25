@@ -6,6 +6,7 @@ import { PhoneInput } from '../../components/pos/PhoneInput';
 import { TimePicker } from '../../components/pos/TimePicker';
 import { DatePicker } from '../../components/pos/DatePicker';
 import { createBooking, type Room } from '@/services/pos-api';
+import { getApiBase } from '@/lib/api';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -103,7 +104,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
     setError('');
     
     try {
-      const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+      const API_BASE = getApiBase();
       const response = await fetch(`${API_BASE}/api/users/lookup?phone=${encodeURIComponent(phone)}`, {
         credentials: 'include',
         headers: { 

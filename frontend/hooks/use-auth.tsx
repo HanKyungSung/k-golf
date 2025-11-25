@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
 import { toast } from "@/hooks/use-toast"
+import { getApiBase } from "@/lib/api"
 
 interface User {
   id: string
@@ -27,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Revalidate session from server; clear user on 401 or non-OK
   const revalidate = useCallback(async () => {
     try {
-      const apiBase = process.env.REACT_APP_API_BASE;
+      const apiBase = getApiBase();
       const res = await fetch(`${apiBase}/api/auth/me`, { credentials: 'include' });
     if (res.ok) {
         const data = await res.json();
@@ -98,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const login = async (email: string, password: string) => {
-    const apiBase = process.env.REACT_APP_API_BASE;
+    const apiBase = getApiBase();
     const res = await fetch(`${apiBase}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -111,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signup = async (name: string, email: string, phone: string, password: string) => {
-    const apiBase = process.env.REACT_APP_API_BASE;
+    const apiBase = getApiBase();
     const res = await fetch(`${apiBase}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -125,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const resendVerification = async (email: string): Promise<{ message: string; expiresAt?: string; retryAfterSeconds?: number }> => {
-    const apiBase = process.env.REACT_APP_API_BASE;
+    const apiBase = getApiBase();
     const res = await fetch(`${apiBase}/api/auth/resend`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -143,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     setUser(null);
-    const apiBase = process.env.REACT_APP_API_BASE;
+    const apiBase = getApiBase();
     try {
       await fetch(`${apiBase}/api/auth/logout`, { method: 'POST', credentials: 'include' });
     } catch {

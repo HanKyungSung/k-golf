@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { Clock, Users, Star } from "lucide-react";
+import { getApiBase } from "@/lib/api";
 
 interface Room {
   // Unique UI id per card to control selection/highlight
@@ -70,8 +71,7 @@ export default function BookingPage() {
     const loadRooms = async () => {
       setLoadingRooms(true);
       try {
-        const apiBase =
-          process.env.REACT_APP_API_BASE || "http://localhost:8080";
+        const apiBase = getApiBase();
         const res = await fetch(`${apiBase}/api/bookings/rooms`, {
           credentials: "include",
         });
@@ -130,8 +130,7 @@ export default function BookingPage() {
       }
       setLoadingSlots(true);
       try {
-        const apiBase =
-          process.env.REACT_APP_API_BASE || "http://localhost:8080";
+        const apiBase = getApiBase();
         const dateStr = toLocalYMD(selectedDate);
         const params = new URLSearchParams({
           roomId: backendId,
@@ -172,7 +171,7 @@ export default function BookingPage() {
     }
 
     try {
-      const apiBase = process.env.REACT_APP_API_BASE || "http://localhost:8080";
+      const apiBase = getApiBase();
       const startTimeIso = toStartIso(selectedDate, selectedTime);
       const backendId = rooms.find((r) => r.id === selectedRoom)?.backendId;
       if (!backendId) {

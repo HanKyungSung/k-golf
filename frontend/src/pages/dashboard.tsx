@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "@/hooks/use-toast"
 import POSDashboard from "./pos/dashboard"
+import { getApiBase } from "@/lib/api"
 
 const getStatusBadge = (status: 'booked'|'completed'|'canceled') => {
   switch (status) {
@@ -46,7 +47,7 @@ const CustomerDashboard = () => {
   React.useEffect(() => {
     const load = async () => {
       try {
-        const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080'
+        const apiBase = getApiBase();
         const [mineRes, roomsRes] = await Promise.all([
           fetch(`${apiBase}/api/bookings/mine`, { credentials: 'include' }),
           fetch(`${apiBase}/api/bookings/rooms`, { credentials: 'include' }),
@@ -74,7 +75,7 @@ const CustomerDashboard = () => {
   const cancelBookingById = async (id: string) => {
     try {
       setBusyIds((m) => ({ ...m, [id]: true }))
-      const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080'
+      const apiBase = getApiBase();
       const res = await fetch(`${apiBase}/api/bookings/${id}/cancel`, { method: 'PATCH', credentials: 'include' })
       if (!res.ok) {
         const msg = (await res.json().catch(() => ({}))).error || 'Failed to cancel booking'
