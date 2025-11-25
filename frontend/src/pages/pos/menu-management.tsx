@@ -3,6 +3,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useAuth } from '@/hooks/use-auth';
+import { useNavigate } from 'react-router-dom';
 import { 
   listMenuItems, 
   createMenuItem, 
@@ -43,6 +45,9 @@ interface POSMenuManagementProps {
 }
 
 export default function POSMenuManagement({ onBack }: POSMenuManagementProps) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  
   // Data state
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,31 +203,50 @@ export default function POSMenuManagement({ onBack }: POSMenuManagementProps) {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   if (loading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-black">
-        <div className="text-white text-xl">Loading menu...</div>
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-slate-300 text-xl mb-2">Loading menu...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
-      <main className="flex-1 px-6 py-8 space-y-8 max-w-6xl mx-auto w-full">
-        {/* Header */}
+    <div className="min-h-screen bg-slate-900 text-slate-100">
+      {/* Header - Consistent with POS Dashboard */}
+      <header className="border-b border-slate-700 bg-slate-800">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-amber-400">K-Golf POS - Menu Management</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-slate-300">{user?.email}</span>
+            <Button onClick={handleLogout} variant="outline" size="sm">Logout</Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-[1800px] mx-auto px-6 py-8 space-y-6 w-full">
+        {/* Page Header with Actions */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
               Menu Management
-            </h1>
+            </h2>
             <p className="text-slate-400 text-sm">Add, edit, and organize menu items</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={onBack} variant="outline" className="bg-slate-700 text-slate-200 border-slate-600 hover:bg-slate-600">
-              Back
+              ← Back to Dashboard
             </Button>
             <Button onClick={startCreate} className="bg-amber-500 text-black hover:bg-amber-600 font-semibold">
-              Add Item
+              + Add Item
             </Button>
           </div>
         </div>
