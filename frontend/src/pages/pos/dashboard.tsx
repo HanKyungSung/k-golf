@@ -61,27 +61,71 @@ export default function POSDashboard() {
     try {
       if (showLoading) setLoading(true);
       
-      const [bookingsData, roomsData] = await Promise.all([
-        listBookings(),
+      // Calculate date ranges for API calls
+      const now = new Date();
+      
+      // Today's range (for Room Status - real-time view)
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      
+      // Current week range (for Timeline - 7 days starting from Monday)
+      const dayOfWeek = now.getDay();
+      const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() + daysToMonday);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      
+      // Load bookings with two separate API calls
+      const [todayBookingsData, weekBookingsData, roomsData] = await Promise.all([
+        listBookings({ 
+          startDate: todayStart.toISOString(), 
+          endDate: todayEnd.toISOString(),
+          limit: 100 // Today should have < 100 bookings
+        }),
+        listBookings({ 
+          startDate: weekStart.toISOString(), 
+          endDate: weekEnd.toISOString(),
+          limit: 500 // Week should have < 500 bookings
+        }),
         listRooms()
       ]);
       
+      // Merge bookings and deduplicate by ID (today's bookings are subset of week)
+      const bookingsMap = new Map<string, any>();
+      
+      // Add week bookings first
+      weekBookingsData.forEach(b => bookingsMap.set(b.id, b));
+      
+      // Add/overwrite with today's bookings (ensures fresh data for today)
+      todayBookingsData.forEach(b => bookingsMap.set(b.id, b));
+      
+      const mergedBookings = Array.from(bookingsMap.values());
+      
       // Transform bookings to add derived fields (date, time, roomName)
-      const transformedBookings = bookingsData.map(b => {
+      const transformedBookings = mergedBookings.map(b => {
         const start = new Date(b.startTime);
         const end = new Date(b.endTime);
         const room = roomsData.find(r => r.id === b.roomId);
         
+        // Use local timezone for date/time display (avoid UTC conversion)
+        const year = start.getFullYear();
+        const month = String(start.getMonth() + 1).padStart(2, '0');
+        const day = String(start.getDate()).padStart(2, '0');
+        const localDate = `${year}-${month}-${day}`;
+        
         return {
           ...b,
-          date: start.toISOString().split('T')[0], // YYYY-MM-DD
+          date: localDate, // YYYY-MM-DD in local timezone
           time: start.toTimeString().slice(0, 5), // HH:MM
           duration: (end.getTime() - start.getTime()) / (1000 * 60 * 60), // hours
           roomName: room?.name || 'Unknown Room',
         };
       });
       
-      console.log('[POS Dashboard] Loaded', transformedBookings.length, 'bookings and', roomsData.length, 'rooms');
+      console.log('[POS Dashboard] Loaded', transformedBookings.length, 'bookings (', todayBookingsData.length, 'today,', weekBookingsData.length, 'this week) and', roomsData.length, 'rooms');
       setBookings(transformedBookings);
       setRooms(roomsData);
     } catch (err) {
@@ -160,9 +204,13 @@ export default function POSDashboard() {
     });
   }, [bookings]);
 
-  // Today's bookings
+  // Today's bookings (use local timezone for comparison)
   const todayBookings = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
     return bookings.filter(b => b.date === today);
   }, [bookings]);
 

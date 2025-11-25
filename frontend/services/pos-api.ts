@@ -41,8 +41,8 @@ export interface Booking {
 }
 
 export interface BookingFilters {
-  startDate?: string; // ISO string
-  endDate?: string; // ISO string
+  startDate?: string; // ISO string for date range filtering
+  endDate?: string; // ISO string for date range filtering
   roomId?: string;
   status?: string;
   page?: number;
@@ -72,10 +72,6 @@ export async function listBookings(filters?: BookingFilters): Promise<Booking[]>
   }
   
   const json = await res.json();
-  // Only log on first successful load
-  if (json.bookings && json.bookings.length > 0) {
-    console.log('[POS API] Loaded', json.bookings.length, 'bookings');
-  }
   return json.bookings || [];
 }
 

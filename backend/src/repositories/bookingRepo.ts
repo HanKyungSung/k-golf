@@ -67,6 +67,8 @@ export interface ListBookingsOptions {
   sortBy?: 'startTime' | 'createdAt';
   order?: 'asc' | 'desc';
   updatedAfter?: string; // ISO timestamp for incremental sync
+  startDate?: string; // ISO timestamp for date range filter
+  endDate?: string; // ISO timestamp for date range filter
 }
 
 export async function listBookings(options?: ListBookingsOptions): Promise<PaginatedBookings> {
@@ -75,13 +77,28 @@ export async function listBookings(options?: ListBookingsOptions): Promise<Pagin
   const sortBy = options?.sortBy || 'startTime';
   const order = options?.order || 'desc';
   const updatedAfter = options?.updatedAfter;
+  const startDate = options?.startDate;
+  const endDate = options?.endDate;
 
   const skip = (page - 1) * limit;
   
-  // Build where clause for incremental sync
+  // Build where clause
   const where: any = {};
+  
+  // Incremental sync filter
   if (updatedAfter) {
     where.updatedAt = { gt: new Date(updatedAfter) };
+  }
+  
+  // Date range filter (for POS dashboard)
+  if (startDate || endDate) {
+    where.startTime = {};
+    if (startDate) {
+      where.startTime.gte = new Date(startDate);
+    }
+    if (endDate) {
+      where.startTime.lte = new Date(endDate);
+    }
   }
 
   const [bookings, total] = await Promise.all([
