@@ -45,7 +45,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_BACKEND }}
           tags: |
-            type=sha
+            type=sha,prefix=,format=long
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build & push backend (includes frontend static files)
