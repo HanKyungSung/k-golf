@@ -840,7 +840,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                 <CardDescription className="text-slate-400">Update booking status</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {booking.status === 'confirmed' && (
+                {booking.bookingStatus === 'CONFIRMED' && (
                   <>
                     <Button onClick={() => changeStatus('completed')} className="w-full bg-green-500 hover:bg-green-600">
                       Mark as Completed
@@ -854,12 +854,12 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                     </Button>
                   </>
                 )}
-                {booking.status === 'cancelled' && (
+                {booking.bookingStatus === 'CANCELLED' && (
                   <Button onClick={() => changeStatus('confirmed')} className="w-full">
                     Restore Booking
                   </Button>
                 )}
-                {booking.status === 'completed' && (
+                {booking.bookingStatus === 'COMPLETED' && (
                   <div className="text-center text-slate-400 py-4">Booking completed</div>
                 )}
               </CardContent>
