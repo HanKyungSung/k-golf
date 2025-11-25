@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import POSDashboard from './dashboard';
 import POSBookingDetail from './booking-detail';
@@ -47,8 +47,14 @@ export default function POSRoutes() {
     <Routes>
       <Route path="dashboard" element={<POSDashboard />} />
       <Route path="booking/:id" element={<POSBookingDetail />} />
-      <Route path="menu" element={<POSMenuManagement />} />
+      <Route path="menu" element={<MenuManagementWrapper />} />
       <Route path="*" element={<Navigate to="dashboard" replace />} />
     </Routes>
   );
+}
+
+// Wrapper to provide onBack navigation
+function MenuManagementWrapper() {
+  const navigate = useNavigate();
+  return <POSMenuManagement onBack={() => navigate('/pos/dashboard')} />;
 }
