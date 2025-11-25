@@ -1721,6 +1721,148 @@ This feature will be implemented after the web POS is stable and in use. See `/P
 - [ ] Verify no foreign key constraint errors
 - [ ] Run full E2E suite: `npm run test:e2e:ui`
 
+### Phase 1.8: Web POS End-to-End Testing (Production)
+
+**Status:** 🔄 In Progress  
+**Priority:** HIGH - All migration features complete, ready for comprehensive testing  
+**Environment:** Production (k-golf.inviteyou.ca)
+
+**Prerequisites:**
+- [x] Phase 1 Frontend Migration Complete
+- [x] Phase 1.6 Booking Detail Page Complete
+- [x] Phase 1.7 Menu Management Complete
+- [x] All features deployed to production
+- [ ] Admin credentials verified
+- [ ] Mobile devices available for testing
+
+**Test Plan:**
+
+1. **POS Dashboard Testing**
+   - [ ] Visit k-golf.inviteyou.ca and login as admin
+   - [ ] Verify POS dashboard loads with header (K-Golf POS, user email, logout)
+   - [ ] Verify real-time clock updates every second
+   - [ ] Verify room status cards display correctly (4 rooms)
+   - [ ] Verify status legend (green=empty, yellow=occupied)
+   - [ ] Test room card "Book" button opens booking modal (not customer page)
+   - [ ] Test room card "Manage" button opens booking detail
+   - [ ] Verify 5-second auto-refresh updates booking data
+   - [ ] Check Timeline tab displays current week bookings
+   - [ ] Verify timeline booking blocks are clickable
+
+2. **Menu Management Testing**
+   - [ ] Navigate to Menu tab, click "Open Menu Management"
+   - [ ] Verify menu page loads with header and all UI sections
+   - [ ] Test "Add Item" button opens form
+   - [ ] Create new menu item with all fields (name, description, price, category, available)
+   - [ ] Verify item appears in filtered list immediately
+   - [ ] Test category filters (All, Food, Drinks, Appetizers, Desserts, Hours)
+   - [ ] Test search functionality (by name and description)
+   - [ ] Edit existing item and verify changes persist
+   - [ ] Toggle availability status and verify badge updates
+   - [ ] Delete item with confirmation dialog
+   - [ ] Verify insights panel updates (total, available, unavailable, avg price)
+   - [ ] Test "Back to Dashboard" button returns correctly
+   - [ ] Refresh page and verify menu items persist
+
+3. **Booking Detail Page Testing**
+   - [ ] Click on existing booking from dashboard
+   - [ ] Verify all sections load: customer info, booking info, payment status
+   - [ ] Verify seat management section displays
+   - [ ] Test add seats (1-10 max)
+   - [ ] Test remove seats (cannot orphan items)
+   - [ ] Add menu items to seats
+   - [ ] Test move item between seats
+   - [ ] Test split item across seats
+   - [ ] Verify receipt calculations (subtotal, tax, total)
+   - [ ] Test print seat bill button
+   - [ ] Test print complete order button
+   - [ ] Test "Back" button returns to dashboard
+   - [ ] **Known Bug:** Actions panel (Complete/Cancel) buttons not showing - see Critical Bug #1
+
+4. **Create Booking Flow Testing**
+   - [ ] Click "Create Booking" button from dashboard header
+   - [ ] Test Walk-in booking with existing customer (phone lookup)
+   - [ ] Test Walk-in booking with new customer (auto-registration)
+   - [ ] Test Walk-in booking as guest (no user account)
+   - [ ] Test Phone booking with existing customer
+   - [ ] Test Phone booking with new customer
+   - [ ] Verify guest mode disabled for phone bookings
+   - [ ] Test room selection dropdown
+   - [ ] Test date/time picker
+   - [ ] Test duration input (hours)
+   - [ ] Test players count input
+   - [ ] Verify booking appears in dashboard immediately
+   - [ ] Verify booking appears in timeline view
+   - [ ] Test modal close after successful creation
+
+5. **Room Management Testing**
+   - [ ] Navigate to "Room Management" tab
+   - [ ] Verify all 4 rooms display with details
+   - [ ] Test room status dropdown (Active/Maintenance/Closed)
+   - [ ] Verify status change reflects in room status cards
+   - [ ] Verify today's bookings list for each room
+   - [ ] Click booking in list, verify navigation to detail page
+   - [ ] Test room capacity and hourly rate display
+
+6. **Tax Settings Testing**
+   - [ ] Navigate to "Tax Settings" tab
+   - [ ] Verify current global tax rate displays
+   - [ ] Click "Edit" button
+   - [ ] Change tax rate value (e.g., 8% → 10%)
+   - [ ] Click "Save" and verify success
+   - [ ] Create new booking and verify new tax rate applied
+   - [ ] Check receipt calculations use new tax rate
+   - [ ] Click "Cancel" and verify changes rollback
+
+7. **Mobile/Tablet Responsive Testing**
+   - [ ] Access k-golf.inviteyou.ca from tablet (iPad/Android tablet)
+   - [ ] Test all dashboard features on tablet
+   - [ ] Verify touch interactions work (tap, scroll, swipe)
+   - [ ] Test menu management on tablet
+   - [ ] Test booking creation flow on tablet
+   - [ ] Access from phone (iPhone/Android phone)
+   - [ ] Verify responsive layout adapts correctly
+   - [ ] Test core POS features on phone
+   - [ ] Verify header and navigation work on small screens
+
+8. **Performance & Reliability Testing**
+   - [ ] Monitor page load times (< 3 seconds)
+   - [ ] Test with slow network connection
+   - [ ] Verify error handling (network errors, validation errors)
+   - [ ] Test concurrent access (multiple browsers/devices)
+   - [ ] Monitor auto-refresh behavior (5-second polling)
+   - [ ] Check browser console for errors
+   - [ ] Verify no memory leaks (check DevTools Performance)
+
+9. **Documentation & Bug Reporting**
+   - [ ] Document test results in spreadsheet or markdown table
+   - [ ] Take screenshots of any bugs found
+   - [ ] Record steps to reproduce each bug
+   - [ ] Categorize bugs by severity (Critical/High/Medium/Low)
+   - [ ] Update POS_WEB_MIGRATION.md with Phase 1.8 completion status
+   - [ ] Create GitHub issues for bugs if needed
+   - [ ] Update TASKS.md with any new issues found
+
+**Known Issues to Verify:**
+- **Critical Bug #1:** Booking Detail Actions Panel Empty (see Active Issues section)
+- Room card "Book" button navigation issue (FIXED in this commit)
+
+**Success Criteria:**
+- [ ] All core POS features functional on production
+- [ ] No critical bugs blocking staff usage
+- [ ] Mobile/tablet experience acceptable
+- [ ] Performance meets requirements (< 3s load time)
+- [ ] All test scenarios documented
+
+**Estimated Time:** 4-6 hours (comprehensive testing)
+
+**Next Steps After Testing:**
+- Fix any critical bugs found
+- Document minor issues for future sprints
+- Update migration docs with final status
+- Plan staff training session
+- Consider Phase 3 (Print Queue) if needed
+
 ---
 
 ## ✅ Completed Tasks Archive

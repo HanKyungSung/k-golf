@@ -368,7 +368,10 @@ export default function POSDashboard() {
                           size="sm"
                           variant="outline"
                           className="w-full text-xs"
-                          onClick={() => navigate('/booking')}
+                          onClick={() => {
+                            setPreselectedRoomId(room.id);
+                            setShowCreateModal(true);
+                          }}
                         >
                           <span className="text-lg mr-1">+</span>
                           Book
