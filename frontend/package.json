@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "webpack serve --config webpack.config.js --mode development",
     "watch": "webpack --config webpack.config.js --watch",
-    "build": "webpack --config webpack.config.js --mode production && rm -rf ../backend/public && cp -r dist ../backend/public",
+    "build": "webpack --config webpack.config.js --mode production",
+    "build:copy": "npm run build && rm -rf ../backend/public && cp -r dist ../backend/public",
     "preview": "npx http-server ./dist -c-1 -o"
   },
   "dependencies": {

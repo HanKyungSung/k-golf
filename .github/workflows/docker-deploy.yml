@@ -1,4 +1,6 @@
-## Docker CI/CD workflow: builds backend image (includes frontend) and deploys via SSH
+## Docker CI/CD workflow: builds backend image (includes frontend static files) and deploys via SSH
+## Architecture: Single backend container serves both API (port 8080) and frontend static files
+## The backend Dockerfile multi-stage build: frontend build → backend build → runner (combines both)
 name: Docker Deploy
 
 on:
@@ -98,8 +100,10 @@ jobs:
       - name: Deploy (pull & up)
         run: |
           ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} \
-            IMAGE_TAG=${GITHUB_SHA} \
-            'cd ~/k-golf && docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && docker compose -f docker-compose.release.yml pull && docker compose -f docker-compose.release.yml up -d'
+            "cd ~/k-golf && \
+             docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && \
+             IMAGE_TAG=${GITHUB_SHA} docker compose -f docker-compose.release.yml pull && \
+             IMAGE_TAG=${GITHUB_SHA} docker compose -f docker-compose.release.yml up -d"
 
       - name: Prune old images (optional)
         run: ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} 'docker image prune -f'

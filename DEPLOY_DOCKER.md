@@ -1,3 +1,26 @@
+## Architecture Overview
+
+**Current Deployment Model (as of 2025):**
+- **Single Container Architecture**: One backend image that includes both the Express.js API server **and** the compiled React frontend static files
+- **Multi-stage Docker Build**: 
+  1. `backend-deps`: Install backend dependencies + Prisma
+  2. `backend-build`: Compile TypeScript backend code
+  3. `frontend-build`: Build React frontend into static files
+  4. `runner`: Combine backend runtime + frontend static files in final image
+- **Static File Serving**: Backend Express server serves frontend from `/dist/public`
+- **Container Registry**: GitHub Container Registry (`ghcr.io/hankyungsung/kgolf-backend`)
+- **Deployment**: CI/CD via GitHub Actions (`docker-deploy.yml`)
+
+**Port Structure:**
+- Backend exposes internal port `8080`
+- Host maps to external port `8082` (`8082:8080`)
+- Backend serves:
+  - API endpoints at `/api/*`
+  - Frontend static files at `/` (root)
+  - Health check at `/health`
+
+**No separate frontend container** - The old `frontend/Dockerfile` and `frontend/nginx.conf` have been removed.
+
 ## Recommended deployment steps (blue/green style)
 
 1. Prep server
@@ -108,39 +131,74 @@
 
 4. First build & start (detached):
 ```bash
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f backend
+# For production deployment (recommended - uses CI-built images)
+IMAGE_TAG=<commit-sha> docker compose -f docker-compose.release.yml pull
+IMAGE_TAG=<commit-sha> docker compose -f docker-compose.release.yml up -d
+docker compose -f docker-compose.release.yml ps
+docker compose -f docker-compose.release.yml logs -f backend
+
+# For local testing only (builds from source)
+docker build -t ghcr.io/hankyungsung/kgolf-backend:test -f backend/Dockerfile .
+IMAGE_TAG=test docker compose -f docker-compose.release.yml up -d
 ```
-    - Why: Builds images locally (if not using CI release yet) and boots the stack.
-    - `build`: executes Dockerfiles producing backend & frontend images.
-    - `up -d`: creates containers in background.
-    - `ps`: sanity list of running containers & states.
-    - `logs -f backend`: tail backend logs to confirm startup & DB connection.
-    - If using remote images from CI use `docker-compose.release.yml` with `pull` instead of building.
+    - Why: Pulls pre-built images from CI (production) or builds locally (testing).
+    - **Note**: The Dockerfile in `backend/` builds **both** backend and frontend in a multi-stage process
+    - `pull`: fetches the unified backend image from GitHub Container Registry
+    - `up -d`: creates containers in background
+    - `ps`: sanity list of running containers & states
+    - `logs -f backend`: tail backend logs to confirm startup & DB connection
 
 5. Verify health:
 ```bash
-curl http://SERVER_IP:8081/health
-docker compose -f docker-compose.prod.yml logs --since=5m migrate
+# Backend serves both API and frontend - check unified health endpoint
+curl http://SERVER_IP:8082/health
+# Verify migration ran successfully
+docker compose -f docker-compose.release.yml logs --since=5m migrate
+# Test frontend static files are accessible
+curl -I http://SERVER_IP:8082/
 ```
-    - The frontend Nginx config serves a simple health endpoint; a 200 indicates container is reachable.
-    - Checking `migrate` logs ensures Prisma migrations ran successfully (should show completion then container exits). If errors appear, fix schema/DB issues before proceeding.
+    - The backend Express server serves both `/health` (API) and `/` (frontend HTML)
+    - Checking `migrate` logs ensures Prisma migrations ran successfully (should show completion then container exits)
+    - If errors appear, fix schema/DB issues before proceeding
 
 6. App API test (inside network):
 ```bash
-docker compose -f docker-compose.prod.yml exec backend wget -qO- http://localhost:8080/health
+docker compose -f docker-compose.release.yml exec backend wget -qO- http://localhost:8080/health
+docker compose -f docker-compose.release.yml exec backend ls -la /app/dist/public
 ```
-    - Runs from inside the backend container network namespace; isolates issues (verifies app responded before exposing externally).
-    - If this fails while outer health passes, check env vars, DB connectivity, or port conflicts.
+    - Runs from inside the backend container network namespace; isolates issues
+    - Second command verifies frontend static files are present in the container
+    - If health check fails, check env vars, DB connectivity, or port conflicts
 
-7. Point reverse proxy (Nginx/Caddy) to:
-   - Frontend container: `http://127.0.0.1:8081`
-   - Backend API (if proxied separately): use internal network or add a mapping (`ports: - 8080:8080`) once ready.
-    - Why: Allows serving on ports 80/443 with TLS termination while keeping containers bound to high ports or internal ports.
-    - Strategy: Add a new upstream (e.g. `upstream kgolf_frontend { server 127.0.0.1:8081; }`) then switch the server block root / proxy to it.
-    - Test with a staging subdomain before cutting production DNS if possible.
+7. Point reverse proxy (Nginx/Caddy) to backend on port 8082:
+   - **Single unified endpoint**: `http://127.0.0.1:8082`
+   - Backend serves:
+     - Root `/` → React SPA (index.html + assets)
+     - API routes `/api/*` → Express API handlers
+     - Health check `/health` → Status endpoint
+    - Why: Simplified architecture with one container serving both concerns
+    - Strategy: Add upstream pointing to 8082, configure server block to proxy all traffic
+    - Example Nginx config:
+      ```nginx
+      upstream kgolf_app {
+          server 127.0.0.1:8082;
+      }
+      
+      server {
+          listen 80;
+          server_name your-domain.com;
+          
+          location / {
+              proxy_pass http://kgolf_app;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header Host $host;
+              proxy_cache_bypass $http_upgrade;
+          }
+      }
+      ```
+    - Test with a staging subdomain before cutting production DNS if possible
 
 8. Cutover:
    - Update DNS / virtual host to route traffic to Docker-backed endpoints.
@@ -164,9 +222,10 @@ docker compose -f docker-compose.prod.yml exec backend wget -qO- http://localhos
     - Only use full `down -v` if you intentionally want to destroy DB data (almost never in prod).
 
 10. Ongoing ops:
-   - Rebuild on changes: `docker compose -f docker-compose.prod.yml build backend frontend && docker compose -f docker-compose.prod.yml up -d --no-deps backend frontend`
-   - Tail logs: `docker compose -f docker-compose.prod.yml logs -f --tail=100 backend frontend`
-   - DB psql: `docker compose -f docker-compose.prod.yml exec db psql -U kgolf -d kgolf_app`
+   - Deploy new version: `IMAGE_TAG=<new-sha> docker compose -f docker-compose.release.yml pull && IMAGE_TAG=<new-sha> docker compose -f docker-compose.release.yml up -d`
+   - Rebuild locally: `docker build -t ghcr.io/hankyungsung/kgolf-backend:test -f backend/Dockerfile . && IMAGE_TAG=test docker compose -f docker-compose.release.yml up -d backend`
+   - Tail logs: `docker compose -f docker-compose.release.yml logs -f --tail=100 backend`
+   - DB psql: `docker compose -f docker-compose.release.yml exec db psql -U kgolf -d kgolf_app`
     - Scale / debug:
        - Restart a single service: `docker compose -f docker-compose.prod.yml restart backend`
        - Inspect environment inside container: `docker compose exec backend env | grep PORT`
@@ -178,29 +237,54 @@ docker compose -f docker-compose.prod.yml exec backend wget -qO- http://localhos
     - Security updates: `sudo apt-get update && sudo apt-get upgrade -y` (host) + rebuild images to get patched base layers.
 
 ## Environment variables to finalize
-Replace placeholders in `docker-compose.prod.yml`:
-- `CORS_ORIGIN` (comma-separated for multi-origins)
-- `FRONTEND_ORIGIN` (used for links in emails)
-- (Optional) SMTP_* + `EMAIL_FROM` only if you enable real email locally
-- Any auth-related secrets (future: `JWT_SECRET`, etc.)
-Add them via an `.env` file and reference:
+
+**Environment File Approach (Recommended):**
+
+Create `.env.production` on the server (see `.env.production.example` for template):
+```bash
+NODE_ENV=production
+PORT=8080
+DATABASE_URL=postgres://kgolf:kgolf_password@db:5432/kgolf_app?schema=public
+CORS_ORIGIN=https://your-domain.com
+FRONTEND_ORIGIN=https://your-domain.com
+SMTP_HOST=smtp.yourprovider.com
+SMTP_PORT=587
+SMTP_USER=apikey-or-username
+SMTP_PASS=secret-password
+EMAIL_FROM=no-reply@your-domain.com
+SEED_ADMIN_EMAIL=admin@your-domain.com
+SEED_ADMIN_PASSWORD=secure-password
+POS_ADMIN_KEY=pos-secret-key
 ```
+
+The `docker-compose.release.yml` file already references this via:
+```yaml
 services:
   backend:
     env_file:
       - .env.production
 ```
 
+**Alternative: GitHub Secrets Injection (Current Workflow):**
+The GitHub Actions workflow currently injects SMTP variables via command line. This works but is less maintainable. Consider migrating to the env file approach by:
+1. Creating `.env.production` on server with all variables
+2. Removing SMTP_* from the deploy command in `.github/workflows/docker-deploy.yml`
+
 ## Notes / adjustments you might consider
-- If production Postgres is managed (e.g., DO Managed DB), remove the `db` service and point `DATABASE_URL` at the managed instance.
-- Add a volume for backend logs only if you introduce a file logger (currently stdout).
-- For HTTPS terminate at host Nginx / Caddy (recommended) rather than adding a reverse proxy container.
-- Add a `restart: unless-stopped` for backend/frontend if you want auto-restart (currently only implicit for backend via default policy). You can set it explicitly.
+- If production Postgres is managed (e.g., DO Managed DB), remove the `db` service and point `DATABASE_URL` at the managed instance
+- Add a volume for backend logs only if you introduce a file logger (currently stdout)
+- For HTTPS terminate at host Nginx / Caddy (recommended) rather than adding a reverse proxy container
+- The backend service already has `restart: unless-stopped` configured
+- **Build Scripts**: 
+  - Backend: `npm run build` only compiles TypeScript (Docker-compatible)
+  - Backend: `npm run build:full` builds both frontend and backend (for local development)
+  - Frontend: `npm run build` only builds React app (Docker-compatible)
+  - Frontend: `npm run build:copy` builds and copies to backend/public (for local development)
 
 ## Next optional improvements
-- Add a lightweight health/status page with build SHA.
-- Add `ARG GIT_SHA` to images and log it on startup.
-- Introduce watchtower or CI pipeline for automatic image builds.
+- Add a lightweight health/status page with build SHA
+- Add `ARG GIT_SHA` to Dockerfile and log it on startup
+- The CI pipeline already builds images automatically on push to main
 
 ## Deployment Checklist (Actionable Sequence)
 
@@ -210,12 +294,12 @@ Legend: (O) optional, (A) choose one path.
 
 ### Pre‑Flight
 - [x] 1. Local repo main branch pushed (CI must see latest code)
-- [ ] 2. GitHub Actions "Docker Deploy" workflow succeeded (both backend & frontend images show new SHA tag in GHCR)
+- [ ] 2. GitHub Actions "Docker Deploy" workflow succeeded (unified backend image with new SHA tag in GHCR)
 - [ ] 3. Record commit SHA (short 7 chars) you intend to deploy: `export RELEASE_SHA=<sha>` (for notes & rollback)
 - [ ] 4. Server: Docker & Compose v2 installed (`docker compose version` shows v2.x)
 - [ ] 5. Deploy user added to `docker` group (log out/in or `newgrp docker`)
 - [ ] 6. Host time in sync (`timedatectl` → NTP active) – avoids token / TLS oddities
-- [ ] 7. Firewall open: 22 (SSH), 80/443 (HTTP/HTTPS). Port 8081 temporarily allowed only if testing directly (close later)
+- [ ] 7. Firewall open: 22 (SSH), 80/443 (HTTP/HTTPS). Port 8082 temporarily allowed only if testing directly (close later)
 
 ### Secrets & Environment
 - [ ] 8. Decide secrets strategy (A):
@@ -248,7 +332,8 @@ Legend: (O) optional, (A) choose one path.
 - [ ] 15. List services & health states: `docker compose -f docker-compose.release.yml ps`
 - [ ] 16. Migration logs clean (no errors, exits 0): `docker compose -f docker-compose.release.yml logs --since=15m migrate`
 - [ ] 17. Backend internal health: `docker compose -f docker-compose.release.yml exec backend wget -qO- http://localhost:8080/health`
-- [ ] 18. Frontend container health: `curl http://SERVER_IP:8081/health` (temporary port)
+- [ ] 18. Backend serves frontend: `curl http://SERVER_IP:8082/` (should return HTML)
+- [ ] 19. Verify static files in container: `docker compose -f docker-compose.release.yml exec backend ls -la /app/dist/public` (temporary port)
 
 ### Database & Persistence
 - [ ] 19. Inspect volume exists: `docker volume inspect pg_data >/dev/null`
@@ -259,10 +344,10 @@ Legend: (O) optional, (A) choose one path.
 - [ ] 21. Restart backend only (proves stateless container + persistent DB): `docker compose -f docker-compose.release.yml restart backend`
 
 ### Reverse Proxy / Cutover
-- [ ] 22. Add / update host Nginx server block to proxy 80/443 → frontend (127.0.0.1:8081) and `/api/` → backend (internal or expose 8080 if needed)
+- [ ] 22. Add / update host Nginx server block to proxy 80/443 → unified backend (127.0.0.1:8082) - serves both frontend and API
 - [ ] 23. Reload Nginx (`nginx -t && systemctl reload nginx`)
 - [ ] 24. Confirm HTTPS loads SPA + API calls succeed (check browser dev tools / network)
-- [ ] 25. Disable direct exposure of 8081 (firewall drop or remove any public mapping later if you re-map ports)
+- [ ] 25. Disable direct exposure of 8082 (firewall drop or remove any public mapping after verifying proxy works)
 
 ### Functional Verification
 - [ ] 26. Test core flows: sign up / login, booking creation, email send (check SMTP logs or inbox)
@@ -319,58 +404,73 @@ export IMAGE_TAG=$(git rev-parse HEAD)  # or: export IMAGE_TAG=local
 echo "Using IMAGE_TAG=$IMAGE_TAG"
 ```
 
-### 3. Build Backend Image (matches CI backend build)
+### 3. Build Unified Backend Image (includes frontend)
 ```bash
-docker build --progress=plain -t ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG ./backend
+docker build --progress=plain -t ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG -f backend/Dockerfile .
 ```
-If it fails, fix errors (often dependency or TypeScript build) before proceeding.
+This builds:
+- Backend dependencies and TypeScript compilation
+- Frontend React app build
+- Combined final image with backend serving frontend static files
 
-### 4. Build Frontend Image
+If it fails, check:
+- Backend TypeScript errors
+- Frontend webpack build issues
+- Prisma schema problems
+
+### 4. (Optional) Verify Image Contents
+Check that both backend and frontend are present:
 ```bash
-docker build --progress=plain -t ghcr.io/hankyungsung/kgolf-frontend:$IMAGE_TAG ./frontend
+docker run --rm ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG ls -la /app/dist/
+docker run --rm ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG ls -la /app/dist/public/
 ```
+Should see:
+- `/app/dist/src/` - Compiled backend TypeScript
+- `/app/dist/public/` - Frontend static files (index.html, assets/, images)
 
-### 5. (Optional) Add Build Cache Tags
-CI uses a build cache ref; locally you can skip. (If you want parity: also tag a `buildcache` ref.)
-
-### 6. (Optional) Test Pushing (Requires Personal PAT with `write:packages`)
+### 5. (Optional) Test Pushing (Requires Personal PAT with `write:packages`)
 Skip unless you explicitly want to push your local test images.
 ```bash
 # docker login ghcr.io -u <gh-user>
 # docker push ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG
-# docker push ghcr.io/hankyungsung/kgolf-frontend:$IMAGE_TAG
 ```
 
-### 7. Start Stack Using Release Compose
+### 6. Start Stack Using Release Compose
 `docker-compose.release.yml` expects images already built/pulled; we provide `IMAGE_TAG`.
 ```bash
 IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.release.yml up -d
 ```
-If images are missing you mistyped the tag.
+If image is missing you mistyped the tag or forgot to build it.
 
-### 8. Check Container Status
+### 7. Check Container Status
 ```bash
 docker compose -f docker-compose.release.yml ps
 ```
 Look for `healthy` (backend) and `exit 0` (migrate) once it finishes.
 
-### 9. Inspect Migration Logs
+### 8. Inspect Migration Logs
 ```bash
 docker compose -f docker-compose.release.yml logs --since=10m migrate
 ```
 Expect successful Prisma output and container exit.
 
-### 10. Backend Health
+### 9. Backend Health (API)
 ```bash
 docker compose -f docker-compose.release.yml exec backend wget -qO- http://localhost:8080/health
 ```
 Should return JSON with ok / uptime.
 
-### 11. Frontend Health
+### 10. Frontend Health (Static Files)
 ```bash
-curl http://localhost:8081/health
+curl http://localhost:8082/
 ```
-Expect `{"ok":true}`.
+Should return HTML (the React SPA index.html).
+
+### 11. Verify Static Assets
+```bash
+docker compose -f docker-compose.release.yml exec backend ls -la /app/dist/public
+```
+Should see index.html, assets/, and image files.
 
 ### 12. Tail Backend Logs (Live)
 ```bash
@@ -379,18 +479,24 @@ docker compose -f docker-compose.release.yml logs -f --tail=100 backend
 Cancel with Ctrl+C.
 
 ### 13. Common Failure Spots
-- Build fails: missing deps / TypeScript error → fix code then rebuild.
-- Migrate fails: schema mismatch / existing constraint → adjust migration or DB state.
-- Backend unhealthy: env variables missing (SMTP_* / DATABASE_URL) or DB not ready.
-- Frontend 404 root: dist not generated; ensure `npm run build` works inside Docker context.
+- **Build fails**: 
+  - Backend TypeScript errors → check `backend/src/**/*.ts`
+  - Frontend webpack errors → check `frontend/webpack.config.js` and React components
+  - Prisma schema issues → verify `backend/prisma/schema.prisma`
+- **Migrate fails**: schema mismatch / existing constraint → adjust migration or DB state
+- **Backend unhealthy**: env variables missing (SMTP_* / DATABASE_URL) or DB not ready
+- **Frontend 404 root**: 
+  - Check frontend built correctly in Docker stage
+  - Verify `/app/dist/public` exists in container
+  - Check backend Express static file serving configured
 
 ### 14. Rebuild After Code Change (Fast Loop)
-If you edited backend only:
+Any change (backend OR frontend) requires rebuilding the unified image:
 ```bash
-docker build -t ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG ./backend
+docker build -t ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG -f backend/Dockerfile .
 IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.release.yml up -d backend
 ```
-For frontend only swap names accordingly.
+The multi-stage build automatically rebuilds only changed layers (Docker layer caching).
 
 ### 15. Tear Down (Keep Volume)
 ```bash
@@ -410,14 +516,22 @@ Build a second tag, then switch tags:
 ```bash
 export PREV_TAG=$IMAGE_TAG
 export IMAGE_TAG=testrollback
-docker build -t ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG ./backend
+docker build -t ghcr.io/hankyungsung/kgolf-backend:$IMAGE_TAG -f backend/Dockerfile .
 IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.release.yml up -d backend
 # Roll back
 IMAGE_TAG=$PREV_TAG docker compose -f docker-compose.release.yml up -d backend
 ```
 
 ### 18. Compare With CI
-CI additionally: sets labels, uses buildx cache, pushes to GHCR, then SSH deploys and runs `pull` + `up -d`. Functional app behavior should match your local simulation results if the tag is identical.
+CI additionally: sets labels, uses buildx cache, pushes to GHCR, then SSH deploys and runs `pull` + `up -d`. 
+
+**CI Build Process:**
+1. Builds unified backend image (includes frontend) from `backend/Dockerfile`
+2. Tags with commit SHA
+3. Pushes to `ghcr.io/hankyungsung/kgolf-backend:<sha>`
+4. SSH to server, sets `IMAGE_TAG=<sha>`, runs `docker compose -f docker-compose.release.yml pull && up -d`
+
+Functional app behavior should match your local simulation if the tag is identical.
 
 ---
 Use this section whenever a CI run fails; locate the failing phase locally, fix, then push again.
