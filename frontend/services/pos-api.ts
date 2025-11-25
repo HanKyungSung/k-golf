@@ -3,9 +3,7 @@
  * Direct REST API calls to backend (no IPC, no local database)
  */
 
-import { getApiBase } from '../src/lib/api';
-
-const API_BASE = getApiBase();
+const API_BASE = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
 
 // Logged once on module load
 if (typeof window !== 'undefined') {

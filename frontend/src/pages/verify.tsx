@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, CheckCircle2, XCircle, Mail } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
-import { getApiBase } from '@/lib/api'
 
 export default function VerifyPage() {
   const { resendVerification } = useAuth()
@@ -25,7 +24,7 @@ export default function VerifyPage() {
     }
     setState('verifying')
     try {
-      const apiBase = getApiBase();
+      const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
       const res = await fetch(`${apiBase}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
