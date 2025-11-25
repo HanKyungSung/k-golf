@@ -23,39 +23,36 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: CRITICAL 🔥
 
-**1. Web POS - Room Status Cards Showing Incorrect Bookings** 🔴 URGENT
-- **Status:** 🔴 CRITICAL - Requires Immediate Fix
+**1. Web POS - Room Status Cards Showing Incorrect Bookings** ✅ FIXED
+- **Status:** � RESOLVED (2025-11-25)
 - **Reported:** 2025-11-23
 - **Component:** Web POS Dashboard (`frontend/src/pages/pos/dashboard.tsx`)
-- **Issue:** Room status cards displaying wrong or missing booking information
-- **Impact:** HIGH - Staff cannot see accurate room status, blocks production use
-- **Symptoms:**
-  - Room cards show incorrect bookings
-  - Customer name/time/duration not matching actual bookings
-  - Possible empty rooms showing occupied or vice versa
-- **Likely Root Causes:**
-  1. **Timezone Issue:** Similar to Timeline bug (fixed Nov 20) - UTC vs local time comparison
-  2. **Room ID Mismatch:** Room IDs might be strings ('1', '2', '3', '4') vs UUIDs from database
-  3. **Date Filtering:** Today's bookings filter using wrong date comparison method
-  4. **Booking Status:** Filtering by wrong field (status vs bookingStatus)
-- **Investigation Steps:**
-  - [ ] Check booking data fetch and filtering logic (lines ~200-300)
-  - [ ] Verify room ID matching between bookings array and room cards
-  - [ ] Check timezone handling (use local methods like Timeline fix)
-  - [ ] Verify "today's bookings" filter logic
-  - [ ] Console.log bookings to see actual data
-  - [ ] Compare with Electron POS room status logic
-- **Reference Fix:** Timeline timezone bug (commit 43bbac8, 2025-11-20)
-  - Used `getFullYear()`, `getMonth()`, `getDate()` instead of `toISOString()`
-  - Created Date objects using local timezone constructor
-  - Avoided UTC conversion
-- **Estimated Fix Time:** 30 mins - 1 hour
-- **Testing After Fix:**
-  - [ ] Room cards show correct bookings for today
-  - [ ] Status colors accurate (green/yellow/red)
-  - [ ] Empty rooms display "No booking today"
-  - [ ] Updates when new booking created
-  - [ ] Works across all 4 rooms
+- **Issues Fixed:**
+  1. **Timezone Bug:** Used `toISOString()` which converted dates to UTC
+     - Booking at 11:30pm PST Nov 24 showed as Nov 25 in UTC
+     - "Today" comparison failed due to UTC/local mismatch
+     - **Fix:** Use local timezone methods (`getFullYear()`, `getMonth()`, `getDate()`)
+  2. **Pagination Bug:** API only returned first 10 bookings by default
+     - Bookings beyond page 1 weren't loaded
+     - **Fix:** Implemented separate API calls with date range filters
+- **Solution Implemented:**
+  - **Room Status:** Loads only today's bookings (0:00-23:59 local time)
+  - **Timeline:** Loads current week's bookings (Monday-Sunday)
+  - Dual API calls merged and deduplicated by booking ID
+  - Backend added `startDate`/`endDate` query parameters
+- **Performance Benefits:**
+  - Reduced data transfer (today + week vs all bookings)
+  - Typical load: 10-50 bookings instead of 100+ or 1000+
+  - Independent refresh strategies for room status and timeline
+- **Testing Completed:**
+  - [x] Room cards show correct bookings for today
+  - [x] Status colors accurate (green=empty, yellow=occupied)
+  - [x] Empty rooms display "No booking"
+  - [x] Bookings update on 5-second poll
+  - [x] Works across all 4 rooms
+- **Commits:** 
+  - Timezone fix & pagination optimization (commit 5cf4243, 2025-11-25)
+  - Reference: Timeline timezone fix (commit 43bbac8, 2025-11-20)
 
 **2. POS Dashboard - Timeline and Room Status Refresh Issues** ✅ FIXED
 - **Status:** 🟢 RESOLVED (2025-11-20)

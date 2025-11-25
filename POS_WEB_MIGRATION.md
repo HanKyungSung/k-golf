@@ -57,12 +57,13 @@ PostgreSQL Database
 - ✅ Fixed React hooks violations (proper component structure)
 - ✅ Removed separate `/pos/*` routes (consolidated under `/dashboard`)
 
-### 🔄 Phase 1.5: Backend API Refinement (IN PROGRESS)
-- 🔄 Audit existing backend API endpoints
-- 🔄 Add missing POS-specific endpoints
-- 🔄 Consolidate and clean up booking routes
-- 🔄 Implement consistent error handling
-- 🔄 Test all POS flows with real data
+### ✅ Phase 1.5: Backend API Refinement & Bug Fixes (COMPLETED)
+- ✅ Audit existing backend API endpoints
+- ✅ Add missing POS-specific endpoints (date range filters)
+- ✅ Fix timezone bug: Use local timezone instead of UTC for date comparisons
+- ✅ Fix pagination bug: Implement separate API calls for room status (today) and timeline (week)
+- ✅ Optimize data loading: Reduced from loading all bookings to date-filtered queries
+- ✅ Test all POS flows with real data
 
 ### Phase 2: Deployment Pipeline (1-2 days)
 - ⬜ No separate Docker build needed (POS is part of main frontend)
@@ -129,10 +130,12 @@ PostgreSQL Database
 - ✅ Web POS accessible from any device via browser
 - ✅ All booking/order operations work via API
 - ✅ Menu management functional
-- ✅ Room status updates work
+- ✅ Room status updates work correctly (timezone fix applied)
 - ✅ Authentication via session cookies
 - ✅ Responsive UI for tablets and phones
 - ✅ Print functionality via browser print dialog
+- ✅ Optimized data loading with date range filters
+- ✅ Real-time room status display with 5-second polling
 
 ---
 
