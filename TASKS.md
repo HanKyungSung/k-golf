@@ -21,6 +21,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ## Personal note
 - Need to see how to handle the paymentStatus. Confirm with customer.
+- Ask no cleaning time between bookings.
 
 ## 🐛 Active Issues & Bugs
 

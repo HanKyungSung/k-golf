@@ -16,8 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
-import { Clock, Users, Star } from "lucide-react";
+import { Clock, Users, Star, CalendarIcon } from "lucide-react";
 
 interface Room {
   // Unique UI id per card to control selection/highlight
@@ -34,6 +36,15 @@ interface TimeSlot {
   available: boolean;
 }
 
+interface Booking {
+  id: string;
+  roomId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  customerName: string;
+}
+
 // Backend room shape (minimal)
 type BackendRoom = { id: string; name: string; capacity: number };
 type ApiSlot = { startIso: string; endIso: string; available: boolean };
@@ -46,14 +57,42 @@ const DISPLAY_ROOM_TEMPLATES: Array<{ name: string; image: string }> = [
   { name: "Room 4", image: "/golf-simulator-room.png" },
 ];
 
+// Mock bookings for timeline visualization
+const mockBookings: Booking[] = [
+  {
+    id: "1",
+    roomId: "display-1",
+    date: new Date().toISOString().split("T")[0],
+    startTime: "14:22",
+    endTime: "15:22",
+    customerName: "Walk-in Customer",
+  },
+  {
+    id: "2",
+    roomId: "display-2",
+    date: new Date().toISOString().split("T")[0],
+    startTime: "11:15",
+    endTime: "13:15",
+    customerName: "John Doe",
+  },
+  {
+    id: "3",
+    roomId: "display-1",
+    date: new Date().toISOString().split("T")[0],
+    startTime: "16:45",
+    endTime: "18:45",
+    customerName: "Jane Smith",
+  },
+];
+
 export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
   );
   const [selectedRoom, setSelectedRoom] = useState<string>("");
-  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [startTime, setStartTime] = useState<string>("");
   const [numberOfPlayers, setNumberOfPlayers] = useState<string>("1");
-  const [hours, setHours] = useState<string>("1");
+  const [bookings, setBookings] = useState<Booking[]>(mockBookings);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -61,8 +100,6 @@ export default function BookingPage() {
   const [backendRooms, setBackendRooms] = useState<BackendRoom[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
-  const [apiSlots, setApiSlots] = useState<ApiSlot[]>([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
   const selectedBackendId = rooms.find((r) => r.id === selectedRoom)?.backendId;
 
   // Load rooms and build 4 display rooms with backend IDs
@@ -119,44 +156,53 @@ export default function BookingPage() {
     return `${y}-${m}-${d}`;
   };
 
-  // Fetch availability when room/date/hours change
-  useEffect(() => {
-    const fetchAvailability = async () => {
-      const backendId = rooms.find((r) => r.id === selectedRoom)?.backendId;
-      if (!backendId || !selectedDate) {
-        setApiSlots([]);
-        return;
+  // Calculate end time based on start time and number of players (1 hour per player)
+  const calculateEndTime = (start: string, players: number) => {
+    if (!start) return "";
+    const [hours, minutes] = start.split(":").map(Number);
+    const endDate = new Date();
+    endDate.setHours(hours, minutes, 0, 0);
+    endDate.setHours(endDate.getHours() + players);
+    return `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+  };
+
+  const endTime = calculateEndTime(startTime, Number.parseInt(numberOfPlayers));
+
+  // Check if a time slot is available
+  const isTimeSlotAvailable = (roomId: string, date: Date, start: string, end: string): boolean => {
+    const dateStr = date.toISOString().split("T")[0];
+    const roomBookings = bookings.filter((b) => b.roomId === roomId && b.date === dateStr);
+
+    const [startHour, startMin] = start.split(":").map(Number);
+    const [endHour, endMin] = end.split(":").map(Number);
+    const requestStart = startHour * 60 + startMin;
+    const requestEnd = endHour * 60 + endMin;
+
+    for (const booking of roomBookings) {
+      const [bookStartHour, bookStartMin] = booking.startTime.split(":").map(Number);
+      const [bookEndHour, bookEndMin] = booking.endTime.split(":").map(Number);
+      const bookStart = bookStartHour * 60 + bookStartMin;
+      const bookEnd = bookEndHour * 60 + bookEndMin;
+
+      // Check for overlap
+      if (
+        (requestStart >= bookStart && requestStart < bookEnd) ||
+        (requestEnd > bookStart && requestEnd <= bookEnd) ||
+        (requestStart <= bookStart && requestEnd >= bookEnd)
+      ) {
+        return false;
       }
-      setLoadingSlots(true);
-      try {
-        const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
-        const dateStr = toLocalYMD(selectedDate);
-        const params = new URLSearchParams({
-          roomId: backendId,
-          date: dateStr,
-          hours,
-          slotMinutes: "60",
-          openStart: "09:00",
-          openEnd: "23:00",
-        });
-        const res = await fetch(
-          `${apiBase}/api/bookings/availability?${params.toString()}`,
-          { credentials: "include" }
-        );
-        if (!res.ok) {
-          setApiSlots([]);
-          return;
-        }
-        const data = await res.json();
-        setApiSlots(Array.isArray(data.slots) ? data.slots : []);
-      } catch {
-        setApiSlots([]);
-      } finally {
-        setLoadingSlots(false);
-      }
-    };
-    fetchAvailability();
-  }, [selectedRoom, selectedDate, hours]);
+    }
+
+    return true;
+  };
+
+  const canBook =
+    selectedRoom &&
+    selectedDate &&
+    startTime &&
+    endTime &&
+    isTimeSlotAvailable(selectedRoom, selectedDate, startTime, endTime);
 
   const handleBooking = async () => {
     if (!user) {
@@ -164,14 +210,22 @@ export default function BookingPage() {
       return;
     }
 
-    if (!selectedRoom || !selectedTime || !selectedDate) {
-      alert("Please select all booking details");
+    if (!canBook) {
+      alert("This time slot is not available. Please choose a different time.");
       return;
     }
 
+    // Mock booking process for now
+    // TODO: Replace with actual API call when backend is ready
+    alert(
+      `Booking confirmed!\nRoom: ${selectedRoomData?.name}\nDate: ${selectedDate?.toDateString()}\nTime: ${startTime} - ${endTime}\nPlayers: ${numberOfPlayers}`
+    );
+    navigate("/dashboard");
+
+    /* TODO: Implement actual API call
     try {
       const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
-      const startTimeIso = toStartIso(selectedDate, selectedTime);
+      const startTimeIso = toStartIso(selectedDate, startTime);
       const backendId = rooms.find((r) => r.id === selectedRoom)?.backendId;
       if (!backendId) {
         alert("No backend room available for this selection");
@@ -185,7 +239,7 @@ export default function BookingPage() {
           roomId: backendId,
           startTimeIso,
           players: parseInt(numberOfPlayers, 10),
-          hours: parseInt(hours, 10),
+          hours: parseInt(numberOfPlayers, 10), // 1 hour per player
         }),
       });
       if (!res.ok) {
@@ -197,6 +251,7 @@ export default function BookingPage() {
     } catch {
       alert("Network error while creating booking");
     }
+    */
   };
 
   const selectedRoomData = rooms.find((r) => r.id === selectedRoom);
@@ -204,13 +259,20 @@ export default function BookingPage() {
   const calculatePrice = () => {
     if (!selectedRoomData) return 0;
     const players = Number.parseInt(numberOfPlayers);
-    const hrs = Number.parseInt(hours);
     const ratePerPersonPerHour = 50; // Fixed rate for all rooms
-    return ratePerPersonPerHour * players * hrs;
+    return ratePerPersonPerHour * players;
   };
 
   const totalPrice = calculatePrice();
-  const totalHours = Number.parseInt(hours);
+  const totalHours = Number.parseInt(numberOfPlayers); // 1 hour per player
+
+  const getBookingsForTimeline = () => {
+    if (!selectedRoom || !selectedDate) return [];
+    const dateStr = selectedDate.toISOString().split("T")[0];
+    return bookings.filter((b) => b.roomId === selectedRoom && b.date === dateStr);
+  };
+
+  const timelineBookings = getBookingsForTimeline();
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -262,12 +324,7 @@ export default function BookingPage() {
             Book Your Premium Experience
           </h2>
           <p className="text-slate-400 text-lg">
-            Choose from our 4 identical premium rooms. Pricing is $50 per person
-            per hour.
-          </p>
-          <p className="text-slate-400 text-sm mt-1">
-            Recommendation: plan roughly 1 hour per player for the best
-            experience.
+            Choose your preferred time flexibly. Each player gets 1 hour of screen golf time at $50 per person.
           </p>
         </div>
 
@@ -275,16 +332,10 @@ export default function BookingPage() {
           {/* Room Selection */}
           <div className="lg:col-span-2 space-y-8">
             <div>
-              <h3 className="text-2xl font-semibold text-white mb-2 flex items-center gap-2">
+              <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
                 <Star className="h-6 w-6 text-amber-400" />
-                Choose Your Room (All Identical)
+                Choose Your Room
               </h3>
-              {backendRooms.length === 0 && (
-                <p className="text-sm text-amber-400 mb-4">
-                  No rooms found on server. Showing placeholders — please seed
-                  the database.
-                </p>
-              )}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 {rooms.map((room) => (
                   <Card
@@ -327,91 +378,215 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* Date and Time Selection */}
             {selectedRoom && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <h3 className="text-2xl font-semibold text-white mb-6">
-                    Select Date
-                  </h3>
-                  <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      disabled={(date) => {
-                        const now = new Date();
-                        const startOfToday = new Date(
-                          now.getFullYear(),
-                          now.getMonth(),
-                          now.getDate()
-                        );
-                        return date < startOfToday;
-                      }}
-                      className="rounded-md bg-transparent text-white"
-                    />
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
+                      <CalendarIcon className="h-6 w-6 text-amber-400" />
+                      Select Date
+                    </h3>
+                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
+                      <Clock className="h-6 w-6 text-amber-400" />
+                      Choose Start Time
+                    </h3>
+                    <div className="space-y-4 bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+                      <div className="space-y-2">
+                        <Label htmlFor="players" className="text-white font-medium">
+                          Number of Players
+                        </Label>
+                        <Select value={numberOfPlayers} onValueChange={setNumberOfPlayers}>
+                          <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-800 border-slate-700">
+                            <SelectItem value="1" className="text-white hover:bg-slate-700">
+                              1 Player (1 hour)
+                            </SelectItem>
+                            <SelectItem value="2" className="text-white hover:bg-slate-700">
+                              2 Players (2 hours)
+                            </SelectItem>
+                            <SelectItem value="3" className="text-white hover:bg-slate-700">
+                              3 Players (3 hours)
+                            </SelectItem>
+                            <SelectItem value="4" className="text-white hover:bg-slate-700">
+                              4 Players (4 hours)
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="start-time" className="text-white font-medium">
+                          Start Time (9:00 AM - 10:00 PM)
+                        </Label>
+                        <Input
+                          id="start-time"
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          min="09:00"
+                          max="22:00"
+                          className="bg-slate-700/50 border-slate-600 text-white [color-scheme:dark]"
+                        />
+                      </div>
+
+                      {startTime && endTime && (
+                        <div className="pt-4 border-t border-slate-700">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 text-sm">Session Duration:</span>
+                            <span className="text-white font-semibold">
+                              {startTime} - {endTime}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            <div
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                canBook
+                                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                  : "bg-red-500/20 text-red-400 border border-red-500/30"
+                              }`}
+                            >
+                              {canBook ? "✓ Available" : "✗ Not Available"}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
-                    <Clock className="h-6 w-6 text-amber-400" />
-                    Available Time Slots
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto bg-slate-800/30 p-4 rounded-lg border border-slate-700">
-                    {loadingSlots && (
-                      <div className="col-span-2 text-slate-400">
-                        Loading slots…
+                {selectedDate && (
+                  <div>
+                    <h3 className="text-2xl font-semibold text-white mb-6">
+                      Current Bookings for {selectedRoomData?.name}
+                    </h3>
+                    <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+                      <div className="relative">
+                        {/* Timeline */}
+                        <div className="flex items-center mb-4">
+                          <div className="text-xs text-slate-500 w-16">9 AM</div>
+                          <div className="flex-1 h-12 bg-slate-900/50 rounded-lg relative border border-slate-700">
+                            {/* Hour markers */}
+                            {Array.from({ length: 13 }).map((_, i) => (
+                              <div
+                                key={i}
+                                className="absolute top-0 bottom-0 border-l border-slate-700/50"
+                                style={{ left: `${(i / 13) * 100}%` }}
+                              >
+                                <span className="absolute -top-5 -left-3 text-[10px] text-slate-600">{9 + i}</span>
+                              </div>
+                            ))}
+
+                            {/* Existing bookings */}
+                            {timelineBookings.map((booking) => {
+                              const [startHour, startMin] = booking.startTime.split(":").map(Number);
+                              const [endHour, endMin] = booking.endTime.split(":").map(Number);
+                              const startMinutes = (startHour - 9) * 60 + startMin;
+                              const endMinutes = (endHour - 9) * 60 + endMin;
+                              const duration = endMinutes - startMinutes;
+                              const totalMinutes = 13 * 60;
+                              const left = (startMinutes / totalMinutes) * 100;
+                              const width = (duration / totalMinutes) * 100;
+
+                              return (
+                                <div
+                                  key={booking.id}
+                                  className="absolute top-1 bottom-1 bg-red-500/30 border border-red-500/50 rounded px-1 flex items-center justify-center"
+                                  style={{
+                                    left: `${left}%`,
+                                    width: `${width}%`,
+                                  }}
+                                >
+                                  <span className="text-[10px] text-red-300 font-medium truncate">
+                                    {booking.startTime}-{booking.endTime}
+                                  </span>
+                                </div>
+                              );
+                            })}
+
+                            {/* Proposed booking */}
+                            {startTime &&
+                              endTime &&
+                              (() => {
+                                const [startHour, startMin] = startTime.split(":").map(Number);
+                                const [endHour, endMin] = endTime.split(":").map(Number);
+                                if (startHour < 9 || endHour > 22) return null;
+                                const startMinutes = (startHour - 9) * 60 + startMin;
+                                const endMinutes = (endHour - 9) * 60 + endMin;
+                                const duration = endMinutes - startMinutes;
+                                const totalMinutes = 13 * 60;
+                                const left = (startMinutes / totalMinutes) * 100;
+                                const width = (duration / totalMinutes) * 100;
+
+                                return (
+                                  <div
+                                    className={`absolute top-1 bottom-1 rounded px-1 flex items-center justify-center ${
+                                      canBook
+                                        ? "bg-green-500/30 border border-green-500/50"
+                                        : "bg-amber-500/30 border border-amber-500/50"
+                                    }`}
+                                    style={{
+                                      left: `${left}%`,
+                                      width: `${width}%`,
+                                    }}
+                                  >
+                                    <span
+                                      className={`text-[10px] font-medium truncate ${
+                                        canBook ? "text-green-300" : "text-amber-300"
+                                      }`}
+                                    >
+                                      {startTime}-{endTime}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                          </div>
+                          <div className="text-xs text-slate-500 w-16 text-right">10 PM</div>
+                        </div>
+
+                        {/* Legend */}
+                        <div className="flex gap-4 text-xs mt-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-red-500/30 border border-red-500/50 rounded"></div>
+                            <span className="text-slate-400">Booked</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-green-500/30 border border-green-500/50 rounded"></div>
+                            <span className="text-slate-400">Your Selection (Available)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-amber-500/30 border border-amber-500/50 rounded"></div>
+                            <span className="text-slate-400">Your Selection (Conflict)</span>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    {!loadingSlots && apiSlots.length === 0 && (
-                      <div className="col-span-2 text-slate-500">
-                        {selectedBackendId
-                          ? "No slots found for this day."
-                          : "This room is not linked to a server room yet. Please seed the database to enable booking."}
-                      </div>
-                    )}
-                    {!loadingSlots &&
-                      apiSlots.map((s) => {
-                        const local = new Date(s.startIso);
-                        const hh = String(local.getHours()).padStart(2, "0");
-                        const mm = String(local.getMinutes()).padStart(2, "0");
-                        const time = `${hh}:${mm}`;
-                        const available = !!s.available;
-                        return (
-                          <Button
-                            key={s.startIso}
-                            variant={
-                              selectedTime === time ? "default" : "outline"
-                            }
-                            className={`h-12 ${
-                              selectedTime === time
-                                ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold"
-                                : available
-                                ? "border-slate-600 text-slate-300 hover:border-amber-500/50 hover:bg-slate-700/50 bg-slate-800/50"
-                                : "opacity-30 cursor-not-allowed bg-slate-900/50 border-slate-800"
-                            }`}
-                            disabled={!available}
-                            onClick={() => setSelectedTime(time)}
-                          >
-                            {time}
-                          </Button>
-                        );
-                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
 
           {/* Booking Summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-4 bg-slate-800/50 border-slate-700 shadow-xl">
-              <CardHeader className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-b border-slate-700">
-                <CardTitle className="text-white text-xl">
+            <Card className="sticky top-24 bg-slate-800/50 border-slate-700 shadow-xl">
+              <div className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-b border-slate-700 h-16 flex items-center justify-center">
+                <h3 className="text-white text-xl font-semibold">
                   Booking Summary
-                </CardTitle>
-              </CardHeader>
+                </h3>
+              </div>
               <CardContent className="space-y-6 p-6">
                 {selectedRoomData ? (
                   <>
@@ -421,103 +596,11 @@ export default function BookingPage() {
                       </p>
                       <p className="text-slate-400 flex items-center gap-1">
                         <Users className="h-4 w-4" />
-                        Up to {selectedRoomData.capacity} players
+                        {numberOfPlayers} player{numberOfPlayers !== "1" ? "s" : ""}
                       </p>
                       <div className="text-amber-400 font-semibold">
                         $50 per person/hour
                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="block font-semibold text-white">
-                        Number of Players
-                      </label>
-                      <Select
-                        value={numberOfPlayers}
-                        onValueChange={setNumberOfPlayers}
-                      >
-                        <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-800 border-slate-700">
-                          <SelectItem
-                            value="1"
-                            className="text-white hover:bg-slate-700"
-                          >
-                            1 Player
-                          </SelectItem>
-                          <SelectItem
-                            value="2"
-                            className="text-white hover:bg-slate-700"
-                          >
-                            2 Players
-                          </SelectItem>
-                          <SelectItem
-                            value="3"
-                            className="text-white hover:bg-slate-700"
-                          >
-                            3 Players
-                          </SelectItem>
-                          <SelectItem
-                            value="4"
-                            className="text-white hover:bg-slate-700"
-                          >
-                            4 Players
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="block font-semibold text-white">
-                        Hours
-                      </label>
-                      <Select value={hours} onValueChange={setHours}>
-                        <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-800 border-slate-700">
-                          <SelectItem
-                            value="1"
-                            className="text-white hover:bg-slate-700"
-                          >
-                            1 Hour{" "}
-                            {Number(numberOfPlayers) > 1
-                              ? "(short for group)"
-                              : ""}
-                          </SelectItem>
-                          <SelectItem
-                            value="2"
-                            className="text-white hover:bg-slate-700"
-                          >
-                            2 Hours{" "}
-                            {Number(numberOfPlayers) === 2
-                              ? "(recommended)"
-                              : ""}
-                          </SelectItem>
-                          <SelectItem
-                            value="3"
-                            className="text-white hover:bg-slate-700"
-                          >
-                            3 Hours{" "}
-                            {Number(numberOfPlayers) === 3
-                              ? "(recommended)"
-                              : ""}
-                          </SelectItem>
-                          <SelectItem
-                            value="4"
-                            className="text-white hover:bg-slate-700"
-                          >
-                            4 Hours{" "}
-                            {Number(numberOfPlayers) === 4
-                              ? "(recommended)"
-                              : ""}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-slate-400">
-                        Tip: 1 hour per player is usually the sweet spot.
-                      </p>
                     </div>
 
                     {selectedDate && (
@@ -529,11 +612,11 @@ export default function BookingPage() {
                       </div>
                     )}
 
-                    {selectedTime && (
+                    {startTime && endTime && (
                       <div className="space-y-2">
-                        <p className="font-semibold text-white">Start Time</p>
+                        <p className="font-semibold text-white">Time</p>
                         <p className="text-slate-300 bg-slate-700/50 px-3 py-2 rounded-md">
-                          {selectedTime}
+                          {startTime} - {endTime}
                         </p>
                       </div>
                     )}
@@ -548,26 +631,17 @@ export default function BookingPage() {
                         </span>
                       </div>
                       <div className="text-xs text-slate-400 mb-4">
-                        {numberOfPlayers} player
-                        {numberOfPlayers !== "1" ? "s" : ""} × {totalHours} hour
-                        {totalHours !== 1 ? "s" : ""} total
+                        {numberOfPlayers} player{numberOfPlayers !== "1" ? "s" : ""} × {totalHours} hour
+                        {totalHours !== 1 ? "s" : ""}
                       </div>
                     </div>
 
                     <Button
-                      className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"
                       onClick={handleBooking}
-                      disabled={
-                        !(
-                          selectedRoomData.backendId &&
-                          selectedDate &&
-                          selectedTime &&
-                          numberOfPlayers &&
-                          hours
-                        )
-                      }
+                      className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold py-3 text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!canBook || !user}
                     >
-                      Book Now (${totalPrice})
+                      {!user ? "Login to Book" : !canBook ? "Time Unavailable" : "Confirm Booking"}
                     </Button>
                   </>
                 ) : (
