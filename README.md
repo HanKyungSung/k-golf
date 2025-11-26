@@ -72,21 +72,24 @@ The POS system follows a **queue-based bidirectional sync** pattern where local 
 See [pos/apps/electron/README.md](pos/apps/electron/README.md) for detailed POS architecture.
 
 ### Booking (Existing)
-- Pricing: $50 per player per hour (players 1–4, hours 1–4 independently).
+- Pricing: $50 per player per hour (players 1–4, each player gets 1 hour).
 - ~~Planned persistence: PostgreSQL (docker-compose `db` service) with overlap constraints.~~
 - Persistence: PostgreSQL + Prisma with overlap constraints.
 - Auth: Email verification + password login; sessions via HttpOnly cookie. Google OAuth planned.
+- UI: Custom TimePicker component with 12-hour format, full minute selection (00-59), and visual timeline showing existing bookings and availability conflicts.
 
-## What’s New (Aug 2025)
+## What's New (Aug 2025)
 
 Auth and UX
 - Frontend verification flow: email links now land on the frontend `/verify` page before calling the backend.
 - Resend verification with cooldown: UI shows remaining seconds; backend enforces a retry window.
 - Structured login errors: backend returns specific codes/messages; frontend surfaces them consistently.
-- Auto-logout on expiry: frontend revalidates the session on mount, window focus/visibility, online events, and every 5 minutes; a 401 clears local user and shows a toast “Session expired, please log in again.”
+- Auto-logout on expiry: frontend revalidates the session on mount, window focus/visibility, online events, and every 5 minutes; a 401 clears local user and shows a toast "Session expired, please log in again."
+- Enhanced booking page: Custom TimePicker component with 12-hour format, full minute selection (00-59), visual timeline showing existing bookings and real-time availability checking.
 
 Bookings and Availability
 - Availability API: `GET /api/bookings/availability?roomId&date&hours&slotMinutes` computes valid continuous windows using stored per-room operating hours (openMinutes/closeMinutes).
+- Timeline API: `GET /api/bookings/by-room-date?roomId&date` returns all bookings for a specific room and date to display in the visual timeline.
 - Overlap prevention: server checks for conflicting bookings; optional DB constraint planned.
 - Price stored as decimal: Booking.price is `Decimal(10,2)` (replaced older cents field).
 - Rooms API: `GET /api/bookings/rooms` returns active rooms only.
@@ -94,6 +97,7 @@ Bookings and Availability
  - No past bookings: server rejects booking requests with a start time in the past; availability marks past starts unavailable.
  - Cancellation: `PATCH /api/bookings/:id/cancel` lets users cancel their own upcoming bookings.
  - Dashboard metrics: counts and monthly spend now consider only completed bookings.
+ - Custom TimePicker: Replaces native HTML time input with a custom component featuring 12-hour format, AM/PM selection, and full minute precision (00-59).
 
 Database changes
 - Booking status column switched from a Postgres ENUM to TEXT for flexibility. The Prisma model is now `status String @default("CONFIRMED")` and the migration `20250828080000_status_to_string` alters the column type safely and drops the old enum if unused.

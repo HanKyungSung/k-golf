@@ -259,9 +259,11 @@ flowchart TD
 
 ### 📅 **Booking System** (`/booking`)
 - Room selection with features and pricing
-- Interactive calendar
-- Time slot availability
-- Duration and pricing calculator
+- Interactive calendar with date selection
+- Custom time picker with full minute selection (00-59)
+- Real-time availability checking with visual timeline
+- Auto-calculated end time based on number of players (1 hour per player)
+- Duration and pricing calculator ($50 per player/hour)
 
 ### ⚙️ **Admin Panel** (`/admin`)
 - Booking management and modification

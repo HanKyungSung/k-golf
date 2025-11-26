@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimePicker } from "@/components/ui/time-picker";
 import { useAuth } from "@/hooks/use-auth";
 import { Clock, Users, Star, CalendarIcon } from "lucide-react";
 
@@ -57,34 +58,6 @@ const DISPLAY_ROOM_TEMPLATES: Array<{ name: string; image: string }> = [
   { name: "Room 4", image: "/golf-simulator-room.png" },
 ];
 
-// Mock bookings for timeline visualization
-const mockBookings: Booking[] = [
-  {
-    id: "1",
-    roomId: "display-1",
-    date: new Date().toISOString().split("T")[0],
-    startTime: "14:22",
-    endTime: "15:22",
-    customerName: "Walk-in Customer",
-  },
-  {
-    id: "2",
-    roomId: "display-2",
-    date: new Date().toISOString().split("T")[0],
-    startTime: "11:15",
-    endTime: "13:15",
-    customerName: "John Doe",
-  },
-  {
-    id: "3",
-    roomId: "display-1",
-    date: new Date().toISOString().split("T")[0],
-    startTime: "16:45",
-    endTime: "18:45",
-    customerName: "Jane Smith",
-  },
-];
-
 export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
@@ -92,7 +65,8 @@ export default function BookingPage() {
   const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [startTime, setStartTime] = useState<string>("");
   const [numberOfPlayers, setNumberOfPlayers] = useState<string>("1");
-  const [bookings, setBookings] = useState<Booking[]>(mockBookings);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -132,6 +106,50 @@ export default function BookingPage() {
     };
     loadRooms();
   }, []);
+
+  // Fetch bookings when room or date changes
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!selectedRoom || !selectedDate) {
+        setBookings([]);
+        return;
+      }
+
+      const backendId = rooms.find((r) => r.id === selectedRoom)?.backendId;
+      if (!backendId) {
+        setBookings([]);
+        return;
+      }
+
+      setLoadingBookings(true);
+      try {
+        const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
+        const dateStr = toLocalYMD(selectedDate);
+        const res = await fetch(
+          `${apiBase}/api/bookings/by-room-date?roomId=${backendId}&date=${dateStr}`,
+          { credentials: "include" }
+        );
+        if (!res.ok) {
+          setBookings([]);
+          return;
+        }
+        const data = await res.json();
+        // Map backend bookings to include the display room ID
+        const mappedBookings = (data.bookings || []).map((b: any) => ({
+          ...b,
+          roomId: selectedRoom, // Use display room ID for filtering
+        }));
+        setBookings(mappedBookings);
+      } catch (error) {
+        console.error('Failed to fetch bookings:', error);
+        setBookings([]);
+      } finally {
+        setLoadingBookings(false);
+      }
+    };
+
+    fetchBookings();
+  }, [selectedRoom, selectedDate, rooms]);
 
   // Helper: local date + HH:mm to UTC ISO
   const toStartIso = (date: Date, timeHHmm: string) => {
@@ -215,17 +233,9 @@ export default function BookingPage() {
       return;
     }
 
-    // Mock booking process for now
-    // TODO: Replace with actual API call when backend is ready
-    alert(
-      `Booking confirmed!\nRoom: ${selectedRoomData?.name}\nDate: ${selectedDate?.toDateString()}\nTime: ${startTime} - ${endTime}\nPlayers: ${numberOfPlayers}`
-    );
-    navigate("/dashboard");
-
-    /* TODO: Implement actual API call
     try {
       const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
-      const startTimeIso = toStartIso(selectedDate, startTime);
+      const startTimeIso = toStartIso(selectedDate!, startTime);
       const backendId = rooms.find((r) => r.id === selectedRoom)?.backendId;
       if (!backendId) {
         alert("No backend room available for this selection");
@@ -247,11 +257,14 @@ export default function BookingPage() {
         alert(err?.message || err?.error || "Failed to create booking");
         return;
       }
+      alert(
+        `Booking confirmed!\nRoom: ${selectedRoomData?.name}\nDate: ${selectedDate?.toDateString()}\nTime: ${startTime} - ${endTime}\nPlayers: ${numberOfPlayers}`
+      );
       navigate("/dashboard");
-    } catch {
+    } catch (error) {
+      console.error('Booking error:', error);
       alert("Network error while creating booking");
     }
-    */
   };
 
   const selectedRoomData = rooms.find((r) => r.id === selectedRoom);
@@ -428,17 +441,14 @@ export default function BookingPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="start-time" className="text-white font-medium">
+                        <Label className="text-white font-medium">
                           Start Time (9:00 AM - 10:00 PM)
                         </Label>
-                        <Input
-                          id="start-time"
-                          type="time"
+                        <TimePicker
                           value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
-                          min="09:00"
-                          max="22:00"
-                          className="bg-slate-700/50 border-slate-600 text-white [color-scheme:dark]"
+                          onChange={setStartTime}
+                          minTime="09:00"
+                          maxTime="22:00"
                         />
                       </div>
 

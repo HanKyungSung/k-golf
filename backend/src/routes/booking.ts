@@ -90,6 +90,56 @@ router.get('/mine', requireAuth, async (req, res) => {
   res.json({ bookings: bookings.map(presentBooking) });
 });
 
+// Get bookings by room and date for timeline visualization
+router.get('/by-room-date', async (req, res) => {
+  const { roomId, date } = req.query as { roomId?: string; date?: string };
+  
+  if (!roomId) {
+    return res.status(400).json({ error: 'roomId required' });
+  }
+  if (!date) {
+    return res.status(400).json({ error: 'date required (YYYY-MM-DD)' });
+  }
+
+  try {
+    // Parse the date string (YYYY-MM-DD)
+    const [y, m, d] = date.split('-').map(Number);
+    if (!y || !m || !d) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+
+    // Create start and end of day in local time
+    const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
+    const dayEnd = new Date(y, m - 1, d, 23, 59, 59, 999);
+
+    // Fetch bookings for the room on this date
+    const bookings = await listRoomBookingsBetween(roomId, dayStart, dayEnd);
+
+    // Format bookings for frontend timeline
+    const formattedBookings = bookings.map((b) => ({
+      id: b.id,
+      roomId: b.roomId,
+      date: date,
+      startTime: new Date(b.startTime).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      }),
+      endTime: new Date(b.endTime).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      }),
+      customerName: b.customerName || 'Guest',
+    }));
+
+    res.json({ bookings: formattedBookings });
+  } catch (error) {
+    console.error('[GET BY-ROOM-DATE] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get single booking by ID
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
