@@ -100,21 +100,27 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: HIGH
 
-**1. Customer Booking Page - No Available Slots** 🔴 NEW
-- **Status:** 🔴 Open
+**1. Customer Booking Page - Enhanced with Custom TimePicker** ✅ COMPLETED
+- **Status:** 🟢 Resolved (2025-11-26)
 - **Reported:** 2025-11-25 (after production database seeding)
 - **Component:** Customer-facing booking page
-- **Issue:** Customers cannot see any available time slots when trying to book
-- **Location:** Customer booking flow (frontend customer pages)
-- **Impact:** HIGH - Blocks all online customer bookings
-- **Next Steps:**
-  - [ ] Investigate availability calculation logic
-  - [ ] Check room availability query/filters
-  - [ ] Verify date/time handling (timezone issues?)
-  - [ ] Check if seeded bookings are blocking all slots
-  - [ ] Test with different date ranges
-  - [ ] Verify booking end time calculations
-  - [ ] Console log availability data to debug
+- **Issue:** Initially no available time slots, enhanced with custom time picker
+- **Solution Implemented:**
+  - [x] Created custom TimePicker component with 12-hour format
+  - [x] Changed from 15-minute intervals to full minute selection (00-59)
+  - [x] Added scrollable minute picker with compact design
+  - [x] Integrated real-time booking data from backend API
+  - [x] Added visual timeline showing existing bookings and conflicts
+  - [x] Replaced mock data with GET /api/bookings/by-room-date endpoint
+  - [x] Auto-calculated end time based on number of players (1 hour per player)
+- **Backend Changes:**
+  - [x] Added GET /api/bookings/by-room-date endpoint for timeline data
+  - [x] Returns bookings with HH:mm time format for frontend visualization
+- **Documentation:**
+  - [x] Updated SITE_FLOW.md with enhanced booking features
+  - [x] Updated README.md with TimePicker and timeline API details
+- **Impact:** HIGH - Improved booking UX with precise time selection and availability visualization
+- **Commit:** 621b011 "Add custom TimePicker and integrate booking timeline API"
 
 **2. Print Queue & Thermal Printer Integration** 🔮 FUTURE
 - **Status:** 🟡 Deferred to Future Phase
