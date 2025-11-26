@@ -99,7 +99,49 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ### Priority: HIGH
 
-**1. Booking Status Implementation (bookingStatus + paymentStatus)**
+**1. Customer Booking Page - No Available Slots** 🔴 NEW
+- **Status:** 🔴 Open
+- **Reported:** 2025-11-25 (after production database seeding)
+- **Component:** Customer-facing booking page
+- **Issue:** Customers cannot see any available time slots when trying to book
+- **Location:** Customer booking flow (frontend customer pages)
+- **Impact:** HIGH - Blocks all online customer bookings
+- **Next Steps:**
+  - [ ] Investigate availability calculation logic
+  - [ ] Check room availability query/filters
+  - [ ] Verify date/time handling (timezone issues?)
+  - [ ] Check if seeded bookings are blocking all slots
+  - [ ] Test with different date ranges
+  - [ ] Verify booking end time calculations
+  - [ ] Console log availability data to debug
+
+**2. Print Queue & Thermal Printer Integration** 🔮 FUTURE
+- **Status:** 🟡 Deferred to Future Phase
+- **Component:** POS Printing System
+- **Requirement:** Backend print queue + standalone bridge service for thermal printers
+- **Current State:** Using browser print dialog (works for receipts)
+- **Architecture:**
+  - Backend print queue service (PrintJob and PrintBridge models)
+  - WebSocket for real-time job broadcasting
+  - Standalone Node.js bridge service (Windows service / systemd)
+  - Thermal printer support (ESC/POS, Epson/Star printers)
+  - Web POS integration with queue-based printing
+- **Implementation Tasks:**
+  - [ ] Add PrintJob and PrintBridge models to Prisma schema
+  - [ ] Create print queue service with job lifecycle management
+  - [ ] Add REST API endpoints (POST /api/print/receipt, GET /api/print/jobs)
+  - [ ] Implement WebSocket server for real-time job broadcasting
+  - [ ] Create standalone bridge service package
+  - [ ] Add thermal printer support (node-thermal-printer)
+  - [ ] Format receipts with ESC/POS commands
+  - [ ] Package as Windows service / systemd service
+  - [ ] Update web POS to use queue-based printing
+  - [ ] Install bridge service on venue computer
+  - [ ] Test with real thermal printer hardware
+- **Priority:** LOW - Current browser print works, implement only if thermal printer needed
+- **Estimated Effort:** 10-12 days (backend 4-5 days, bridge service 3-4 days, integration 3 days)
+
+**3. Booking Status Implementation (bookingStatus + paymentStatus)**
 - **Status:** 🔴 Open
 - **Component:** Full Stack (Backend + Frontend + POS)
 - **Requirement:** Implement dual-status system for booking lifecycle and payment workflow tracking
@@ -1671,71 +1713,19 @@ This feature will be implemented after the web POS is stable and in use. See `/P
 
 ## 🧪 Testing & Quality Assurance
 
-### E2E Testing Setup – ✅ Partially Complete
-
-**Completed:**
-[x] Playwright E2E testing framework installed
-[x] Test structure at `pos/tests/`
-[x] Database helper with reset/seed functions
-[x] Comprehensive booking creation test
-[x] Test fixtures (customers.json, bookings.json)
-[x] Automated test database setup script
-[x] Documentation in `pos/tests/E2E_TESTING_GUIDE.md`
-[x] Fixed Button component to forward data-testid prop
-
-**Test Status: 3/5 Passing ✅**
-
-**Passing Tests:**
-- ✅ Should create walk-in booking with existing customer
-- ✅ Should create walk-in booking as guest
-- ✅ Should handle validation errors
-
-**Failing Tests (Functional Issues):**
-
-1. **"should create walk-in booking with new customer"**
-   - Issue: Modal doesn't close after successful booking
-   - Error: Modal still visible after "Create Booking" click
-   - Root Cause: Backend API/onSuccess callback not triggering modal close
-   - Location: `pos/tests/e2e/booking/create-booking.spec.ts:85`
-   - Next Steps: Investigate BookingModal handleSubmit success flow
-
-2. **"should disable guest mode for phone bookings"**
-   - Issue: Continue button remains enabled for guest + phone booking
-   - Error: Button enabled when should be disabled
-   - Root Cause: React state update timing or validation logic
-   - Location: `pos/tests/e2e/booking/create-booking.spec.ts:150`
-   - Implementation: canProceedFromCustomerMode() validation exists but not working
-   - Next Steps: Debug button disabled logic on customerMode step
-
-### Pending Test Tasks
-
-**Setup:**
-- [ ] Set up test database: `cd backend && npm run db:setup-test`
-- [ ] Install Playwright: `cd pos && npm install && npx playwright install`
-- [ ] Configure test environment: Copy .env.example to .env.test
-- [ ] Update TEST_DATABASE_URL in .env.test
-- [ ] Add remaining data-testid attributes to components
-- [ ] Restart backend server with updated middleware
-
-**Test Execution:**
-- [ ] Fix modal close issue in booking creation
-- [ ] Fix guest mode validation for phone bookings
-- [ ] Test all three customer modes (existing/new/guest)
-- [ ] Verify authentication with API key
-- [ ] Verify no foreign key constraint errors
-- [ ] Run full E2E suite: `npm run test:e2e:ui`
-
-### Phase 1.8: Web POS End-to-End Testing (Production)
+### Web POS End-to-End Testing (Production) – 🔄 IN PROGRESS
 
 **Status:** 🔄 In Progress  
 **Priority:** HIGH - All migration features complete, ready for comprehensive testing  
-**Environment:** Production (k-golf.inviteyou.ca)
+**Environment:** Production (k-golf.inviteyou.ca)  
+**Estimated Time:** 4-6 hours
 
 **Prerequisites:**
 - [x] Phase 1 Frontend Migration Complete
 - [x] Phase 1.6 Booking Detail Page Complete
 - [x] Phase 1.7 Menu Management Complete
 - [x] All features deployed to production
+- [x] Production database seeded with test data (133 bookings)
 - [ ] Admin credentials verified
 - [ ] Mobile devices available for testing
 
@@ -1843,29 +1833,71 @@ This feature will be implemented after the web POS is stable and in use. See `/P
    - [ ] Take screenshots of any bugs found
    - [ ] Record steps to reproduce each bug
    - [ ] Categorize bugs by severity (Critical/High/Medium/Low)
-   - [ ] Update POS_WEB_MIGRATION.md with Phase 1.8 completion status
-   - [ ] Create GitHub issues for bugs if needed
    - [ ] Update TASKS.md with any new issues found
+   - [ ] Create GitHub issues for bugs if needed
 
 **Known Issues to Verify:**
-- **Critical Bug #1:** Booking Detail Actions Panel Empty (see Active Issues section)
-- Room card "Book" button navigation issue (FIXED in this commit)
+- **Critical Bug #1:** Booking Detail Actions Panel (RESOLVED - verify fix works)
+- **New Bug:** Customer booking page shows no available slots (needs investigation)
 
 **Success Criteria:**
 - [ ] All core POS features functional on production
-- [ ] No critical bugs blocking staff usage
+- [ ] No critical bugs blocking usage
 - [ ] Mobile/tablet experience acceptable
 - [ ] Performance meets requirements (< 3s load time)
 - [ ] All test scenarios documented
 
-**Estimated Time:** 4-6 hours (comprehensive testing)
-
 **Next Steps After Testing:**
 - Fix any critical bugs found
 - Document minor issues for future sprints
-- Update migration docs with final status
-- Plan staff training session
-- Consider Phase 3 (Print Queue) if needed
+- Update TASKS.md with testing completion status
+- Monitor production usage for issues
+- Consider Print Queue implementation if thermal printer needed
+
+---
+
+### Electron POS E2E Testing (Legacy) – ✅ Partially Complete
+
+**Note:** This section relates to the legacy Electron POS app. Web POS testing is above.
+
+**Completed:**
+[x] Playwright E2E testing framework installed
+[x] Test structure at `pos/tests/`
+[x] Database helper with reset/seed functions
+[x] Comprehensive booking creation test
+[x] Test fixtures (customers.json, bookings.json)
+[x] Automated test database setup script
+[x] Documentation in `pos/tests/E2E_TESTING_GUIDE.md`
+[x] Fixed Button component to forward data-testid prop
+
+**Test Status: 3/5 Passing ✅**
+
+**Passing Tests:**
+- ✅ Should create walk-in booking with existing customer
+- ✅ Should create walk-in booking as guest
+- ✅ Should handle validation errors
+
+**Failing Tests (Functional Issues):**
+
+1. **"should create walk-in booking with new customer"**
+   - Issue: Modal doesn't close after successful booking
+   - Root Cause: Backend API/onSuccess callback not triggering modal close
+   - Location: `pos/tests/e2e/booking/create-booking.spec.ts:85`
+
+2. **"should disable guest mode for phone bookings"**
+   - Issue: Continue button remains enabled for guest + phone booking
+   - Root Cause: React state update timing or validation logic
+   - Location: `pos/tests/e2e/booking/create-booking.spec.ts:150`
+
+**Pending Test Tasks:**
+- [ ] Set up test database: `cd backend && npm run db:setup-test`
+- [ ] Install Playwright: `cd pos && npm install && npx playwright install`
+- [ ] Configure test environment: Copy .env.example to .env.test
+- [ ] Update TEST_DATABASE_URL in .env.test
+- [ ] Fix modal close issue in booking creation
+- [ ] Fix guest mode validation for phone bookings
+- [ ] Test all three customer modes (existing/new/guest)
+- [ ] Run full E2E suite: `npm run test:e2e:ui`
 
 ---
 
