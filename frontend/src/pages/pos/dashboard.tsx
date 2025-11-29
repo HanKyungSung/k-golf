@@ -610,9 +610,18 @@ interface TimelineViewProps {
 
 function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
   const navigate = useNavigate();
-  const dayStart = 9 * 60; // 9 AM in minutes
-  const dayEnd = 22 * 60;  // 10 PM in minutes
+  const dayStart = 0 * 60; // Midnight (0:00)
+  const dayEnd = 24 * 60;  // Next midnight (24:00)
   const totalMinutes = dayEnd - dayStart;
+
+  // Track current time for real-time bar
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every minute
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Get current week (Monday to Sunday)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
@@ -650,6 +659,37 @@ function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
 
   // Assign colors to rooms
   const roomColors = ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-orange-600'];
+
+  // Helper: Check if booking has ended (past)
+  const isBookingPast = (booking: Booking) => {
+    const endTime = new Date(booking.endTime);
+    return endTime < currentTime;
+  };
+
+  // Helper: Filter bookings by status (only CONFIRMED, hide CANCELLED)
+  const filterBookingsByStatus = (bookingsToFilter: Booking[]) => {
+    return bookingsToFilter.filter(b => 
+      b.bookingStatus === 'CONFIRMED' || b.status === 'booked' // Handle both API field names
+    );
+  };
+
+  // Helper: Calculate current time position in timeline
+  const getCurrentTimePosition = (day: Date) => {
+    // Only show current time bar for today
+    const today = new Date();
+    const todayStr = dateKey(today);
+    const dayStr = dateKey(day);
+    
+    if (todayStr !== dayStr) return null;
+    
+    const currentHour = currentTime.getHours();
+    const currentMinutes = currentTime.getMinutes();
+    
+    const currentTotalMinutes = currentHour * 60 + currentMinutes;
+    const leftPct = (currentTotalMinutes / totalMinutes) * 100;
+    
+    return leftPct;
+  };
 
   return (
     <Card>
@@ -705,9 +745,9 @@ function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
                 <div className="flex items-start gap-3">
                   <div className="min-w-[90px]"></div>
                   <div className="flex-1 flex">
-                    {Array.from({ length: 13 }, (_, i) => {
-                      const hour = 9 + i;
-                      const displayHour = hour > 12 ? hour - 12 : hour;
+                    {Array.from({ length: 24 }, (_, i) => {
+                      const hour = i;
+                      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
                       const period = hour < 12 ? 'A' : 'P';
                       return (
                         <div key={i} className="flex-1 text-left">
@@ -720,8 +760,9 @@ function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
 
                 {/* Room Rows */}
                 {rooms.map((room, roomIdx) => {
-                  const roomBookings = dayBookings.filter(b => b.roomId === room.id);
+                  const roomBookings = filterBookingsByStatus(dayBookings.filter(b => b.roomId === room.id));
                   const roomColor = roomColors[roomIdx % roomColors.length];
+                  const currentTimePos = getCurrentTimePosition(day);
 
                   return (
                     <div key={room.id} className="flex items-start gap-3">
@@ -737,10 +778,22 @@ function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
                       <div className="flex-1 relative h-14 bg-slate-700/30 rounded-lg border border-slate-700 overflow-hidden">
                         {/* Hour Grid Lines */}
                         <div className="absolute inset-0 flex">
-                          {Array.from({ length: 13 }, (_, i) => (
+                          {Array.from({ length: 24 }, (_, i) => (
                             <div key={i} className="flex-1 border-r border-slate-700/40 last:border-r-0"></div>
                           ))}
                         </div>
+
+                        {/* Current Time Bar (Real-time indicator for today) */}
+                        {currentTimePos !== null && (
+                          <div
+                            className="absolute top-0 bottom-0 w-1 bg-red-500 shadow-lg z-40 animate-pulse"
+                            style={{ left: `${currentTimePos}%` }}
+                          >
+                            <div className="absolute -top-6 -left-4 bg-red-600 text-white text-[10px] px-2 py-1 rounded font-bold whitespace-nowrap">
+                              {currentTime.getHours()}:{String(currentTime.getMinutes()).padStart(2, '0')}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Booking Blocks */}
                         {roomBookings.map((booking) => {
@@ -748,11 +801,12 @@ function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
                           const startMinutes = h * 60 + m;
                           const leftPct = ((startMinutes - dayStart) / totalMinutes) * 100;
                           const widthPct = (booking.duration * 60 / totalMinutes) * 100;
+                          const isPast = isBookingPast(booking);
 
                           return (
                             <div
                               key={booking.id}
-                              className={`${roomColor} absolute top-2 bottom-2 rounded-md hover:opacity-80 transition-all cursor-pointer overflow-hidden group shadow-md`}
+                              className={`${isPast ? 'bg-slate-500 opacity-40' : roomColor} absolute top-2 bottom-2 rounded-md hover:opacity-80 transition-all cursor-pointer overflow-hidden group shadow-md`}
                               style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
                               onClick={() => onBookingClick(booking.id)}
                             >
@@ -772,6 +826,7 @@ function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
                                 <div className="text-slate-400 text-[9px] mt-1">
                                   {booking.time} • {booking.duration}h • {booking.players} players • ${booking.price}
                                 </div>
+                                {isPast && <div className="text-slate-500 text-[9px] mt-1">(Past)</div>}
                               </div>
                             </div>
                           );
