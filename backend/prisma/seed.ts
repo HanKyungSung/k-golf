@@ -145,6 +145,49 @@ async function main() {
 		}
 	}
 
+	// Create a second admin account for testing (separate from primary admin)
+	// Prevents issues from shared account access
+	const admin2Email = 'admin2@kgolf.com';
+	const admin2Phone = '+14165553333'; // Separate phone for admin2
+	const admin2Password = 'admin2password123';
+	
+	const existingAdmin2 = await prisma.user.findFirst({
+		where: {
+			OR: [
+				{ email: admin2Email },
+				{ phone: admin2Phone }
+			]
+		}
+	});
+
+	if (!existingAdmin2) {
+		const passwordHash = await hashPassword(admin2Password);
+		await prisma.user.create({
+			data: {
+				email: admin2Email,
+				name: 'Admin 2 (Test)',
+				phone: admin2Phone,
+				passwordHash,
+				passwordUpdatedAt: new Date(),
+				emailVerifiedAt: new Date(),
+				role: 'ADMIN',
+				registrationSource: 'ONLINE',
+			} as any,
+		});
+		console.log(`Seeded secondary admin user: ${admin2Email} / ${admin2Phone} / ${admin2Password} (role: ADMIN)`);
+	} else {
+		// Ensure existing admin2 has ADMIN role
+		if ((existingAdmin2 as any).role !== 'ADMIN') {
+			await prisma.user.update({
+				where: { id: existingAdmin2.id },
+				data: { role: 'ADMIN', emailVerifiedAt: new Date() },
+			});
+			console.log(`Updated existing user to ADMIN role: ${admin2Email} / ${admin2Phone}`);
+		} else {
+			console.log(`Admin 2 already exists: ${admin2Email} / ${admin2Phone}`);
+		}
+	}
+
 	// Create a test user for manual login (idempotent by email)
 	// Only in non-production by default. To force in prod/staging, set SEED_ENABLE_TEST_USER=true explicitly.
 	const enableTestUser = (process.env.NODE_ENV !== 'production') || process.env.SEED_ENABLE_TEST_USER === 'true';
