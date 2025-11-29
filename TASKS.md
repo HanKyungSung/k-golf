@@ -22,6 +22,170 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 ## Personal note
 - Need to see how to handle the paymentStatus. Confirm with customer.
 - Ask no cleaning time between bookings.
+- The coupon. like every 30 times visit, free hours etc.
+- Cancel booking shouldn't show in visual. Remove it from the timeline. 
+  - timeline shows the bookings the cancelled one.
+  - past time bookings shows grey. not real color
+  - remove it from room management too.
+- When pay button clicks
+  - per seat payment closure 
+
+## 🚨 URGENT TASKS (2025-11-26)
+
+### 1. **Printable Bill Formatting** 🔥 CRITICAL
+- **Priority:** VERY URGENT
+- **Component:** Web POS Booking Detail Page
+- **Requirement:** Each bill must be nicely formatted and printable
+- **Current State:** Basic print functionality exists but formatting needs improvement
+- **Tasks:**
+  - [ ] Design professional receipt layout (header, itemized list, totals, footer)
+  - [ ] Add business branding (K-Golf logo, address, contact info)
+  - [ ] Format currency properly with $ symbol and 2 decimals
+  - [ ] Add print-specific CSS (hide buttons, optimize for paper)
+  - [ ] Support different receipt types:
+    - [ ] Individual seat bill (per-seat orders only)
+    - [ ] Combined bill (all seats together)
+    - [ ] Summary bill (totals only, no item details)
+  - [ ] Add receipt metadata (date, time, booking #, room, staff name)
+  - [ ] Test printing on actual receipt printer or A4 paper
+  - [ ] Add print preview option
+  - [ ] Handle tax breakdown display
+  - [ ] Add payment method fields (for future: Card/Cash/Tips)
+- **Impact:** HIGH - Required for customer checkout process
+- **Estimated Time:** 2-4 hours
+
+### 2. **Payment Completion Workflow** 🟡 PLANNING
+- **Priority:** HIGH (needs customer confirmation first)
+- **Component:** Web POS Booking Detail + Backend
+- **Requirement:** Define and implement payment completion process
+- **Questions for Customer:**
+  - [ ] When should payment status change? (before/after bill printed?)
+  - [ ] Do you collect payment before or after service?
+  - [ ] Should "Complete Booking" be blocked until payment received?
+  - [ ] How do you track Card vs Cash vs Tips?
+  - [ ] Do you need payment history/audit log?
+  - [ ] Should payment update room status color?
+  
+- **Proposed Workflow Options:**
+  
+  **Option A: Simple Flow (Payment at End)**
+  ```
+  1. Customer plays → 2. Staff prints bill → 3. Customer pays → 4. Staff marks "Paid" → 5. Complete booking
+  ```
+  
+  **Option B: Advanced Flow (Payment Before Completion)**
+  ```
+  1. Customer plays → 2. Issue Bill (changes room to RED) → 3. Collect Payment (Card/Cash/Tip) → 4. Mark Paid (room to BLUE) → 5. Complete Booking
+  ```
+
+### 3. **Book Keeping (Financial Records)** 🟡 HIGH
+- **Priority:** HIGH - Essential for business operations and tax compliance
+- **Component:** Web POS Admin Dashboard + Backend
+- **Requirement:** Track and record all financial transactions for accounting and tax purposes
+- **Features Needed:**
+  - [ ] Daily sales report (by payment method: Card/Cash/Tips)
+  - [ ] Monthly revenue summary
+  - [ ] Transaction history with timestamps and staff attribution
+  - [ ] Void/Refund tracking with reasons
+  - [ ] Tax calculation per transaction
+  - [ ] Export to CSV/Excel for accounting software
+  - [ ] Reconciliation report (expected vs actual)
+  - [ ] Payment method breakdown (Card vs Cash)
+  - [ ] Employee/staff performance metrics (sales per staff)
+  - [ ] Discount/coupon tracking
+  - [ ] Period-based reports (daily, weekly, monthly, custom date range)
+- **Database Considerations:**
+  - [ ] Ensure all transactions logged with proper timestamps
+  - [ ] Add transaction ID for reconciliation
+  - [ ] Track voided/cancelled bookings separately (audit trail)
+  - [ ] Store payment method and staff attribution per booking
+  - [ ] Add notes field for refunds/adjustments
+- **Integration Points:**
+  - [ ] Link to booking completion (when does revenue get recorded?)
+  - [ ] Link to payment collection (when is payment final?)
+  - [ ] Link to cancellation process (refund handling)
+- **Impact:** HIGH - Legal/tax compliance requirement
+- **Estimated Time:** 4-6 hours
+
+### 4. **Customer Booking** 🟡 MEDIUM
+- **Priority:** MEDIUM - Customer-facing feature
+- **Component:** Frontend Web App `/booking` page
+- **Requirement:** Customers can browse available times and make online bookings
+- **Current State:** Basic booking page with custom TimePicker, real API integration
+- **Features Already Complete:**
+  - [x] Room selection with capacity/price info
+  - [x] Calendar date picker
+  - [x] Custom time picker (12-hour format, 00-59 minutes)
+  - [x] Visual timeline showing existing bookings
+  - [x] Real-time availability checking
+  - [x] Auto-calculated end time based on players
+  - [x] Booking creation via API
+- **Enhancements Needed:**
+  - [ ] Customer account login requirement (pre-booking)
+  - [ ] Pre-populated customer info (name, phone, email)
+  - [ ] Email confirmation after booking
+  - [ ] Booking cancellation option (24 hours before?)
+  - [ ] Booking modification (change date/time if available)
+  - [ ] QR code for easy venue check-in
+  - [ ] SMS reminders (24 hours before, 1 hour before)
+  - [ ] Add to calendar (Google Calendar, iCal export)
+  - [ ] Group booking support (multiple rooms)
+  - [ ] Waitlist if no availability
+  - [ ] Promo code/coupon application
+  - [ ] Special requests/notes field
+- **Impact:** MEDIUM - Improves customer experience and reduces phone bookings
+- **Estimated Time:** 3-5 hours (per feature)
+
+### 5. **Customer Dashboard** 🟡 MEDIUM
+- **Priority:** MEDIUM - Customer portal feature
+- **Component:** Frontend Web App `/dashboard` (customer view)
+- **Requirement:** Customers can view and manage their bookings
+- **Features Needed:**
+  - [ ] Upcoming bookings list (next 30 days)
+  - [ ] Past bookings history
+  - [ ] Booking status (confirmed, completed, cancelled)
+  - [ ] Quick booking buttons (rebook same room/time)
+  - [ ] Cancel booking option with deadline
+  - [ ] Modify booking (if slots available)
+  - [ ] View receipt/invoice for past bookings
+  - [ ] Loyalty program status (visit count, rewards earned)
+  - [ ] Payment method on file management
+  - [ ] Notification preferences (email, SMS)
+  - [ ] Account settings (name, phone, email, password)
+  - [ ] Download receipt/invoice as PDF
+  - [ ] Referral/invite friends section
+- **Integration Points:**
+  - [ ] Link to customer booking page for new bookings
+  - [ ] Link to profile/settings page
+  - [ ] Display loyalty rewards/coupons
+  - [ ] Show upcoming reminders
+- **Impact:** MEDIUM - Enhances customer experience and retention
+- **Estimated Time:** 4-6 hours
+  
+  **Option C: Flexible Flow (Payment Optional)**
+  ```
+  1. Customer plays → 2. Print bill (optional) → 3. Complete booking (payment tracked separately)
+  ```
+
+- **Implementation Tasks (Once Confirmed):**
+  - [ ] Add payment collection UI (Card/Cash/Tip input fields)
+  - [ ] Add "Mark as Paid" button with confirmation
+  - [ ] Update room status based on payment (if needed)
+  - [ ] Store payment details in database (paymentMethod, tipAmount, paidAt)
+  - [ ] Add payment receipt option (separate from order receipt)
+  - [ ] Update booking completion logic (require payment or not?)
+  - [ ] Add payment status indicator in dashboard
+  - [ ] Test complete payment workflow
+
+- **Database Fields Already Available:**
+  - `paymentStatus`: 'UNPAID' | 'BILLED' | 'PAID'
+  - `billedAt`: DateTime?
+  - `paidAt`: DateTime?
+  - `paymentMethod`: 'CARD' | 'CASH'
+  - `tipAmount`: Decimal?
+
+- **Impact:** MEDIUM-HIGH - Affects daily operations
+- **Estimated Time:** 4-6 hours (after requirements confirmed)
 
 ## 🐛 Active Issues & Bugs
 
