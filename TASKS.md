@@ -54,6 +54,53 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - **Impact:** HIGH - Required for customer checkout process
 - **Estimated Time:** 2-4 hours
 
+### 1.5 **Timeline Visual Enhancements** 🔥 CRITICAL
+- **Priority:** VERY URGENT
+- **Component:** Web POS Dashboard Timeline View (`frontend/src/pages/pos/dashboard.tsx`)
+- **Requirement:** Improve timeline visualization with real-time indicators and better status filtering
+- **Current State:** Basic timeline shows all bookings in a grid
+- **Tasks:**
+  - [ ] **Real-time Current Time Bar**
+    - [ ] Add animated vertical line indicating current time
+    - [ ] Update position every minute to follow timeline
+    - [ ] Move smoothly across timeline as time progresses
+    - [ ] Show current time label (HH:MM format)
+    - [ ] Use distinct color (e.g., red or amber) to stand out
+    - [ ] Only show bar during operating hours (9 AM - 10 PM)
+  
+  - [ ] **Past Booking Styling**
+    - [ ] Detect if booking has already ended (endTime < now)
+    - [ ] Display past bookings in grey or dark color (low contrast)
+    - [ ] Apply visual distinction (opacity: 0.5 or specific grey color like slate-500)
+    - [ ] Apply across all room columns in timeline
+    - [ ] Differentiate from active/future bookings
+  
+  - [ ] **Status-Based Filtering**
+    - [ ] Only show "CONFIRMED" bookings on timeline
+    - [ ] Hide "CANCELLED" bookings completely
+    - [ ] Hide "COMPLETED" bookings (optional: or show in light grey)
+    - [ ] Add filter controls (checkboxes) to toggle booking status visibility
+    - [ ] Remember filter preference per session
+    - [ ] Show booking count by status in legend
+  
+  - [ ] **Implementation Details**
+    - [ ] Calculate current time position: `(currentHour - 9) / 13 * 100%`
+    - [ ] Use `setInterval()` to update bar position every 60 seconds
+    - [ ] Add CSS animation for smooth position transitions
+    - [ ] Filter bookings by `booking.bookingStatus === 'CONFIRMED'`
+    - [ ] Check `booking.endTime < new Date()` for past detection
+  
+  - [ ] **Testing**
+    - [ ] Verify bar moves smoothly across timeline
+    - [ ] Verify bar disappears after 10 PM
+    - [ ] Verify past bookings appear grey
+    - [ ] Verify cancelled bookings don't show
+    - [ ] Test on different dates and times
+    - [ ] Test with multiple rooms and bookings
+  
+- **Impact:** HIGH - Better UX for staff monitoring room status in real-time
+- **Estimated Time:** 2-3 hours
+
 ### 2. **Payment Completion Workflow** 🟡 PLANNING
 - **Priority:** HIGH (needs customer confirmation first)
 - **Component:** Web POS Booking Detail + Backend
