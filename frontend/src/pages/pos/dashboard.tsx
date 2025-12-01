@@ -66,7 +66,7 @@ export default function POSDashboard() {
     }, 5000);
     
     return () => clearInterval(pollInterval);
-  }, []);
+  }, [currentWeekStart]);
 
   // Reload data when selected week changes
   useEffect(() => {
