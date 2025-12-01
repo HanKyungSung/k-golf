@@ -166,13 +166,13 @@ Example:
   Total: $73
 ```
 
-#### **BOOKING → ORDER (One-to-Many)**
+#### **ORDER → BOOKING (Many-to-One)**
 ```
-One BOOKING has N ORDERs (food/drinks/items ordered)
+Many ORDERs reference a BOOKING
 Each ORDER belongs to ONE BOOKING
 
 Note: ORDER is created when customer orders items
-      ORDER details are reflected in INVOICE LINE ITEMs
+      ORDER details are reflected in INVOICE aggregates
 
 Example:
   Booking #1 ──┐
@@ -383,7 +383,6 @@ model Booking {
   
   // Relations
   invoices        Invoice[]  // One per seat
-  orders          Order[]    // All food/drinks ordered
   
   @@index([roomId, startTime])
   @@index([customerPhone])

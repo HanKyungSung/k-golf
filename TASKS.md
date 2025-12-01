@@ -528,7 +528,6 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
 ### ✅ Phase 1.3.1: Database Schema Foundation (2-3 hours)
 - [ ] **Update Booking Model**
   - Keep: `price` field (total price: players × hours × $50/hour)
-  - Add relation: `orders: Order[]`
   - Keep: `invoices: Invoice[]`, all payment fields
   
 - [ ] **Create Order Model (NEW)**
