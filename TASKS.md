@@ -526,138 +526,135 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLED/EXPIRED) and implement full POS invoice system with per-seat billing, order tracking, and payment collection.
 
 ### ✅ Phase 1.3.1: Database Schema Foundation (2-3 hours)
-- [ ] **Update Booking Model**
+- [x] **Update Booking Model**
   - Keep: `price` field (total price: players × hours × $50/hour)
   - Keep: `invoices: Invoice[]`, all payment fields
   
-- [ ] **Create Order Model (NEW)**
+- [x] **Create Order Model (NEW)**
   - Fields: id, bookingId, menuItemId, seatIndex, quantity, unitPrice, totalPrice
   - Relations: Booking (FK), MenuItem (FK)
   - Indexes: bookingId, seatIndex
   
-- [ ] **Simplify Invoice Model**
+- [x] **Simplify Invoice Model**
   - Remove: customerName, refundedAt, refundReason, notes, recordedBy
   - Keep: seatIndex, status (UNPAID/PAID), paymentMethod, paidAt
   - Add: subtotal, tax, tip, totalAmount (calculated from orders)
   
-- [ ] **Update MenuItem Model**
+- [x] **Update MenuItem Model**
   - Add relation: `orders: Order[]`
 
-- [ ] **Testing**
+- [x] **Testing**
   - Validate schema syntax with `prisma validate`
   - Generate updated Prisma client
 
 ### ✅ Phase 1.3.2: Database Migration (1 hour)
-- [ ] **Create Migration File**
+- [x] **Create Migration File**
   - File: `backend/prisma/migrations/20251130_add_orders_and_simplify_invoices/migration.sql`
   - Actions:
-    - [ ] Create Order table with indexes
-    - [ ] Drop unused Invoice fields (customerName, refundedAt, refundReason, notes, recordedBy)
-    - [ ] Add new Invoice fields (subtotal, tax, tip, totalAmount)
-    - [ ] Update existing bookingStatus: CONFIRMED → BOOKED
-    - [ ] Update existing bookings: ensure price field is populated
+    - [x] Create Order table with indexes
+    - [x] Drop unused Invoice fields (customerName, refundedAt, refundReason, notes, recordedBy)
+    - [x] Add new Invoice fields (subtotal, tax, tip, totalAmount)
+    - [x] Update existing bookingStatus: CONFIRMED → BOOKED
+    - [x] Update existing bookings: ensure price field is populated
 
-- [ ] **Run Migration Locally**
-  - [ ] Test migration with `prisma migrate dev`
-  - [ ] Verify no data loss
-  - [ ] Check all indexes created
+- [x] **Run Migration Locally**
+  - [x] Test migration with `prisma db push --force-reset`
+  - [x] Verify no data loss
+  - [x] Check all indexes created
 
 ### ✅ Phase 1.3.3: Backend Repository Layer (4-6 hours)
 
 #### BookingRepo Updates
-- [ ] **createBooking()**
+- [x] **createBooking()**
   - Auto-create N invoices (1 per seat)
   - Divide total price equally among seats: `price / players` per seat
   - Set each invoice subtotal to seat price
   - Calculate tax from global setting
   
-- [ ] **New Functions:**
-  - [ ] `completeBooking(id)` - Mark COMPLETED with completedAt timestamp
-  - [ ] `markBookingExpired(id)` - Set status EXPIRED (for scheduled job)
-  - [ ] `updateBookingStatus(id, status)` - Admin override
-  - [ ] `cancelBooking(id)` - Only allows BOOKED → CANCELLED
+- [x] **New Functions:**
+  - [x] `completeBooking(id)` - Mark COMPLETED with completedAt timestamp
+  - [x] `markBookingExpired(id)` - Set status EXPIRED (for scheduled job)
+  - [x] `updateBookingStatus(id, status)` - Admin override
+  - [x] `cancelBooking(id)` - Only allows BOOKED → CANCELLED
 
 #### Create OrderRepo (NEW)
-- [ ] **createOrder(bookingId, menuItemId, seatIndex, quantity)**
+- [x] **createOrder(bookingId, menuItemId, seatIndex, quantity)**
   - Create order record
   - Recalculate associated invoice totals
   
-- [ ] **deleteOrder(id)**
+- [x] **deleteOrder(id)**
   - Remove order
   - Recalculate invoice
   
-- [ ] **getOrdersByBooking(bookingId)**
+- [x] **getOrdersByBooking(bookingId)**
   - Return all orders for booking
   
-- [ ] **getOrdersBySeat(bookingId, seatIndex)**
+- [x] **getOrdersBySeat(bookingId, seatIndex)**
   - Return orders for specific seat
 
 #### Create InvoiceRepo (NEW)
-- [ ] **getInvoiceBySeat(bookingId, seatIndex)**
+- [x] **getInvoiceBySeat(bookingId, seatIndex)**
   - Return single invoice with all line items
   
-- [ ] **getAllInvoices(bookingId)**
+- [x] **getAllInvoices(bookingId)**
   - Return all invoices for booking
   
-- [ ] **markInvoicePaid(invoiceId, paymentMethod, tip?)**
+- [x] **updateInvoicePayment(bookingId, seatIndex, paymentMethod, tip?)**
   - Update invoice status, paymentMethod, paidAt, tip
   - Check if all invoices now paid → update Booking.paymentStatus
   
-- [ ] **recalculateInvoice(invoiceId)**
+- [x] **recalculateInvoice(bookingId, seatIndex)**
   - Sum all orders for that seat
   - Add tax calculation
   - Update subtotal, tax, totalAmount
 
-### ✅ Phase 1.3.4: Backend API Routes (3-4 hours)
+### 🔜 Phase 1.3.4: Backend API Routes (3-4 hours)
 
 #### Update Existing Endpoints
 - [ ] **POST /api/bookings** 
   - Keep price calculation: `players * hours * $50/hour`
   - Auto-generate invoices on creation (1 per seat)
   - Split total price equally: `price / players` per seat
+  - Return: booking with invoices
   
 - [ ] **PATCH /api/bookings/:id/cancel**
   - Only allows BOOKED status
   - Cannot cancel COMPLETED
+  - Return: updated booking
   
-- [ ] **PATCH /api/bookings/:id** (update room hours endpoint)
-  - Add validation for new fields
+- [ ] **GET /api/bookings/:id**
+  - Include invoices with orders
+  - Include payment status
 
 #### Create New Endpoints
 - [ ] **POST /api/bookings/:bookingId/orders**
-  ```
-  Body: { menuItemId, seatIndex, quantity }
-  Returns: { order, updatedInvoice }
-  ```
+  - Body: `{ menuItemId, seatIndex, quantity }`
+  - Auto-lookup menuItem for unitPrice
+  - Recalculate invoice totals
+  - Return: `{ order, updatedInvoice }`
   
 - [ ] **DELETE /api/bookings/orders/:orderId**
-  ```
-  Returns: { success, updatedInvoice }
-  ```
+  - Recalculate associated invoice
+  - Return: `{ success, updatedInvoice }`
   
 - [ ] **GET /api/bookings/:bookingId/invoices**
-  ```
-  Returns: [{ seatIndex, subtotal, tax, tip, totalAmount, status, orders[] }]
-  ```
+  - Return: `[{ seatIndex, subtotal, tax, tip, totalAmount, status, paymentMethod, orders[] }]`
   
 - [ ] **PATCH /api/invoices/:invoiceId/pay**
-  ```
-  Body: { paymentMethod, tip? }
-  Returns: { invoice, bookingPaymentStatus }
-  ```
+  - Body: `{ bookingId, seatIndex, paymentMethod, tip? }`
+  - Update invoice status to PAID
+  - Check if all invoices paid → update booking.paymentStatus
+  - Return: `{ invoice, bookingPaymentStatus }`
   
 - [ ] **GET /api/bookings/:bookingId/payment-status**
-  ```
-  Returns: { seats: [{ seatIndex, paid, totalAmount }], allPaid, remaining }
-  ```
+  - Return: `{ seats: [{ seatIndex, paid, totalAmount, paymentMethod }], allPaid, remaining, totalRevenue }`
   
-- [ ] **POST /api/bookings/:bookingId/complete** (NEW)
-  ```
-  Requires: All invoices PAID
-  Updates: bookingStatus = COMPLETED, completedAt = now
-  ```
+- [ ] **POST /api/bookings/:bookingId/complete**
+  - Requires: All invoices PAID
+  - Updates: bookingStatus = COMPLETED, completedAt = now
+  - Return: updated booking
 
-### ✅ Phase 1.3.5: Database Seeding (1-2 hours)
+### ⏳ Phase 1.3.5: Database Seeding (1-2 hours)
 - [ ] **Update seed.ts**
   - [ ] Create sample orders for existing bookings
   - [ ] Generate invoices with line items (booking fee + orders)
