@@ -13,9 +13,10 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 3. [Open Questions & Decisions](#open-questions--decisions)
 4. [POS Electron App - Phase 0](#pos-electron-app---phase-0)
 5. [Backend & Admin Features - Phase 1](#backend--admin-features---phase-1)
-6. [Code Cleanup & Technical Debt](#code-cleanup--technical-debt)
-7. [Testing & Quality Assurance](#testing--quality-assurance)
-8. [Completed Tasks Archive](#completed-tasks-archive)
+6. [Simplified Booking Status & Invoice System - Phase 1.3](#phase-13-simplified-booking-status--full-pos-invoice-system)
+7. [Code Cleanup & Technical Debt](#code-cleanup--technical-debt)
+8. [Testing & Quality Assurance](#testing--quality-assurance)
+9. [Completed Tasks Archive](#completed-tasks-archive)
 
 ---
 
@@ -29,6 +30,8 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - remove it from room management too.
 - When pay button clicks
   - per seat payment closure 
+- Cancellation policy
+- individual payment collection from the customer
 
 ## 🚨 URGENT TASKS (2025-11-26)
 
@@ -509,6 +512,258 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 **Impact:** HIGH - Core feature affecting all booking operations and room status tracking
 **Priority:** HIGH - Needed for proper POS workflow implementation
 **Estimated Effort:** 3-5 days across all components
+
+---
+
+## Phase 1.3: Simplified Booking Status & Full POS Invoice System
+
+> **Started:** November 30, 2025
+> **Scope:** Simplify booking lifecycle + implement per-seat invoicing with menu items
+> **Estimated Effort:** 22-32 hours across 5 phases
+> **Priority:** HIGH - Foundation for core POS workflow
+
+### Overview
+Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLED/EXPIRED) and implement full POS invoice system with per-seat billing, order tracking, and payment collection.
+
+### ✅ Phase 1.3.1: Database Schema Foundation (2-3 hours)
+- [ ] **Update Booking Model**
+  - Rename: `price` → `basePrice`
+  - Add relation: `orders: Order[]`
+  - Keep: `invoices: Invoice[]`, all payment fields
+  
+- [ ] **Create Order Model (NEW)**
+  - Fields: id, bookingId, menuItemId, seatIndex, quantity, unitPrice, totalPrice
+  - Relations: Booking (FK), MenuItem (FK)
+  - Indexes: bookingId, seatIndex
+  
+- [ ] **Simplify Invoice Model**
+  - Remove: customerName, refundedAt, refundReason, notes, recordedBy
+  - Keep: seatIndex, amount, status (UNPAID/PAID), paymentMethod, paidAt
+  - Add: subtotal, tax, tip, totalAmount (calculated fields)
+  
+- [ ] **Update MenuItem Model**
+  - Add relation: `orders: Order[]`
+
+- [ ] **Testing**
+  - Validate schema syntax with `prisma validate`
+  - Generate updated Prisma client
+
+### ✅ Phase 1.3.2: Database Migration (1 hour)
+- [ ] **Create Migration File**
+  - File: `backend/prisma/migrations/20251130_add_orders_and_simplify_invoices/migration.sql`
+  - Actions:
+    - [ ] Create Order table with indexes
+    - [ ] Rename Booking.price → basePrice
+    - [ ] Drop unused Invoice fields
+    - [ ] Add new Invoice fields (subtotal, tax, tip, totalAmount)
+    - [ ] Update existing bookingStatus: CONFIRMED → BOOKED
+    - [ ] Update existing bookings: set basePrice from price
+
+- [ ] **Run Migration Locally**
+  - [ ] Test migration with `prisma migrate dev`
+  - [ ] Verify no data loss
+  - [ ] Check all indexes created
+
+### ✅ Phase 1.3.3: Backend Repository Layer (4-6 hours)
+
+#### BookingRepo Updates
+- [ ] **createBooking()**
+  - Auto-create N invoices (1 per seat)
+  - Set each invoice with basePrice as subtotal
+  - Calculate tax from global setting
+  
+- [ ] **New Functions:**
+  - [ ] `completeBooking(id)` - Mark COMPLETED with completedAt timestamp
+  - [ ] `markBookingExpired(id)` - Set status EXPIRED (for scheduled job)
+  - [ ] `updateBookingStatus(id, status)` - Admin override
+  - [ ] `cancelBooking(id)` - Only allows BOOKED → CANCELLED
+
+#### Create OrderRepo (NEW)
+- [ ] **createOrder(bookingId, menuItemId, seatIndex, quantity)**
+  - Create order record
+  - Recalculate associated invoice totals
+  
+- [ ] **deleteOrder(id)**
+  - Remove order
+  - Recalculate invoice
+  
+- [ ] **getOrdersByBooking(bookingId)**
+  - Return all orders for booking
+  
+- [ ] **getOrdersBySeat(bookingId, seatIndex)**
+  - Return orders for specific seat
+
+#### Create InvoiceRepo (NEW)
+- [ ] **getInvoiceBySeat(bookingId, seatIndex)**
+  - Return single invoice with all line items
+  
+- [ ] **getAllInvoices(bookingId)**
+  - Return all invoices for booking
+  
+- [ ] **markInvoicePaid(invoiceId, paymentMethod, tip?)**
+  - Update invoice status, paymentMethod, paidAt, tip
+  - Check if all invoices now paid → update Booking.paymentStatus
+  
+- [ ] **recalculateInvoice(invoiceId)**
+  - Sum all orders for that seat
+  - Add tax calculation
+  - Update subtotal, tax, totalAmount
+
+### ✅ Phase 1.3.4: Backend API Routes (3-4 hours)
+
+#### Update Existing Endpoints
+- [ ] **POST /api/bookings** 
+  - Use basePrice instead of price
+  - Auto-generate invoices on creation
+  
+- [ ] **PATCH /api/bookings/:id/cancel**
+  - Only allows BOOKED status
+  - Cannot cancel COMPLETED
+  
+- [ ] **PATCH /api/bookings/:id** (update room hours endpoint)
+  - Add validation for new fields
+
+#### Create New Endpoints
+- [ ] **POST /api/bookings/:bookingId/orders**
+  ```
+  Body: { menuItemId, seatIndex, quantity }
+  Returns: { order, updatedInvoice }
+  ```
+  
+- [ ] **DELETE /api/bookings/orders/:orderId**
+  ```
+  Returns: { success, updatedInvoice }
+  ```
+  
+- [ ] **GET /api/bookings/:bookingId/invoices**
+  ```
+  Returns: [{ seatIndex, subtotal, tax, tip, totalAmount, status, orders[] }]
+  ```
+  
+- [ ] **PATCH /api/invoices/:invoiceId/pay**
+  ```
+  Body: { paymentMethod, tip? }
+  Returns: { invoice, bookingPaymentStatus }
+  ```
+  
+- [ ] **GET /api/bookings/:bookingId/payment-status**
+  ```
+  Returns: { seats: [{ seatIndex, paid, totalAmount }], allPaid, remaining }
+  ```
+  
+- [ ] **POST /api/bookings/:bookingId/complete** (NEW)
+  ```
+  Requires: All invoices PAID
+  Updates: bookingStatus = COMPLETED, completedAt = now
+  ```
+
+### ✅ Phase 1.3.5: Database Seeding (1-2 hours)
+- [ ] **Update seed.ts**
+  - [ ] Create sample orders for existing bookings
+  - [ ] Generate invoices with line items
+  - [ ] Create mix of paid/unpaid invoices
+  - [ ] Test different payment methods
+  - [ ] Update bookingStatus from CONFIRMED → BOOKED
+  - [ ] Rename price → basePrice in test data
+
+- [ ] **Test Seed**
+  - [ ] Run `npm run db:seed`
+  - [ ] Verify no errors
+  - [ ] Check data in database
+
+### ✅ Phase 1.3.6: Frontend Components (6-8 hours)
+
+#### Create New Components
+- [ ] **OrderForm.tsx** (NEW)
+  - Select menu items
+  - Choose seat (1-4)
+  - Set quantity
+  - Add to cart per seat
+  - Show running total
+  
+- [ ] **InvoiceDisplay.tsx** (NEW)
+  - Show per-seat invoice breakdown
+  - Display booking fee + orders as line items
+  - Show subtotal, tax, total
+  - Color-code by payment status
+  
+- [ ] **PaymentForm.tsx** (NEW)
+  - Accept payment per invoice
+  - Payment method selection (CARD/CASH)
+  - Tip entry
+  - Mark as paid button
+  - Show payment status
+  
+- [ ] **PaymentSummary.tsx** (NEW)
+  - Show all seats with status
+  - Display total paid vs remaining
+  - Show payment breakdown per seat
+
+#### Update Existing Components
+- [ ] **Dashboard Timeline**
+  - Update to use new bookingStatus (BOOKED/EXPIRED)
+  - Update filtering to only show BOOKED (hide CANCELLED/EXPIRED)
+  
+- [ ] **Booking Creation Modal**
+  - Use basePrice instead of price
+  - Auto-generate invoices on submit
+  
+- [ ] **Booking Detail View**
+  - Show invoices instead of just payment status
+  - Add order entry UI
+  - Add payment UI
+  - Show completion button (only if all paid)
+
+### ✅ Phase 1.3.7: Testing & Validation (3-4 hours)
+
+#### Unit Tests
+- [ ] **bookingRepo.test.ts**
+  - Create booking auto-generates invoices
+  - Invoice totals calculate correctly
+  - Status transitions work properly
+  
+- [ ] **orderRepo.test.ts**
+  - Create order updates invoice
+  - Delete order recalculates invoice
+  - Multi-order calculations
+  
+- [ ] **invoiceRepo.test.ts**
+  - Mark paid updates booking
+  - All paid detection works
+  - Tax calculations correct
+
+#### E2E Tests
+- [ ] **booking-workflow.test.ts**
+  - Create booking → invoices created
+  - Add order → invoice updated
+  - Pay invoice → marked PAID
+  - Complete booking → requires all paid
+  
+- [ ] **payment-workflow.test.ts**
+  - Partial payment scenarios
+  - Multiple orders per seat
+  - Payment method tracking
+  - Tip handling
+
+#### Manual Testing
+- [ ] Create booking with 3 seats
+- [ ] Add different orders to each seat
+- [ ] Mark each paid individually
+- [ ] Verify booking only completes when all paid
+- [ ] Test dashboard filtering
+- [ ] Test print functionality
+
+### 📋 Checklist Before Starting
+
+Answer these before implementation:
+
+- [ ] Confirm tax calculation: Fixed global % or per-item?
+- [ ] Confirm shared orders: Can one order apply to multiple seats?
+- [ ] Confirm partial payments: Allow incomplete payment continuation?
+- [ ] Confirm expiration threshold: 30 days OK?
+- [ ] Confirm base price: $50/seat still correct?
+- [ ] Confirm menu items: Any items excluded from invoices?
+- [ ] Confirm print format: Receipt format for thermal printer?
 
 ---
 
@@ -1874,6 +2129,218 @@ This feature will be implemented after the web POS is stable and in use. See `/P
 [ ] Database schema ER diagram update
 [ ] README update with new features
 [ ] Migration guide (email-based → phone-based)
+
+---
+
+## 🔄 Phase 1.2 - Booking Status Simplification
+
+> **Goal:** Simplify booking lifecycle and add split payment tracking
+> **Documentation:** `/docs/BOOKING_STATUS_FLOW.md`
+> **Status:** READY FOR IMPLEMENTATION
+> **Start Date:** 2025-11-29
+
+### Overview
+
+Refactor booking status model from complex 4-field approach to simplified 2-field system:
+- **bookingStatus:** `BOOKED` | `COMPLETED` | `CANCELLED` | `EXPIRED` (lifecycle)
+- **paymentStatus:** `UNPAID` | `PAID` (revenue tracking)
+- **BookingPayment:** New table for per-seat payment tracking (split payments)
+
+### Changes from v1.0
+- ✅ `CONFIRMED` → `BOOKED` (more intuitive naming)
+- ✅ Removed `BILLED` status (simplified to UNPAID/PAID)
+- ✅ Added `EXPIRED` status (30-day cleanup)
+- ✅ Added `completedAt` timestamp
+- ✅ New `BookingPayment` model for split payments
+- ✅ Removed `billedAt` column (no longer needed)
+
+### Task 1.2.1: Database Schema & Migration
+
+[ ] **Schema Updates:**
+  - [x] Update Prisma schema: BookingPayment model added
+  - [x] Update Booking model: BOOKED default, remove BILLED, add completedAt
+  - [x] Create migration file (20250129_001_simplify_booking_status)
+  
+[ ] **Apply Migration:**
+  - [ ] Run `npm run prisma:migrate` in backend/
+  - [ ] Verify migration succeeds and all CONFIRMED→BOOKED conversions work
+  - [ ] Test database state (no BILLED records remain)
+  - [ ] Verify BookingPayment table created with indices
+
+[ ] **Seed Script Updates:**
+  - [ ] Update backend/prisma/seed.ts to use new status values
+  - [ ] Create sample BookingPayment records for test data
+  - [ ] Verify seed completes without errors
+  - [ ] Check test data in DB (status values, payment records)
+
+### Task 1.2.2: Backend Repository Layer
+
+[ ] **bookingRepo.ts Updates:**
+  - [ ] Add `createPayment(bookingId, customerName, seatIndex, amount, paymentMethod)` function
+  - [ ] Add `getPaymentTotal(bookingId)` → sum of all BookingPayment amounts
+  - [ ] Add `getPaymentsByBooking(bookingId)` → return all payment records
+  - [ ] Update `completeBooking(id)` → validate PAID status required
+  - [ ] Add `updateBookingStatus(id, newStatus)` → admin override (validate new status)
+  - [ ] Update validators to allow: BOOKED | COMPLETED | CANCELLED | EXPIRED
+  - [ ] Update tests for all new functions
+
+[ ] **Validation & Business Logic:**
+  - [ ] Prevent COMPLETED if paymentStatus ≠ PAID
+  - [ ] Prevent changing COMPLETED bookings (except admin override)
+  - [ ] Validate seatIndex range (1-4)
+  - [ ] Validate payment amount > 0
+  - [ ] Check total payments don't exceed booking price
+
+### Task 1.2.3: Backend API Routes
+
+[ ] **New Endpoints:**
+  - [ ] `PATCH /api/bookings/:id/payment` → record payment (staff)
+    - Body: `{ amount, paymentMethod, customerName, seatIndex }`
+    - Response: booking + remaining balance
+    - Validation: amount > 0, total ≤ price, booking is BOOKED
+  
+  - [ ] `PATCH /api/bookings/:id/complete` → mark COMPLETED (staff)
+    - Body: `{}`
+    - Response: booking with completedAt timestamp
+    - Validation: paymentStatus must be PAID
+  
+  - [ ] `PATCH /api/bookings/:id/status` → admin override (admin only)
+    - Body: `{ bookingStatus?, paymentStatus? }`
+    - Response: updated booking
+    - Validation: None (admin can do anything)
+
+[ ] **Existing Endpoint Updates:**
+  - [ ] `GET /api/bookings/:id` → include payments array
+  - [ ] `GET /api/bookings` → include payment summary
+  - [ ] `PATCH /api/bookings/:id/cancel` → prevent if COMPLETED
+  - [ ] Update response schema to new status values
+
+[ ] **Error Handling:**
+  - [ ] 409 Conflict: Cannot complete without payment
+  - [ ] 409 Conflict: Booking already completed
+  - [ ] 400 Bad Request: Invalid payment amount
+  - [ ] 404 Not Found: Booking not found
+
+### Task 1.2.4: Frontend Components
+
+[ ] **POS Dashboard Payment UI:**
+  - [ ] Add "Collect Payment" button (visible if UNPAID)
+  - [ ] Add payment collection modal/dialog:
+    - [ ] Amount input (pre-filled with remaining balance)
+    - [ ] Payment method dropdown (CARD/CASH)
+    - [ ] Customer name field
+    - [ ] Seat selector (1-4)
+    - [ ] Submit button
+    - [ ] Cancel button
+  
+  - [ ] Display current payment status:
+    - [ ] Show each payment record (customer name, amount, method)
+    - [ ] Show remaining balance
+    - [ ] Show total collected vs. total price
+
+[ ] **Booking Completion UI:**
+  - [ ] Add "Complete Booking" button (visible if PAID)
+  - [ ] Confirmation dialog before completion
+  - [ ] Display completion timestamp after success
+
+[ ] **Admin Override UI:**
+  - [ ] Add admin menu to change status
+  - [ ] Status dropdown: BOOKED | COMPLETED | CANCELLED | EXPIRED
+  - [ ] Warning confirmation dialog
+  - [ ] Audit log display
+
+[ ] **Status Display Updates:**
+  - [ ] Update all status labels: BOOKED instead of CONFIRMED
+  - [ ] Update colors/badges for new statuses
+  - [ ] Update timeline filtering (hide CANCELLED, EXPIRED)
+  - [ ] Update dashboard past booking styling
+
+### Task 1.2.5: API Service Updates
+
+[ ] **frontend/src/services/pos-api.ts:**
+  - [ ] Add `recordPayment(bookingId, { amount, paymentMethod, customerName, seatIndex })`
+  - [ ] Add `completeBooking(bookingId)`
+  - [ ] Add `adminChangeStatus(bookingId, { bookingStatus?, paymentStatus? })`
+  - [ ] Update existing endpoints for new schema
+
+### Task 1.2.6: Testing
+
+[ ] **Unit Tests:**
+  - [ ] bookingRepo: payment functions (createPayment, getTotal, validate)
+  - [ ] bookingRepo: status transitions (BOOKED→COMPLETED, etc.)
+  - [ ] bookingRepo: validation rules (prevent invalid states)
+
+[ ] **Integration Tests:**
+  - [ ] Single payment flow (one customer pays for all)
+  - [ ] Split payment flow (3 seats pay separately)
+  - [ ] Partial payment detection (remaining balance > 0)
+  - [ ] Cannot complete without all payments
+  - [ ] Cannot cancel after PAID
+  - [ ] Admin override works
+
+[ ] **Frontend Tests:**
+  - [ ] Payment collection modal opens/closes
+  - [ ] Payment form validation (amount, customer name)
+  - [ ] Payment recorded and UI updates
+  - [ ] Complete booking button disabled if unpaid
+  - [ ] Correct status displayed in timeline
+
+[ ] **E2E Tests:**
+  - [ ] Complete booking workflow (payment → complete)
+  - [ ] Split payment workflow (3 customers, collect sequentially)
+  - [ ] Admin override (change status manually)
+
+### Task 1.2.7: Migration & Data
+
+[ ] **Data Migration:**
+  - [ ] Run migration on development database
+  - [ ] Verify no data loss (all bookings still present)
+  - [ ] Verify status conversions (CONFIRMED→BOOKED)
+  - [ ] Create initial BookingPayment records from existing paid bookings
+  - [ ] Test on staging database
+
+[ ] **Backward Compatibility:**
+  - [ ] Ensure API responses handle old schema gracefully
+  - [ ] Document breaking changes in CHANGELOG
+  - [ ] Update example API requests in README
+
+### Task 1.2.8: Documentation & Alerts
+
+[ ] **Documentation Updates:**
+  - [x] Create `/docs/BOOKING_STATUS_FLOW.md` with complete flow diagrams ✅
+  - [ ] Update `README.md` with new status model
+  - [ ] Update API documentation with new endpoints
+  - [ ] Add migration notes to README
+  - [ ] Create admin guide for payment collection
+
+[ ] **Alert System (Phase 2 Task):**
+  - [ ] Flag incomplete bookings (UNPAID + past endTime)
+  - [ ] Dashboard warning badge for pending payments
+  - [ ] Daily report of uncollected payments
+  - [ ] Auto-expire after 30 days (configurable)
+  - Add as separate Phase 2 task
+
+### Success Criteria
+
+- ✅ All CONFIRMED bookings converted to BOOKED
+- ✅ Split payments tracked in BookingPayment table
+- ✅ Cannot complete without all payments
+- ✅ Staff can manually collect payments per seat
+- ✅ Admin can override any status
+- ✅ All tests passing
+- ✅ No data loss during migration
+- ✅ API response time < 200ms for payment operations
+
+### Risks & Mitigation
+
+| Risk | Mitigation |
+|------|-----------|
+| Data loss during migration | Test migration multiple times on dev/staging first |
+| Existing integrations break | Maintain backward compatibility layer, deprecation warnings |
+| Performance issues with payment queries | Add indices on BookingPayment table |
+| Split payment logic errors | Comprehensive unit + integration tests |
+
+---
 
 ### Phase 1 Summary & Success Metrics
 
