@@ -41,6 +41,7 @@ export default function POSDashboard() {
     weekStart.setHours(0, 0, 0, 0);
     return weekStart;
   });
+  console.log('currentWeekStart', currentWeekStart);
   
   // Component navigation state
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
@@ -85,13 +86,22 @@ export default function POSDashboard() {
       const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
       
       // Selected week range (for Timeline - use currentWeekStart for navigation)
-      // currentWeekStart is already set to start of week at midnight local time
-      const weekStart = new Date(currentWeekStart);
-      // Convert to UTC midnight
-      const weekStartUTC = new Date(Date.UTC(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate(), 0, 0, 0));
-      const weekEnd = new Date(weekStartUTC);
-      weekEnd.setUTCDate(weekStartUTC.getUTCDate() + 6);
-      weekEnd.setUTCHours(23, 59, 59, 999);
+      // currentWeekStart is a local time Date at Monday 00:00:00
+      // Extract the local date and convert to UTC boundaries
+      const localYear = currentWeekStart.getFullYear();
+      const localMonth = currentWeekStart.getMonth();
+      const localDate = currentWeekStart.getDate();
+      
+      // Create UTC start (Monday at 00:00:00 UTC)
+      const weekStartUTC = new Date(Date.UTC(localYear, localMonth, localDate, 0, 0, 0));
+      // Create UTC end (Sunday at 23:59:59 UTC)
+      const weekEndUTC = new Date(Date.UTC(localYear, localMonth, localDate + 6, 23, 59, 59));
+      
+      console.log('[Dashboard] Week range:', {
+        currentWeekStart: currentWeekStart.toString(),
+        weekStartUTC: weekStartUTC.toISOString(),
+        weekEndUTC: weekEndUTC.toISOString(),
+      });
       
       // Load bookings with two separate API calls
       const [todayBookingsData, weekBookingsData, roomsData] = await Promise.all([
@@ -102,7 +112,7 @@ export default function POSDashboard() {
         }),
         listBookings({ 
           startDate: weekStartUTC.toISOString(), 
-          endDate: weekEnd.toISOString(),
+          endDate: weekEndUTC.toISOString(),
           limit: 500 // Week should have < 500 bookings
         }),
         listRooms()
@@ -416,6 +426,8 @@ export default function POSDashboard() {
               bookings={bookings} 
               rooms={rooms}
               onBookingClick={openBookingDetail}
+              currentWeekStart={currentWeekStart}
+              setCurrentWeekStart={setCurrentWeekStart}
             />
           </TabsContent>
 
@@ -623,9 +635,11 @@ interface TimelineViewProps {
   bookings: Booking[];
   rooms: Room[];
   onBookingClick: (bookingId: string) => void;
+  currentWeekStart: Date;
+  setCurrentWeekStart: (date: Date) => void;
 }
 
-function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
+function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCurrentWeekStart }: TimelineViewProps) {
   const navigate = useNavigate();
   const dayStart = 0 * 60; // Midnight (0:00)
   const dayEnd = 24 * 60;  // Next midnight (24:00)
@@ -639,17 +653,6 @@ function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(interval);
   }, []);
-
-  // Get current week (Monday to Sunday)
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + daysToMonday);
-    monday.setHours(0, 0, 0, 0);
-    return monday;
-  });
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
