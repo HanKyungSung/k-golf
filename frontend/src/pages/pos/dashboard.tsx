@@ -57,6 +57,11 @@ export default function POSDashboard() {
     return () => clearInterval(pollInterval);
   }, []);
 
+  // Reload data when selected week changes
+  useEffect(() => {
+    loadData(false);
+  }, [currentWeekStart]);
+
   async function loadData(showLoading = true) {
     try {
       if (showLoading) setLoading(true);
@@ -68,11 +73,8 @@ export default function POSDashboard() {
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
       const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
       
-      // Current week range (for Timeline - 7 days starting from Monday)
-      const dayOfWeek = now.getDay();
-      const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() + daysToMonday);
+      // Selected week range (for Timeline - use currentWeekStart for navigation)
+      const weekStart = new Date(currentWeekStart);
       weekStart.setHours(0, 0, 0, 0);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
