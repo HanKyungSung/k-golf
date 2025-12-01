@@ -73,12 +73,11 @@ model Booking {
   startTime       DateTime  @db.Timestamptz
   endTime         DateTime  @db.Timestamptz
   players         Int
-  price           Decimal   @db.Decimal(10, 2)
-  bookingStatus   String    @default("CONFIRMED") // CONFIRMED | COMPLETED | CANCELLED (renamed from status)
-  paymentStatus   String    @default("UNPAID")    // UNPAID | BILLED | PAID
-  billedAt        DateTime? @db.Timestamptz        // When bill was issued
-  paidAt          DateTime? @db.Timestamptz        // When payment was received
-  paymentMethod   String?                          // CARD | CASH
+  price           Decimal   @db.Decimal(10, 2)  // Total price for all players (players × hours × $50)
+  bookingStatus   String    @default("BOOKED")    // BOOKED | COMPLETED | CANCELLED | EXPIRED
+  paymentStatus   String    @default("UNPAID")    // UNPAID | PAID
+  paidAt          DateTime? @db.Timestamptz        // When final payment was marked complete
+  completedAt     DateTime? @db.Timestamptz        // When booking was marked COMPLETED
   tipAmount       Decimal?  @db.Decimal(10, 2)    // Tip amount
   bookingSource   String    @default("ONLINE") @db.VarChar(50) // "ONLINE" | "WALK_IN" | "PHONE"
   createdBy       String?   // FK to User.id (admin who created this booking)
@@ -86,11 +85,59 @@ model Booking {
   internalNotes   String?   @db.Text // Admin-only notes
   createdAt       DateTime  @default(now()) @db.Timestamptz
   updatedAt       DateTime  @updatedAt @db.Timestamptz
+  invoices        Invoice[]
+  orders          Order[]
 
   @@index([roomId, startTime])
   @@index([userId, startTime])
   @@index([customerPhone]) // For fast customer lookup and history
   @@index([bookingSource]) // For analytics queries
+}
+
+// Invoice for individual seats - aggregates orders and tracks payment
+model Invoice {
+  id              String    @id @default(uuid())
+  booking         Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId       String
+  seatIndex       Int       // 1-4 (which seat/player this invoice is for)
+  
+  // Billing info (denormalized from orders for quick access)
+  subtotal        Decimal   @db.Decimal(10, 2)  // Sum of all orders for this seat
+  tax             Decimal   @db.Decimal(10, 2)  // Calculated tax on subtotal
+  tip             Decimal?  @db.Decimal(10, 2)  // Optional tip added at payment
+  totalAmount     Decimal   @db.Decimal(10, 2)  // subtotal + tax + tip
+  
+  // Payment tracking
+  status          String    @default("UNPAID")  // UNPAID | PAID
+  paymentMethod   String?   // CARD | CASH | null if unpaid
+  paidAt          DateTime? @db.Timestamptz     // When payment was collected
+  
+  createdAt       DateTime  @default(now()) @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @db.Timestamptz
+
+  @@unique([bookingId, seatIndex])  // One invoice per seat per booking
+  @@index([bookingId])
+  @@index([status])
+  @@index([paidAt])
+}
+
+// Order model - tracks individual menu items ordered per seat
+model Order {
+  id              String    @id @default(uuid())
+  booking         Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId       String
+  menuItem        MenuItem  @relation(fields: [menuItemId], references: [id])
+  menuItemId      String
+  
+  seatIndex       Int?      // 1-4 = specific seat, null = shared order
+  quantity        Int
+  unitPrice       Decimal   @db.Decimal(10, 2)  // Price per unit at time of order
+  totalPrice      Decimal   @db.Decimal(10, 2)  // quantity × unitPrice
+  
+  createdAt       DateTime  @default(now()) @db.Timestamptz
+  
+  @@index([bookingId])
+  @@index([seatIndex])
 }
 
 model AuthProvider {
@@ -173,6 +220,7 @@ model MenuItem {
   sortOrder   Int          @default(0)
   createdAt   DateTime     @default(now()) @db.Timestamptz
   updatedAt   DateTime     @updatedAt @db.Timestamptz
+  orders      Order[]
 
   @@index([category, sortOrder])
   @@index([available])

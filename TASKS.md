@@ -527,7 +527,7 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
 
 ### ✅ Phase 1.3.1: Database Schema Foundation (2-3 hours)
 - [ ] **Update Booking Model**
-  - Rename: `price` → `basePrice`
+  - Keep: `price` field (total price: players × hours × $50/hour)
   - Add relation: `orders: Order[]`
   - Keep: `invoices: Invoice[]`, all payment fields
   
@@ -538,8 +538,8 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
   
 - [ ] **Simplify Invoice Model**
   - Remove: customerName, refundedAt, refundReason, notes, recordedBy
-  - Keep: seatIndex, amount, status (UNPAID/PAID), paymentMethod, paidAt
-  - Add: subtotal, tax, tip, totalAmount (calculated fields)
+  - Keep: seatIndex, status (UNPAID/PAID), paymentMethod, paidAt
+  - Add: subtotal, tax, tip, totalAmount (calculated from orders)
   
 - [ ] **Update MenuItem Model**
   - Add relation: `orders: Order[]`
@@ -553,11 +553,10 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
   - File: `backend/prisma/migrations/20251130_add_orders_and_simplify_invoices/migration.sql`
   - Actions:
     - [ ] Create Order table with indexes
-    - [ ] Rename Booking.price → basePrice
-    - [ ] Drop unused Invoice fields
+    - [ ] Drop unused Invoice fields (customerName, refundedAt, refundReason, notes, recordedBy)
     - [ ] Add new Invoice fields (subtotal, tax, tip, totalAmount)
     - [ ] Update existing bookingStatus: CONFIRMED → BOOKED
-    - [ ] Update existing bookings: set basePrice from price
+    - [ ] Update existing bookings: ensure price field is populated
 
 - [ ] **Run Migration Locally**
   - [ ] Test migration with `prisma migrate dev`
@@ -569,7 +568,8 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
 #### BookingRepo Updates
 - [ ] **createBooking()**
   - Auto-create N invoices (1 per seat)
-  - Set each invoice with basePrice as subtotal
+  - Divide total price equally among seats: `price / players` per seat
+  - Set each invoice subtotal to seat price
   - Calculate tax from global setting
   
 - [ ] **New Functions:**
@@ -613,8 +613,9 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
 
 #### Update Existing Endpoints
 - [ ] **POST /api/bookings** 
-  - Use basePrice instead of price
-  - Auto-generate invoices on creation
+  - Keep price calculation: `players * hours * $50/hour`
+  - Auto-generate invoices on creation (1 per seat)
+  - Split total price equally: `price / players` per seat
   
 - [ ] **PATCH /api/bookings/:id/cancel**
   - Only allows BOOKED status
@@ -660,11 +661,12 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
 ### ✅ Phase 1.3.5: Database Seeding (1-2 hours)
 - [ ] **Update seed.ts**
   - [ ] Create sample orders for existing bookings
-  - [ ] Generate invoices with line items
+  - [ ] Generate invoices with line items (booking fee + orders)
+  - [ ] Split invoice totals equally per seat
   - [ ] Create mix of paid/unpaid invoices
   - [ ] Test different payment methods
   - [ ] Update bookingStatus from CONFIRMED → BOOKED
-  - [ ] Rename price → basePrice in test data
+  - [ ] Ensure price field calculations are correct
 
 - [ ] **Test Seed**
   - [ ] Run `npm run db:seed`
