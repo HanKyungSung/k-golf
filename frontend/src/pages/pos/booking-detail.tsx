@@ -6,6 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Users, Plus, Minus, Trash2, Printer, Edit } from 'lucide-react';
+import InvoiceDisplay from '@/components/InvoiceDisplay';
+import PaymentForm from '@/components/PaymentForm';
+import OrderForm from '@/components/OrderForm';
+import PaymentSummary from '@/components/PaymentSummary';
 import { 
   getBooking, 
   updateBookingStatus as apiUpdateBookingStatus, 
@@ -69,6 +73,9 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   // Order management
   const [numberOfSeats, setNumberOfSeats] = useState<number>(1);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  
+  // Seat payment tracking
+  const [seatPayments, setSeatPayments] = useState<Record<number, { status: 'UNPAID' | 'PAID'; method?: string; tip?: number }>>({});
   
   // Dialog state
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
@@ -764,6 +771,39 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
               </CardContent>
             </Card>
 
+            {/* Seat Payment Summary */}
+            <Card className="no-print bg-gradient-to-br from-blue-900/30 to-purple-900/30 border-blue-700/50">
+              <CardHeader>
+                <CardTitle className="text-white">Seat Payments</CardTitle>
+                <CardDescription className="text-slate-400">Per-seat payment collection</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => {
+                  const seatPayment = seatPayments[seat] || { status: 'UNPAID' };
+                  const seatTotal = calculateSeatTotal(seat);
+                  
+                  return (
+                    <div key={seat} className="p-3 rounded-lg bg-slate-900/50 border border-slate-700 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-6 h-6 rounded text-xs font-bold flex items-center justify-center text-white ${seatColors[seat % seatColors.length]}`}>
+                            {seat}
+                          </div>
+                          <span className="text-sm font-medium text-slate-300">${seatTotal.toFixed(2)}</span>
+                        </div>
+                        <Badge className={seatPayment.status === 'PAID' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}>
+                          {seatPayment.status}
+                        </Badge>
+                      </div>
+                      {seatPayment.method && (
+                        <div className="text-xs text-slate-400">via {seatPayment.method}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
             {/* Payment Information */}
             {booking.paymentStatus && (
               <Card className="bg-slate-800/50 border-slate-700">
@@ -881,6 +921,64 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </div>
+
+        {/* Seat Invoices & Payments Section */}
+        <div className="no-print mt-8 border-t border-slate-700 pt-8">
+          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+            <span className="text-amber-400">💳</span>
+            Seat Invoices & Payments
+          </h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => {
+              const seatItems = getItemsForSeat(seat);
+              const seatSubtotal = calculateSeatSubtotal(seat);
+              const seatTax = calculateSeatTax(seat);
+              const seatTotal = calculateSeatTotal(seat);
+              const seatPayment = seatPayments[seat] || { status: 'UNPAID' };
+              
+              return (
+                <div key={seat} className="space-y-3">
+                  {/* Invoice Display */}
+                  <InvoiceDisplay
+                    seatIndex={seat}
+                    subtotal={seatSubtotal}
+                    tax={seatTax}
+                    tip={seatPayment.tip}
+                    totalAmount={seatTotal + (seatPayment.tip || 0)}
+                    status={seatPayment.status as 'UNPAID' | 'PAID'}
+                    paymentMethod={seatPayment.method}
+                    orders={seatItems.map(item => ({
+                      id: item.id,
+                      description: item.menuItem.name,
+                      quantity: item.quantity,
+                      unitPrice: item.splitPrice || item.menuItem.price,
+                      totalPrice: (item.splitPrice || item.menuItem.price) * item.quantity,
+                    }))}
+                  />
+                  
+                  {/* Payment Form */}
+                  <PaymentForm
+                    seatIndex={seat}
+                    totalAmount={seatTotal}
+                    currentStatus={seatPayment.status as 'UNPAID' | 'PAID'}
+                    currentPaymentMethod={seatPayment.method}
+                    onPayment={async (method, tip) => {
+                      // Update seat payment status
+                      setSeatPayments(prev => ({
+                        ...prev,
+                        [seat]: { status: 'PAID', method, tip },
+                      }));
+                      
+                      // In a real app, this would call the backend payment API
+                      console.log(`Seat ${seat} paid with ${method}, tip: ${tip || 0}`);
+                    }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       </main>
