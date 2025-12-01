@@ -668,11 +668,12 @@ function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
     return endTime < currentTime;
   };
 
-  // Helper: Filter bookings by status (only BOOKED, hide CANCELLED/COMPLETED/EXPIRED)
+  // Helper: Filter bookings by status (show BOOKED and COMPLETED, hide CANCELLED/EXPIRED)
   const filterBookingsByStatus = (bookingsToFilter: Booking[]) => {
-    return bookingsToFilter.filter(b => 
-      b.bookingStatus === 'BOOKED' || b.status === 'booked' // Handle both API field names
-    );
+    return bookingsToFilter.filter(b => {
+      const bookingStatus = (b.bookingStatus || b.status || '').toUpperCase();
+      return bookingStatus === 'BOOKED' || bookingStatus === 'COMPLETED';
+    });
   };
 
   // Helper: Calculate current time position in timeline
