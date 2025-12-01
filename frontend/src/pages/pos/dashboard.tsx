@@ -80,16 +80,18 @@ export default function POSDashboard() {
       // Calculate date ranges for API calls
       const now = new Date();
       
-      // Today's range (for Room Status - real-time view)
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      // Today's range (for Room Status - real-time view) - using UTC
+      const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+      const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
       
       // Selected week range (for Timeline - use currentWeekStart for navigation)
+      // currentWeekStart is already set to start of week at midnight local time
       const weekStart = new Date(currentWeekStart);
-      weekStart.setHours(0, 0, 0, 0);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      weekEnd.setHours(23, 59, 59, 999);
+      // Convert to UTC midnight
+      const weekStartUTC = new Date(Date.UTC(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate(), 0, 0, 0));
+      const weekEnd = new Date(weekStartUTC);
+      weekEnd.setUTCDate(weekStartUTC.getUTCDate() + 6);
+      weekEnd.setUTCHours(23, 59, 59, 999);
       
       // Load bookings with two separate API calls
       const [todayBookingsData, weekBookingsData, roomsData] = await Promise.all([
@@ -99,7 +101,7 @@ export default function POSDashboard() {
           limit: 100 // Today should have < 100 bookings
         }),
         listBookings({ 
-          startDate: weekStart.toISOString(), 
+          startDate: weekStartUTC.toISOString(), 
           endDate: weekEnd.toISOString(),
           limit: 500 // Week should have < 500 bookings
         }),
