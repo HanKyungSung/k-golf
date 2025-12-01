@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { createBooking, findConflict, listBookings, listUserBookings, listRoomBookingsBetween } from '../repositories/bookingRepo';
-import { getBooking, cancelBooking, updatePaymentStatus } from '../repositories/bookingRepo';
+import { getBooking, cancelBooking, updatePaymentStatus, completeBooking, updateBookingStatus } from '../repositories/bookingRepo';
+import * as orderRepo from '../repositories/orderRepo';
+import * as invoiceRepo from '../repositories/invoiceRepo';
 import { requireAuth } from '../middleware/requireAuth';
 import { PrismaClient, UserRole } from '@prisma/client';
 
@@ -148,7 +150,27 @@ router.get('/:id', async (req, res) => {
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found' });
     }
-    res.json({ booking: presentBooking(booking) });
+
+    // Include invoices with orders if requested
+    let responseData: any = presentBooking(booking);
+    
+    if (req.query.includeInvoices === 'true') {
+      const invoices = await invoiceRepo.getAllInvoices(id);
+      responseData.invoices = invoices.map((inv) => ({
+        id: inv.id,
+        seatIndex: inv.seatIndex,
+        subtotal: inv.subtotal,
+        tax: inv.tax,
+        tip: inv.tip,
+        totalAmount: inv.totalAmount,
+        status: inv.status,
+        paymentMethod: inv.paymentMethod,
+        paidAt: inv.paidAt,
+        orders: inv.orders || [],
+      }));
+    }
+
+    res.json({ booking: responseData });
   } catch (error) {
     console.error('[GET BOOKING] Error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -934,7 +956,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
 
 // Update payment status endpoint (admin only)
 const updatePaymentStatusSchema = z.object({
-  paymentStatus: z.enum(['UNPAID', 'BILLED', 'PAID']),
+  paymentStatus: z.enum(['UNPAID', 'PAID']),
   paymentMethod: z.enum(['CARD', 'CASH']).optional(),
   tipAmount: z.number().optional(),
 });
@@ -960,21 +982,328 @@ router.patch('/:id/payment-status', requireAuth, requireAdmin, async (req, res) 
 
     // Set timestamps based on payment status
     const now = new Date();
-    const billedAt = paymentStatus === 'BILLED' || paymentStatus === 'PAID' ? now : null;
     const paidAt = paymentStatus === 'PAID' ? now : null;
 
     const updated = await updatePaymentStatus(id, {
       paymentStatus,
-      billedAt: billedAt ?? undefined,
       paidAt: paidAt ?? undefined,
-      paymentMethod,
-      tipAmount,
     });
 
     return res.json({ booking: presentBooking(updated) });
   } catch (error) {
     console.error('[UPDATE PAYMENT STATUS] Error:', error);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ============================================
+// Phase 1.3.4: New Invoice & Order Endpoints
+// ============================================
+
+// POST /api/bookings/:bookingId/orders - Add order to booking
+const createOrderSchema = z.object({
+  menuItemId: z.string().uuid(),
+  seatIndex: z.number().int().min(1).max(4).optional(), // null for shared orders
+  quantity: z.number().int().min(1),
+});
+
+router.post('/:bookingId/orders', requireAuth, async (req, res) => {
+  const { bookingId } = req.params;
+  
+  try {
+    const parsed = createOrderSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const { menuItemId, seatIndex, quantity } = parsed.data;
+
+    // Verify booking exists
+    const booking = await getBooking(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Verify seatIndex is valid (1 to players count)
+    if (seatIndex && (seatIndex < 1 || seatIndex > booking.players)) {
+      return res.status(400).json({
+        error: `Invalid seat index. Must be between 1 and ${booking.players}`,
+      });
+    }
+
+    // Get menu item to get unit price
+    const menuItem = await prisma.menuItem.findUnique({
+      where: { id: menuItemId },
+    });
+
+    if (!menuItem) {
+      return res.status(404).json({ error: 'Menu item not found' });
+    }
+
+    // Create order
+    const order = await orderRepo.createOrder({
+      bookingId,
+      menuItemId,
+      seatIndex: seatIndex || undefined,
+      quantity,
+      unitPrice: Number(menuItem.price),
+    });
+
+    // Recalculate invoice if seat-specific
+    if (seatIndex) {
+      const updatedInvoice = await invoiceRepo.recalculateInvoice(bookingId, seatIndex);
+      return res.status(201).json({
+        order: {
+          id: order.id,
+          bookingId: order.bookingId,
+          menuItemId: order.menuItemId,
+          seatIndex: order.seatIndex,
+          quantity: order.quantity,
+          unitPrice: order.unitPrice,
+          totalPrice: order.totalPrice,
+          createdAt: order.createdAt,
+        },
+        updatedInvoice: {
+          id: updatedInvoice.id,
+          seatIndex: updatedInvoice.seatIndex,
+          subtotal: updatedInvoice.subtotal,
+          tax: updatedInvoice.tax,
+          tip: updatedInvoice.tip,
+          totalAmount: updatedInvoice.totalAmount,
+          status: updatedInvoice.status,
+          paymentMethod: updatedInvoice.paymentMethod,
+        },
+      });
+    }
+
+    return res.status(201).json({
+      order: {
+        id: order.id,
+        bookingId: order.bookingId,
+        menuItemId: order.menuItemId,
+        seatIndex: order.seatIndex,
+        quantity: order.quantity,
+        unitPrice: order.unitPrice,
+        totalPrice: order.totalPrice,
+        createdAt: order.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('[CREATE ORDER] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/bookings/orders/:orderId - Delete order
+router.delete('/orders/:orderId', requireAuth, async (req, res) => {
+  const { orderId } = req.params;
+
+  try {
+    // Get order to know booking and seat for recalc
+    const order = await orderRepo.getOrder(orderId);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const { bookingId, seatIndex } = order;
+
+    // Delete order
+    await orderRepo.deleteOrder(orderId);
+
+    // Recalculate invoice if seat-specific
+    if (seatIndex) {
+      const updatedInvoice = await invoiceRepo.recalculateInvoice(bookingId, seatIndex);
+      return res.json({
+        success: true,
+        updatedInvoice: {
+          id: updatedInvoice.id,
+          seatIndex: updatedInvoice.seatIndex,
+          subtotal: updatedInvoice.subtotal,
+          tax: updatedInvoice.tax,
+          tip: updatedInvoice.tip,
+          totalAmount: updatedInvoice.totalAmount,
+          status: updatedInvoice.status,
+          paymentMethod: updatedInvoice.paymentMethod,
+        },
+      });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('[DELETE ORDER] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/bookings/:bookingId/invoices - Get all invoices for booking
+router.get('/:bookingId/invoices', async (req, res) => {
+  const { bookingId } = req.params;
+
+  try {
+    const booking = await getBooking(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    const invoices = await invoiceRepo.getAllInvoices(bookingId);
+
+    const formatted = invoices.map((inv) => ({
+      id: inv.id,
+      bookingId: inv.bookingId,
+      seatIndex: inv.seatIndex,
+      subtotal: inv.subtotal,
+      tax: inv.tax,
+      tip: inv.tip,
+      totalAmount: inv.totalAmount,
+      status: inv.status,
+      paymentMethod: inv.paymentMethod,
+      paidAt: inv.paidAt,
+      orders: inv.orders || [],
+    }));
+
+    return res.json({ invoices: formatted });
+  } catch (error) {
+    console.error('[GET INVOICES] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/invoices/:invoiceId/pay - Mark invoice as paid
+const payInvoiceSchema = z.object({
+  bookingId: z.string().uuid(),
+  seatIndex: z.number().int().min(1).max(4),
+  paymentMethod: z.enum(['CARD', 'CASH']),
+  tip: z.number().nonnegative().optional(),
+});
+
+router.patch('/invoices/:invoiceId/pay', requireAuth, async (req, res) => {
+  const { invoiceId } = req.params;
+
+  try {
+    const parsed = payInvoiceSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const { bookingId, seatIndex, paymentMethod, tip } = parsed.data;
+
+    // Verify booking exists
+    const booking = await getBooking(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Update invoice payment
+    const updatedInvoice = await invoiceRepo.updateInvoicePayment(
+      bookingId,
+      seatIndex,
+      paymentMethod,
+      tip
+    );
+
+    // Check if all invoices are now paid
+    const allPaid = await invoiceRepo.checkAllInvoicesPaid(bookingId);
+
+    if (allPaid) {
+      // Update booking payment status
+      await updatePaymentStatus(bookingId, {
+        paymentStatus: 'PAID',
+        paidAt: new Date(),
+      });
+    }
+
+    return res.json({
+      invoice: {
+        id: updatedInvoice.id,
+        seatIndex: updatedInvoice.seatIndex,
+        subtotal: updatedInvoice.subtotal,
+        tax: updatedInvoice.tax,
+        tip: updatedInvoice.tip,
+        totalAmount: updatedInvoice.totalAmount,
+        status: updatedInvoice.status,
+        paymentMethod: updatedInvoice.paymentMethod,
+        paidAt: updatedInvoice.paidAt,
+      },
+      bookingPaymentStatus: allPaid ? 'PAID' : 'UNPAID',
+    });
+  } catch (error) {
+    console.error('[PAY INVOICE] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/bookings/:bookingId/payment-status - Get payment status for booking
+router.get('/:bookingId/payment-status', async (req, res) => {
+  const { bookingId } = req.params;
+
+  try {
+    const booking = await getBooking(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    const invoices = await invoiceRepo.getAllInvoices(bookingId);
+    const totalRevenue = await invoiceRepo.getTotalRevenueForBooking(bookingId);
+
+    const seats = invoices.map((inv) => ({
+      seatIndex: inv.seatIndex,
+      paid: inv.status === 'PAID',
+      totalAmount: inv.totalAmount,
+      paymentMethod: inv.paymentMethod,
+      paidAt: inv.paidAt,
+    }));
+
+    const allPaid = invoices.every((inv) => inv.status === 'PAID');
+    const remaining = invoices
+      .filter((inv) => inv.status === 'UNPAID')
+      .reduce((sum, inv) => sum + Number(inv.totalAmount), 0);
+
+    return res.json({
+      seats,
+      allPaid,
+      remaining: remaining,
+      totalRevenue: totalRevenue,
+    });
+  } catch (error) {
+    console.error('[GET PAYMENT STATUS] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/bookings/:bookingId/complete - Mark booking as complete
+router.post('/:bookingId/complete', requireAuth, async (req, res) => {
+  const { bookingId } = req.params;
+
+  try {
+    const booking = await getBooking(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Check all invoices are paid
+    const allPaid = await invoiceRepo.checkAllInvoicesPaid(bookingId);
+    if (!allPaid) {
+      return res.status(400).json({
+        error: 'Cannot complete booking. Not all invoices are paid.',
+      });
+    }
+
+    // Mark booking as completed
+    const completed = await completeBooking(bookingId);
+
+    return res.json({
+      booking: presentBooking(completed),
+      message: 'Booking marked as completed',
+    });
+  } catch (error) {
+    console.error('[COMPLETE BOOKING] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
