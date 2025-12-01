@@ -611,45 +611,45 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
 ### 🔜 Phase 1.3.4: Backend API Routes (3-4 hours)
 
 #### Update Existing Endpoints
-- [ ] **POST /api/bookings** 
+- [x] **POST /api/bookings** 
   - Keep price calculation: `players * hours * $50/hour`
   - Auto-generate invoices on creation (1 per seat)
   - Split total price equally: `price / players` per seat
   - Return: booking with invoices
   
-- [ ] **PATCH /api/bookings/:id/cancel**
+- [x] **PATCH /api/bookings/:id/cancel**
   - Only allows BOOKED status
   - Cannot cancel COMPLETED
   - Return: updated booking
   
-- [ ] **GET /api/bookings/:id**
+- [x] **GET /api/bookings/:id**
   - Include invoices with orders
   - Include payment status
 
 #### Create New Endpoints
-- [ ] **POST /api/bookings/:bookingId/orders**
+- [x] **POST /api/bookings/:bookingId/orders**
   - Body: `{ menuItemId, seatIndex, quantity }`
   - Auto-lookup menuItem for unitPrice
   - Recalculate invoice totals
   - Return: `{ order, updatedInvoice }`
   
-- [ ] **DELETE /api/bookings/orders/:orderId**
+- [x] **DELETE /api/bookings/orders/:orderId**
   - Recalculate associated invoice
   - Return: `{ success, updatedInvoice }`
   
-- [ ] **GET /api/bookings/:bookingId/invoices**
+- [x] **GET /api/bookings/:bookingId/invoices**
   - Return: `[{ seatIndex, subtotal, tax, tip, totalAmount, status, paymentMethod, orders[] }]`
   
-- [ ] **PATCH /api/invoices/:invoiceId/pay**
+- [x] **PATCH /api/invoices/:invoiceId/pay**
   - Body: `{ bookingId, seatIndex, paymentMethod, tip? }`
   - Update invoice status to PAID
   - Check if all invoices paid → update booking.paymentStatus
   - Return: `{ invoice, bookingPaymentStatus }`
   
-- [ ] **GET /api/bookings/:bookingId/payment-status**
+- [x] **GET /api/bookings/:bookingId/payment-status**
   - Return: `{ seats: [{ seatIndex, paid, totalAmount, paymentMethod }], allPaid, remaining, totalRevenue }`
   
-- [ ] **POST /api/bookings/:bookingId/complete**
+- [x] **POST /api/bookings/:bookingId/complete**
   - Requires: All invoices PAID
   - Updates: bookingStatus = COMPLETED, completedAt = now
   - Return: updated booking
@@ -669,7 +669,7 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
   - [ ] Verify no errors
   - [ ] Check data in database
 
-### ✅ Phase 1.3.6: Frontend Components (6-8 hours)
+### ⏳ Phase 1.3.6: Frontend Components (6-8 hours)
 
 #### Create New Components
 - [ ] **OrderForm.tsx** (NEW)
