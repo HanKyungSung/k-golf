@@ -55,22 +55,80 @@ export default function POSDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Load data on mount and poll every 5 seconds
+  // Initial load on mount
   useEffect(() => {
     loadData(true); // Initial load with loading spinner
     loadTaxRate();
-    
-    // Poll for updates every 5 seconds (without loading spinner)
-    const pollInterval = setInterval(() => {
-      loadData(false);
+  }, []);
+
+  // Reload data when selected week changes (no loading spinner)
+  useEffect(() => {
+    loadData(false);
+  }, [currentWeekStart]);
+
+  // Poll for room status updates and current week bookings every 5 seconds (smooth, no flickering)
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        // Update room status and today's bookings
+        const now = new Date();
+        const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+        const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
+        
+        // Also fetch current week's bookings to keep timeline fresh
+        const localYear = currentWeekStart.getFullYear();
+        const localMonth = currentWeekStart.getMonth();
+        const localDate = currentWeekStart.getDate();
+        const weekStartUTC = new Date(Date.UTC(localYear, localMonth, localDate, 0, 0, 0));
+        const weekEndUTC = new Date(Date.UTC(localYear, localMonth, localDate + 6, 23, 59, 59));
+        
+        const [todayBookingsData, weekBookingsData, roomsData] = await Promise.all([
+          listBookings({ 
+            startDate: todayStart.toISOString(), 
+            endDate: todayEnd.toISOString(),
+            limit: 100 
+          }),
+          listBookings({ 
+            startDate: weekStartUTC.toISOString(), 
+            endDate: weekEndUTC.toISOString(),
+            limit: 500 
+          }),
+          listRooms()
+        ]);
+        
+        // Merge and transform bookings
+        const bookingsMap = new Map<string, any>();
+        weekBookingsData.forEach(b => bookingsMap.set(b.id, b));
+        todayBookingsData.forEach(b => bookingsMap.set(b.id, b));
+        
+        const mergedBookings = Array.from(bookingsMap.values()).map(b => {
+          const start = new Date(b.startTime);
+          const end = new Date(b.endTime);
+          const room = roomsData.find(r => r.id === b.roomId);
+          const year = start.getFullYear();
+          const month = String(start.getMonth() + 1).padStart(2, '0');
+          const day = String(start.getDate()).padStart(2, '0');
+          const localDate = `${year}-${month}-${day}`;
+          
+          return {
+            ...b,
+            date: localDate,
+            time: start.toTimeString().slice(0, 5),
+            duration: (end.getTime() - start.getTime()) / (1000 * 60 * 60),
+            roomName: room?.name || 'Unknown Room',
+          };
+        });
+        
+        // Update bookings and rooms
+        setBookings(mergedBookings);
+        setRooms(roomsData);
+      } catch (err) {
+        // Silent fail on poll - don't interrupt user experience
+        console.debug('[Dashboard] Poll update skipped:', err);
+      }
     }, 5000);
     
     return () => clearInterval(pollInterval);
-  }, [currentWeekStart]);
-
-  // Reload data when selected week changes
-  useEffect(() => {
-    loadData(false);
   }, [currentWeekStart]);
 
   async function loadData(showLoading = true) {
