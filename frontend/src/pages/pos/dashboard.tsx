@@ -192,16 +192,14 @@ export default function POSDashboard() {
         const end = new Date(b.endTime);
         const room = roomsData.find(r => r.id === b.roomId);
         
-        // Use local timezone for date/time display (avoid UTC conversion)
-        const year = start.getFullYear();
-        const month = String(start.getMonth() + 1).padStart(2, '0');
-        const day = String(start.getDate()).padStart(2, '0');
-        const localDate = `${year}-${month}-${day}`;
+        // Extract date from UTC ISO string (before timezone conversion)
+        // startTime is like "2025-12-15T01:00:00.000Z" -> extract "2025-12-15"
+        const utcDate = b.startTime.split('T')[0];
         
         return {
           ...b,
-          date: localDate, // YYYY-MM-DD in local timezone
-          time: start.toTimeString().slice(0, 5), // HH:MM
+          date: utcDate, // YYYY-MM-DD from UTC ISO string (not affected by local timezone)
+          time: start.toTimeString().slice(0, 5), // HH:MM in local time
           duration: (end.getTime() - start.getTime()) / (1000 * 60 * 60), // hours
           roomName: room?.name || 'Unknown Room',
         };
