@@ -41,7 +41,6 @@ export default function POSDashboard() {
     weekStart.setHours(0, 0, 0, 0);
     return weekStart;
   });
-  console.log('currentWeekStart', currentWeekStart);
   
   // Component navigation state
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
