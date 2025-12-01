@@ -669,30 +669,30 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
   - Schema validated
   - Data generation logic implemented
 
-### ⏳ Phase 1.3.6: Frontend Components (6-8 hours)
+### ✅ Phase 1.3.6: Frontend Components (6-8 hours)
 
 #### Create New Components
-- [ ] **OrderForm.tsx** (NEW)
+- [x] **OrderForm.tsx** (NEW)
   - Select menu items
   - Choose seat (1-4)
   - Set quantity
   - Add to cart per seat
   - Show running total
   
-- [ ] **InvoiceDisplay.tsx** (NEW)
+- [x] **InvoiceDisplay.tsx** (NEW)
   - Show per-seat invoice breakdown
   - Display booking fee + orders as line items
   - Show subtotal, tax, total
   - Color-code by payment status
   
-- [ ] **PaymentForm.tsx** (NEW)
+- [x] **PaymentForm.tsx** (NEW)
   - Accept payment per invoice
   - Payment method selection (CARD/CASH)
   - Tip entry
   - Mark as paid button
   - Show payment status
   
-- [ ] **PaymentSummary.tsx** (NEW)
+- [x] **PaymentSummary.tsx** (NEW)
   - Show all seats with status
   - Display total paid vs remaining
   - Show payment breakdown per seat
@@ -703,7 +703,7 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
   - Update filtering to only show BOOKED (hide CANCELLED/EXPIRED)
   
 - [ ] **Booking Creation Modal**
-  - Use basePrice instead of price
+  - Use price instead of basePrice
   - Auto-generate invoices on submit
   
 - [ ] **Booking Detail View**
@@ -712,7 +712,7 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
   - Add payment UI
   - Show completion button (only if all paid)
 
-### ✅ Phase 1.3.7: Testing & Validation (3-4 hours)
+### ⏳ Phase 1.3.7: Testing & Validation (3-4 hours)
 
 #### Unit Tests
 - [ ] **bookingRepo.test.ts**
