@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 export interface CreateBookingInput {
   roomId: string;
-  userId: string;
+  userId?: string;
   customerName: string;
   customerPhone: string;
   startTime: Date;
@@ -12,15 +12,16 @@ export interface CreateBookingInput {
   players: number;
   hours?: number; // Optional if endTime provided
   price: number | string; // stored as Decimal(10,2) in DB
-  bookingStatus?: string; // CONFIRMED | COMPLETED | CANCELLED
-  paymentStatus?: string; // UNPAID | BILLED | PAID
-  bookingSource: string; // Required: "ONLINE" | "WALK_IN" | "PHONE"
+  bookingSource?: string; // Optional: "ONLINE" | "WALK_IN" | "PHONE"
 }
 
 // Compute endTime: independent hours selection
 function computeEnd(startTime: Date, hours: number): Date {
   return new Date(startTime.getTime() + hours * 60 * 60 * 1000);
 }
+
+const HOURLY_RATE = 50; // $50 per hour per player
+const TAX_RATE = 0.1; // 10% tax
 
 export async function findConflict(roomId: string, startTime: Date, endTime: Date) {
   return prisma.booking.findFirst({
@@ -36,6 +37,19 @@ export async function findConflict(roomId: string, startTime: Date, endTime: Dat
 
 export async function createBooking(data: CreateBookingInput): Promise<Booking> {
   const endTime = data.endTime || (data.hours ? computeEnd(data.startTime, data.hours) : new Date(data.startTime.getTime() + 3600000));
+  
+  // Calculate price if not provided: players × hours × $50/hour
+  let price = data.price;
+  if (!price && data.hours) {
+    price = data.players * data.hours * HOURLY_RATE;
+  }
+  
+  // Calculate per-seat subtotal and tax
+  const seatSubtotal = Number(price) / data.players;
+  const seatTax = seatSubtotal * TAX_RATE;
+  const seatTotal = seatSubtotal + seatTax;
+  
+  // Create booking with auto-generated invoices (one per seat)
   return prisma.booking.create({
     data: {
       roomId: data.roomId,
@@ -45,11 +59,22 @@ export async function createBooking(data: CreateBookingInput): Promise<Booking> 
       startTime: data.startTime,
       endTime,
       players: data.players,
-      price: data.price,
-      bookingStatus: data.bookingStatus || 'CONFIRMED',
-      paymentStatus: data.paymentStatus || 'UNPAID',
-      bookingSource: data.bookingSource, // Required field, no default
+      price: price,
+      bookingStatus: 'BOOKED',
+      paymentStatus: 'UNPAID',
+      bookingSource: data.bookingSource || 'ONLINE',
+      // Auto-create invoices for each seat
+      invoices: {
+        create: Array.from({ length: data.players }, (_, i) => ({
+          seatIndex: i + 1,
+          subtotal: seatSubtotal,
+          tax: seatTax,
+          totalAmount: seatTotal,
+          status: 'UNPAID',
+        })),
+      },
     },
+    include: { invoices: true },
   });
 }
 
@@ -149,16 +174,46 @@ export async function getBooking(id: string): Promise<Booking | null> {
 }
 
 export async function cancelBooking(id: string): Promise<Booking> {
-  return prisma.booking.update({ where: { id }, data: { bookingStatus: 'CANCELLED' } });
+  // Only allow cancellation from BOOKED state
+  return prisma.booking.update({
+    where: { id },
+    data: { bookingStatus: 'CANCELLED' },
+  });
 }
 
-// Update payment status with optional fields
+export async function completeBooking(id: string): Promise<Booking> {
+  return prisma.booking.update({
+    where: { id },
+    data: {
+      bookingStatus: 'COMPLETED',
+      completedAt: new Date(),
+    },
+  });
+}
+
+export async function markBookingExpired(id: string): Promise<Booking> {
+  return prisma.booking.update({
+    where: { id },
+    data: {
+      bookingStatus: 'EXPIRED',
+    },
+  });
+}
+
+export async function updateBookingStatus(
+  id: string,
+  bookingStatus: 'BOOKED' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED'
+): Promise<Booking> {
+  return prisma.booking.update({
+    where: { id },
+    data: { bookingStatus },
+  });
+}
+
+// Update payment status (marks booking as PAID when all invoices paid)
 export interface UpdatePaymentStatusInput {
-  paymentStatus: 'UNPAID' | 'BILLED' | 'PAID';
-  billedAt?: Date;
+  paymentStatus: 'UNPAID' | 'PAID';
   paidAt?: Date;
-  paymentMethod?: 'CARD' | 'CASH';
-  tipAmount?: number;
 }
 
 export async function updatePaymentStatus(
@@ -169,21 +224,7 @@ export async function updatePaymentStatus(
     where: { id },
     data: {
       paymentStatus: data.paymentStatus,
-      billedAt: data.billedAt,
       paidAt: data.paidAt,
-      paymentMethod: data.paymentMethod,
-      tipAmount: data.tipAmount,
     },
-  });
-}
-
-// Update booking status
-export async function updateBookingStatus(
-  id: string,
-  bookingStatus: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
-): Promise<Booking> {
-  return prisma.booking.update({
-    where: { id },
-    data: { bookingStatus },
   });
 }
