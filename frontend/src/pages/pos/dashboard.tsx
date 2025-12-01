@@ -216,9 +216,11 @@ export default function POSDashboard() {
 
   const getStatusColor = (status: string) => {
     const s = status?.toLowerCase();
-    if (s === 'confirmed') return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+    if (s === 'booked') return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+    if (s === 'confirmed') return 'bg-blue-500/20 text-blue-300 border-blue-500/30'; // Legacy support
     if (s === 'completed') return 'bg-green-500/20 text-green-300 border-green-500/30';
     if (s === 'cancelled') return 'bg-red-500/20 text-red-300 border-red-500/30';
+    if (s === 'expired') return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
     if (s === 'active') return 'bg-green-500/20 text-green-300 border-green-500/30';
     if (s === 'maintenance') return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
     if (s === 'closed') return 'bg-red-500/20 text-red-300 border-red-500/30';
@@ -227,8 +229,8 @@ export default function POSDashboard() {
 
   const getPaymentStatusColor = (status: string) => {
     if (status === 'UNPAID') return 'bg-red-500/20 text-red-300 border-red-500/30';
-    if (status === 'BILLED') return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
     if (status === 'PAID') return 'bg-green-500/20 text-green-300 border-green-500/30';
+    if (status === 'BILLED') return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'; // Legacy support
     return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
   };
 
@@ -666,10 +668,10 @@ function TimelineView({ bookings, rooms, onBookingClick }: TimelineViewProps) {
     return endTime < currentTime;
   };
 
-  // Helper: Filter bookings by status (only CONFIRMED, hide CANCELLED)
+  // Helper: Filter bookings by status (only BOOKED, hide CANCELLED/COMPLETED/EXPIRED)
   const filterBookingsByStatus = (bookingsToFilter: Booking[]) => {
     return bookingsToFilter.filter(b => 
-      b.bookingStatus === 'CONFIRMED' || b.status === 'booked' // Handle both API field names
+      b.bookingStatus === 'BOOKED' || b.status === 'booked' // Handle both API field names
     );
   };
 
