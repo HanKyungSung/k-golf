@@ -315,9 +315,9 @@ async function main() {
 						// Calculate price (base $50/hour)
 						const basePrice = duration * 50;
 						
-						// Status: past bookings are completed, future are confirmed
+						// Status: past bookings are completed, future are booked
 						const isPast = startTime < today;
-						const bookingStatus = isPast ? 'COMPLETED' : 'CONFIRMED';
+						const bookingStatus = isPast ? 'COMPLETED' : 'BOOKED';
 					
 					// Payment status: completed bookings are paid, future are unpaid
 					const paymentStatus = isPast ? 'PAID' : 'UNPAID';
@@ -325,7 +325,6 @@ async function main() {
 					// Payment details for completed/paid bookings
 					const paymentMethod = isPast ? (Math.random() > 0.5 ? 'CARD' : 'CASH') : null;
 					const paidAt = isPast ? endTime : null;
-					const billedAt = isPast ? new Date(endTime.getTime() - 5 * 60 * 1000) : null; // 5 min before end
 						
 						// Random booking source: ONLINE, WALK_IN, or PHONE
 						const sources = ['ONLINE', 'WALK_IN', 'PHONE'];
@@ -346,9 +345,7 @@ async function main() {
 						price: basePrice,
 						bookingStatus,
 						paymentStatus,
-						billedAt,
 						paidAt,
-						paymentMethod,
 						bookingSource: bookingSource,
 						createdBy: adminUser.id,
 						createdAt,
@@ -381,6 +378,117 @@ async function main() {
 	} else {
 		console.log('Skipping mock bookings seeding (production and SEED_ENABLE_MOCK_BOOKINGS not set).');
 	}
+
+	// ============================================
+	// Phase 1.3.5: Seed Orders and Invoices
+	// ============================================
+	console.log('\n=== Seeding Orders and Invoices ===');
+
+	const TAX_RATE = 0.1; // 10% tax
+	const HOURLY_RATE = 50;
+
+	// Get all bookings to seed orders/invoices for
+	const allBookings = await prisma.booking.findMany({
+		include: { invoices: true },
+	});
+
+	console.log(`Found ${allBookings.length} bookings to process for orders/invoices`);
+
+	let invoicesCreated = 0;
+	let ordersCreated = 0;
+
+	for (const booking of allBookings) {
+		// Skip if invoices already exist for this booking
+		if (booking.invoices.length > 0) {
+			continue;
+		}
+
+		// Create invoices for each seat (1 per player)
+		const invoicesForBooking = [];
+		
+		// Calculate price per seat
+		const pricePerSeat = Number(booking.price) / booking.players;
+		const taxPerSeat = pricePerSeat * TAX_RATE;
+		const totalPerSeat = pricePerSeat + taxPerSeat;
+
+		for (let seatIndex = 1; seatIndex <= booking.players; seatIndex++) {
+			const invoice = await prisma.invoice.create({
+				data: {
+					bookingId: booking.id,
+					seatIndex,
+					subtotal: pricePerSeat,
+					tax: taxPerSeat,
+					tip: null,
+					totalAmount: totalPerSeat,
+					status: booking.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID',
+					paymentMethod: booking.paymentStatus === 'PAID' ? (Math.random() > 0.5 ? 'CARD' : 'CASH') : null,
+					paidAt: booking.paymentStatus === 'PAID' ? booking.paidAt : null,
+				},
+			});
+			invoicesForBooking.push(invoice);
+			invoicesCreated++;
+		}
+
+		// 50% chance to add orders (menu items) for completed bookings
+		if (booking.bookingStatus === 'COMPLETED' && Math.random() > 0.5) {
+			const menuItems = await prisma.menuItem.findMany({
+				where: {
+					available: true,
+					category: { in: ['FOOD', 'DRINKS', 'APPETIZERS', 'DESSERTS'] },
+				},
+			});
+
+			if (menuItems.length > 0) {
+				// Add 1-3 random menu items per seat
+				for (const invoice of invoicesForBooking) {
+					const itemCount = Math.floor(Math.random() * 3) + 1;
+					const selectedItems = menuItems
+						.sort(() => Math.random() - 0.5)
+						.slice(0, itemCount);
+
+					for (const item of selectedItems) {
+						const quantity = Math.floor(Math.random() * 2) + 1; // 1-2 of each item
+						const order = await prisma.order.create({
+							data: {
+								bookingId: booking.id,
+								menuItemId: item.id,
+								seatIndex: invoice.seatIndex,
+								quantity,
+								unitPrice: Number(item.price),
+								totalPrice: Number(item.price) * quantity,
+							},
+						});
+						ordersCreated++;
+					}
+
+					// Recalculate invoice totals with orders
+					const orders = await prisma.order.findMany({
+						where: {
+							bookingId: booking.id,
+							seatIndex: invoice.seatIndex,
+						},
+					});
+
+					const orderSubtotal = orders.reduce((sum, o) => sum + Number(o.totalPrice), 0);
+					const basePrice = Number(booking.price) / booking.players;
+					const newSubtotal = basePrice + orderSubtotal;
+					const newTax = newSubtotal * TAX_RATE;
+					const newTotal = newSubtotal + newTax;
+
+					await prisma.invoice.update({
+						where: { id: invoice.id },
+						data: {
+							subtotal: newSubtotal,
+							tax: newTax,
+							totalAmount: newTotal,
+						},
+					});
+				}
+			}
+		}
+	}
+
+	console.log(`Seeded ${invoicesCreated} invoices and ${ordersCreated} orders`);
 }
 
 main()
