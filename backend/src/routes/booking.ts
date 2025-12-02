@@ -545,7 +545,6 @@ router.post('/admin/create-OLD', requireAuth, async (req, res) => {
       endTime: end,
       players,
       price,
-      status: 'CONFIRMED',
     });
 
     res.status(201).json({ booking: presentBooking(booking) });
@@ -795,7 +794,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
             endTime,
             players,
             price: pricing.totalPrice,
-            bookingStatus: 'CONFIRMED',
+            bookingStatus: 'BOOKED',
             paymentStatus: 'UNPAID',
             bookingSource,
             createdBy: req.user!.id,
@@ -864,7 +863,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
               endTime,
               players,
               price: pricing.totalPrice,
-              bookingStatus: 'CONFIRMED',
+              bookingStatus: 'BOOKED',
               paymentStatus: 'UNPAID',
               bookingSource,
               createdBy: req.user!.id,
@@ -910,7 +909,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
         endTime,
         players,
         price: pricing.totalPrice,
-        bookingStatus: 'CONFIRMED',
+        bookingStatus: 'BOOKED',
         paymentStatus: 'UNPAID',
         bookingSource,
         createdBy: req.user!.id,

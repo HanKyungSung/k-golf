@@ -130,7 +130,7 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
         endTime,
         players: data.players,
         price,
-        bookingStatus: 'CONFIRMED',
+        bookingStatus: 'BOOKED',
         paymentStatus: 'UNPAID',
         bookingSource: data.bookingSource,
         createdBy: adminId,
