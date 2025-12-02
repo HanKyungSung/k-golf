@@ -56,8 +56,10 @@ jobs:
           push: true
           tags: ${{ steps.meta_backend.outputs.tags }}
           labels: ${{ steps.meta_backend.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.IMAGE_BACKEND }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_BACKEND }}:buildcache,mode=max
+          # Temporarily disable cache to ensure migrations are copied fresh
+          # cache-from: type=registry,ref=${{ env.IMAGE_BACKEND }}:buildcache
+          # cache-to: type=registry,ref=${{ env.IMAGE_BACKEND }}:buildcache,mode=max
+          no-cache: true
 
       - name: Export IMAGE_TAG (commit SHA)
         id: vars

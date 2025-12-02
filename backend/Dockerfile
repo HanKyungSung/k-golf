@@ -4,6 +4,7 @@ WORKDIR /app/backend
 ENV CI=true
 RUN apk add --no-cache openssl libc6-compat
 COPY backend/package*.json ./
+# Copy prisma schema and migrations (order matters for cache)
 COPY backend/prisma ./prisma
 RUN npm install
 
