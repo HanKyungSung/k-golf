@@ -19,8 +19,8 @@ ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "completedAt" TIMESTAMPTZ;
 
 -- 5. Create BookingPayment table for split payments
 CREATE TABLE IF NOT EXISTS "BookingPayment" (
-  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "bookingId" UUID NOT NULL REFERENCES "Booking"("id") ON DELETE CASCADE,
+  "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "bookingId" TEXT NOT NULL REFERENCES "Booking"("id") ON DELETE CASCADE,
   "customerName" VARCHAR(255) NOT NULL,
   "seatIndex" INT NOT NULL,
   "amount" DECIMAL(10,2) NOT NULL,
