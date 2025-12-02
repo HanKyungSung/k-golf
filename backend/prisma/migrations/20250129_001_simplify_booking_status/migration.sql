@@ -1,5 +1,5 @@
 -- Simplify booking status model
--- Migration: Rename CONFIRMED→BOOKED, add EXPIRED, remove BILLED, add BookingPayment for split payments
+-- Migration: Rename CONFIRMED→BOOKED, add EXPIRED, remove BILLED, create Invoice table
 
 -- 1. Update existing CONFIRMED bookings to BOOKED
 UPDATE "Booking" 
@@ -17,18 +17,19 @@ ALTER TABLE "Booking" DROP COLUMN IF EXISTS "billedAt";
 -- 4. Add completedAt column (track when booking was marked complete)
 ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "completedAt" TIMESTAMPTZ;
 
--- 5. Create BookingPayment table for split payments
-CREATE TABLE IF NOT EXISTS "BookingPayment" (
+-- 5. Create Invoice table for per-seat invoices
+CREATE TABLE IF NOT EXISTS "Invoice" (
   "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   "bookingId" TEXT NOT NULL REFERENCES "Booking"("id") ON DELETE CASCADE,
-  "customerName" VARCHAR(255) NOT NULL,
   "seatIndex" INT NOT NULL,
-  "amount" DECIMAL(10,2) NOT NULL,
+  "status" VARCHAR(50) NOT NULL DEFAULT 'UNPAID',
   "paymentMethod" VARCHAR(50),
-  "paidAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  "paidAt" TIMESTAMPTZ,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Create indices for BookingPayment
-CREATE INDEX IF NOT EXISTS "idx_booking_payment_bookingid" ON "BookingPayment"("bookingId");
-CREATE INDEX IF NOT EXISTS "idx_booking_payment_paidat" ON "BookingPayment"("paidAt");
+-- 6. Create indices for Invoice
+CREATE INDEX IF NOT EXISTS "idx_invoice_bookingid" ON "Invoice"("bookingId");
+CREATE INDEX IF NOT EXISTS "idx_invoice_status" ON "Invoice"("status");
+CREATE INDEX IF NOT EXISTS "idx_invoice_paidat" ON "Invoice"("paidAt");
