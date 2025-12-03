@@ -293,3 +293,166 @@ export async function updateGlobalTaxRate(rate: number): Promise<void> {
 
   if (!res.ok) throw new Error('Failed to update tax rate');
 }
+
+// ============= Invoice & Order APIs =============
+
+export interface Order {
+  id: string;
+  bookingId: string;
+  menuItemId: string;
+  seatIndex: number | null;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  createdAt: string;
+}
+
+export interface Invoice {
+  id: string;
+  bookingId: string;
+  seatIndex: number;
+  subtotal: number;
+  tax: number;
+  tip: number | null;
+  totalAmount: number;
+  status: 'UNPAID' | 'PAID';
+  paymentMethod: string | null;
+  paidAt: string | null;
+  orders?: Order[];
+}
+
+export interface PaymentStatus {
+  seats: Array<{
+    seatIndex: number;
+    paid: boolean;
+    totalAmount: number;
+    paymentMethod: string | null;
+    paidAt: string | null;
+  }>;
+  allPaid: boolean;
+  remaining: number;
+  totalRevenue: number;
+}
+
+/**
+ * Get all invoices for a booking (includes orders for each seat)
+ */
+export async function getInvoices(bookingId: string): Promise<Invoice[]> {
+  const res = await fetch(`${API_BASE}/api/bookings/${bookingId}/invoices`, {
+    credentials: 'include',
+    headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' }
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('[POS API] Get invoices error:', errorText);
+    throw new Error(`Failed to fetch invoices: ${res.status} ${errorText}`);
+  }
+
+  const json = await res.json();
+  return json.invoices || [];
+}
+
+/**
+ * Create a new order for a booking
+ */
+export async function createOrder(data: {
+  bookingId: string;
+  menuItemId: string;
+  seatIndex: number;
+  quantity: number;
+}): Promise<{ order: Order; updatedInvoice?: Invoice }> {
+  const res = await fetch(`${API_BASE}/api/bookings/${data.bookingId}/orders`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-pos-admin-key': 'pos-dev-key-change-in-production'
+    },
+    body: JSON.stringify({
+      menuItemId: data.menuItemId,
+      seatIndex: data.seatIndex,
+      quantity: data.quantity,
+    })
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to create order' }));
+    throw new Error(error.error || 'Failed to create order');
+  }
+
+  const json = await res.json();
+  return json;
+}
+
+/**
+ * Delete an order
+ */
+export async function deleteOrder(orderId: string): Promise<{ updatedInvoice?: Invoice }> {
+  const res = await fetch(`${API_BASE}/api/bookings/orders/${orderId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' }
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to delete order' }));
+    throw new Error(error.error || 'Failed to delete order');
+  }
+
+  const json = await res.json();
+  return json;
+}
+
+/**
+ * Mark an invoice as paid
+ */
+export async function payInvoice(data: {
+  invoiceId: string;
+  bookingId: string;
+  seatIndex: number;
+  paymentMethod: 'CARD' | 'CASH';
+  tip?: number;
+}): Promise<{ invoice: Invoice; bookingPaymentStatus: string }> {
+  const res = await fetch(`${API_BASE}/api/bookings/invoices/${data.invoiceId}/pay`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-pos-admin-key': 'pos-dev-key-change-in-production'
+    },
+    body: JSON.stringify({
+      bookingId: data.bookingId,
+      seatIndex: data.seatIndex,
+      paymentMethod: data.paymentMethod,
+      tip: data.tip,
+    })
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to process payment' }));
+    throw new Error(error.error || 'Failed to process payment');
+  }
+
+  const json = await res.json();
+  return json;
+}
+
+/**
+ * Get payment status for a booking
+ */
+export async function getPaymentStatus(bookingId: string): Promise<PaymentStatus> {
+  const res = await fetch(`${API_BASE}/api/bookings/${bookingId}/payment-status`, {
+    credentials: 'include',
+    headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' }
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('[POS API] Get payment status error:', errorText);
+    throw new Error(`Failed to fetch payment status: ${res.status} ${errorText}`);
+  }
+
+  const json = await res.json();
+  return json;
+}

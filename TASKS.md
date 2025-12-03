@@ -33,10 +33,119 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - Cancellation policy
 - individual payment collection from the customer
 
-## 🚨 URGENT TASKS (2025-11-26)
+## 🚨 URGENT TASKS (2025-12-02)
 
-### 1. **Printable Bill Formatting** 🔥 CRITICAL
+### 1. **Backend API Integration for Orders & Invoices** 🔥 CRITICAL
 - **Priority:** VERY URGENT
+- **Component:** POS Booking Detail Page + Backend APIs
+- **Problem:** Orders/payments stored in localStorage only, not persisted to database
+- **Current State:** 
+  - UI works with localStorage
+  - Backend has Order/Invoice tables and APIs
+  - No connection between frontend and backend for orders/invoices
+
+#### Implementation Plan:
+
+**Phase 1: Add API Functions to Frontend** `[~]`
+- [ ] Add to `frontend/services/pos-api.ts`:
+  - [ ] `getInvoices(bookingId)` → `GET /api/bookings/:bookingId/invoices`
+  - [ ] `createOrder(bookingId, menuItemId, seatIndex, quantity)` → `POST /api/bookings/:bookingId/orders`
+  - [ ] `deleteOrder(orderId)` → `DELETE /api/bookings/orders/:orderId`
+  - [ ] `payInvoice(invoiceId, bookingId, seatIndex, paymentMethod, tip)` → `PATCH /api/invoices/:invoiceId/pay`
+  - [ ] `getPaymentStatus(bookingId)` → `GET /api/bookings/:bookingId/payment-status`
+
+**Phase 2: Auto-Create Invoices** `[ ]`
+- [ ] Backend: Create empty invoices when booking is created (one per player/seat)
+- [ ] Or lazy-create invoices when first order is added
+- [ ] Ensure seed script creates invoices for existing bookings (already done)
+
+**Phase 3: Integrate Orders** `[ ]`
+- [ ] Load existing orders from backend on page load via `getInvoices()`
+- [ ] Replace localStorage `addItemToSeat()` with API call to `createOrder()`
+- [ ] Replace localStorage `removeOrderItem()` with API call to `deleteOrder()`
+- [ ] Backend auto-recalculates invoice totals after order changes
+- [ ] Remove localStorage dependency for orders (keep only UI state like expanded seats)
+
+**Phase 4: Integrate Payments** `[ ]`
+- [ ] Replace simulated `processPayment()` with real `payInvoice()` API call
+- [ ] Backend marks invoice as PAID, updates booking status if all seats paid
+- [ ] Refresh invoice/payment status after successful payment
+- [ ] Show proper loading/error states
+
+**Phase 5: Load Initial State from Backend** `[ ]`
+- [ ] On page load: fetch booking + invoices with orders
+- [ ] Populate `orderItems` state from backend Order data
+- [ ] Populate `seatPayments` state from backend Invoice data
+- [ ] Set `numberOfSeats` based on booking.players
+- [ ] Remove localStorage order persistence
+
+**Phase 6: Real-time Sync** `[ ]`
+- [ ] After adding order → refetch invoices to get updated totals
+- [ ] After payment → refetch payment status and invoices
+- [ ] Show loading indicators during API calls
+- [ ] Handle API errors gracefully with user feedback
+
+#### Manual Testing Checklist:
+
+**Test 1: Order Management**
+- [ ] Open booking detail page
+- [ ] Verify existing orders load from database (if any)
+- [ ] Add menu item to Seat 1 → verify POST to `/api/bookings/:id/orders`
+- [ ] Check database: verify Order record created with correct seatIndex
+- [ ] Verify invoice subtotal/tax/total updated automatically
+- [ ] Remove order → verify DELETE to `/api/bookings/orders/:orderId`
+- [ ] Check database: verify Order deleted and invoice recalculated
+
+**Test 2: Multiple Seats & Orders**
+- [ ] Increase seats to 3
+- [ ] Add different items to each seat
+- [ ] Verify each order saved with correct seatIndex (1, 2, 3)
+- [ ] Check database Invoice table: verify 3 invoices exist (one per seat)
+- [ ] Verify each invoice has correct subtotal from its seat's orders
+
+**Test 3: Payment Collection**
+- [ ] Add orders to Seat 1
+- [ ] Click "Collect Payment" on Seat 1
+- [ ] Select payment method (CARD/CASH), add optional tip
+- [ ] Click "Confirm Payment"
+- [ ] Verify PATCH to `/api/invoices/:invoiceId/pay`
+- [ ] Check database: Invoice status = 'PAID', paidAt timestamp set
+- [ ] Verify seat shows green "PAID" badge
+- [ ] Verify Payment Summary updates (paid count, progress bar)
+
+**Test 4: Complete Booking**
+- [ ] Pay all seats for a booking
+- [ ] Verify booking paymentStatus changes to 'PAID'
+- [ ] Click "Complete Booking"
+- [ ] Verify booking bookingStatus changes to 'COMPLETED'
+- [ ] Verify completedAt timestamp set
+
+**Test 5: Persistence**
+- [ ] Add orders and pay some seats
+- [ ] Close browser tab
+- [ ] Reopen booking detail page
+- [ ] Verify all orders still shown (loaded from database)
+- [ ] Verify paid seats still show PAID status
+- [ ] Verify unpaid seats still show UNPAID with correct totals
+
+**Test 6: Error Handling**
+- [ ] Try adding order with invalid menuItemId → verify error message
+- [ ] Try paying already-paid invoice → verify error handled
+- [ ] Disconnect backend → verify graceful error messages
+- [ ] Reconnect → verify page recovers and syncs data
+
+**Test 7: Invoice Recalculation**
+- [ ] Add 3 items to Seat 1
+- [ ] Note the invoice total
+- [ ] Delete 1 item
+- [ ] Verify invoice total decreased automatically
+- [ ] Add item back
+- [ ] Verify invoice total increased again
+
+---
+
+### 2. **Printable Bill Formatting** 
+- **Priority:** HIGH
 - **Component:** Web POS Booking Detail Page
 - **Requirement:** Each bill must be nicely formatted and printable
 - **Current State:** Basic print functionality exists but formatting needs improvement
