@@ -272,7 +272,7 @@ export default function BookingPage() {
   const calculatePrice = () => {
     if (!selectedRoomData) return 0;
     const players = Number.parseInt(numberOfPlayers);
-    const ratePerPersonPerHour = 50; // Fixed rate for all rooms
+    const ratePerPersonPerHour = 35; // Fixed rate for all rooms
     return ratePerPersonPerHour * players;
   };
 
@@ -337,7 +337,7 @@ export default function BookingPage() {
             Book Your Premium Experience
           </h2>
           <p className="text-slate-400 text-lg">
-            Choose your preferred time flexibly. Each player gets 1 hour of screen golf time at $50 per person.
+            Choose your preferred time flexibly. Each player gets 1 hour of screen golf time at $35 per person (tax not included).
           </p>
         </div>
 
@@ -350,44 +350,76 @@ export default function BookingPage() {
                 Choose Your Room
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                {rooms.map((room) => (
-                  <Card
-                    key={room.id}
-                    className={`cursor-pointer transition-all duration-300 bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 ${
-                      selectedRoom === room.id
-                        ? "ring-2 ring-amber-500 bg-slate-800/80 shadow-lg shadow-amber-500/20"
-                        : "hover:shadow-xl hover:shadow-slate-900/50"
-                    }`}
-                    onClick={() => setSelectedRoom(room.id)}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="relative">
-                        <img
-                          src={room.image || "/placeholder.svg"}
-                          alt={room.name}
-                          className="w-full h-24 object-cover rounded-lg mb-3"
-                        />
-                      </div>
-                      <CardTitle className="text-base text-white">
-                        {room.name}
-                      </CardTitle>
-                      <CardDescription className="text-slate-400 flex items-center gap-2 text-sm">
-                        <Users className="h-3 w-3" />
-                        Up to {room.capacity} players
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-amber-400">
-                          $50
+                {rooms.map((room) => {
+                  const roomNumber = room.name.match(/\d+/)?.[0] || '1';
+                  const handPreference = ['1', '2'].includes(roomNumber) ? 'Right-Handed' : 'Both Hands';
+                  
+                  return (
+                    <Card
+                      key={room.id}
+                      className={`cursor-pointer transition-all duration-300 bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 ${
+                        selectedRoom === room.id
+                          ? "ring-2 ring-amber-500 bg-slate-800/80 shadow-lg shadow-amber-500/20"
+                          : "hover:shadow-xl hover:shadow-slate-900/50"
+                      }`}
+                      onClick={() => setSelectedRoom(room.id)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="relative mb-3">
+                          <img
+                            src={room.image || "/placeholder.svg"}
+                            alt={room.name}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
                         </div>
-                        <div className="text-xs text-slate-400">
-                          per person/hour
+                        <CardTitle className="text-base text-white">
+                          {room.name}
+                        </CardTitle>
+                        <CardDescription className="text-slate-400 flex items-center gap-2 text-sm">
+                          <Users className="h-3 w-3" />
+                          Up to {room.capacity} players
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="space-y-2">
+                          <div className="text-center mb-3">
+                            <div className="text-lg font-bold text-amber-400">$35</div>
+                            <div className="text-xs text-slate-400">per person/hour (+ tax)</div>
+                          </div>
+
+                          {/* Hand Preference Badge */}
+                          <div className="flex items-center justify-center">
+                            {handPreference === 'Right-Handed' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
+                                  />
+                                </svg>
+                                Right-Handed
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
+                                  />
+                                </svg>
+                                Both Hands
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
 
@@ -609,7 +641,7 @@ export default function BookingPage() {
                         {numberOfPlayers} player{numberOfPlayers !== "1" ? "s" : ""}
                       </p>
                       <div className="text-amber-400 font-semibold">
-                        $50 per person/hour
+                        $35 per hour
                       </div>
                     </div>
 
