@@ -149,11 +149,39 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
       },
     });
     
+    // Auto-create invoices for each seat (1 per player)
+    const TAX_RATE = 0.1; // 10% tax
+    const pricePerSeat = Number(price) / data.players;
+    const taxPerSeat = pricePerSeat * TAX_RATE;
+    const totalPerSeat = pricePerSeat + taxPerSeat;
+    
+    const invoicePromises = [];
+    for (let seatIndex = 1; seatIndex <= data.players; seatIndex++) {
+      invoicePromises.push(
+        prisma.invoice.create({
+          data: {
+            bookingId: booking.id,
+            seatIndex,
+            subtotal: pricePerSeat,
+            tax: taxPerSeat,
+            tip: null,
+            totalAmount: totalPerSeat,
+            status: 'UNPAID',
+            paymentMethod: null,
+            paidAt: null,
+          },
+        })
+      );
+    }
+    
+    await Promise.all(invoicePromises);
+    
     return res.status(201).json({
       success: true,
       booking,
       isNewCustomer: !existingUser,
       linkedToUser: !!existingUser,
+      invoicesCreated: data.players,
     });
     
   } catch (error: any) {
