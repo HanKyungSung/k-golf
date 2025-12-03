@@ -221,6 +221,7 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req, res) => {
       where: { id },
       data: { 
         bookingStatus: status,
+        completedAt: status === 'COMPLETED' ? new Date() : null,
         updatedAt: new Date(),
       },
     });
