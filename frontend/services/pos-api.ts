@@ -462,6 +462,34 @@ export async function payInvoice(data: {
 }
 
 /**
+ * Cancel payment/refund an invoice
+ */
+export async function unpayInvoice(data: {
+  invoiceId: string;
+  bookingId: string;
+}): Promise<{ invoice: Invoice; bookingPaymentStatus: string }> {
+  const res = await fetch(`${API_BASE}/api/bookings/invoices/${data.invoiceId}/unpay`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-pos-admin-key': 'pos-dev-key-change-in-production'
+    },
+    body: JSON.stringify({
+      bookingId: data.bookingId,
+    })
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to cancel payment' }));
+    throw new Error(error.error || 'Failed to cancel payment');
+  }
+
+  const json = await res.json();
+  return json;
+}
+
+/**
  * Get payment status for a booking
  */
 export async function getPaymentStatus(bookingId: string): Promise<PaymentStatus> {

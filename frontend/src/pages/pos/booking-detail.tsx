@@ -23,6 +23,7 @@ import {
   updateOrder as apiUpdateOrder,
   deleteOrder as apiDeleteOrder,
   payInvoice as apiPayInvoice,
+  unpayInvoice as apiUnpayInvoice,
   type Booking,
   type Room,
   type MenuItem,
@@ -488,6 +489,61 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     }
   };
 
+  const unpayInvoice = async (seat: number) => {
+    if (!booking) return;
+    
+    if (!confirm(`Cancel payment for Seat ${seat}? This will mark the invoice as unpaid.`)) {
+      return;
+    }
+
+    setProcessingPayment(seat);
+
+    try {
+      // Find the invoice for this seat
+      const invoice = invoices.find((inv) => inv.seatIndex === seat);
+      if (!invoice) {
+        throw new Error(`No invoice found for seat ${seat}`);
+      }
+      
+      console.log('[BookingDetail] Canceling payment:', { invoiceId: invoice.id, seat });
+      
+      // Call backend API to mark invoice as unpaid
+      const result = await apiUnpayInvoice({
+        invoiceId: invoice.id,
+        bookingId: booking.id,
+      });
+      
+      console.log('[BookingDetail] Payment canceled:', result.invoice);
+
+      // Update seat payment status
+      setSeatPayments(prev => ({
+        ...prev,
+        [seat]: { 
+          status: 'UNPAID', 
+          method: undefined, 
+          tip: undefined,
+          total: result.invoice.totalAmount
+        },
+      }));
+      
+      // Clear tip input for this seat
+      setTipAmountBySeat(prev => ({ ...prev, [seat]: '' }));
+      
+      // Refetch invoices to ensure we have latest data
+      const updatedInvoices = await getInvoices(booking.id);
+      setInvoices(updatedInvoices.invoices);
+      
+      // Reload booking to get updated payment status
+      await loadData();
+
+    } catch (err) {
+      console.error('[BookingDetail] Failed to cancel payment:', err);
+      alert(`Failed to cancel payment: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setProcessingPayment(null);
+    }
+  };
+
   const isSeatPaid = (seat: number) => {
     return seatPayments[seat]?.status === 'PAID';
   };
@@ -518,7 +574,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       .reduce((sum, seat) => {
         const payment = getSeatPayment(seat);
         if (!payment) return sum;
-        return sum + (payment.total || 0);
+        return sum + (parseFloat(String(payment.total || 0)) || 0);
       }, 0);
   };
 
@@ -1003,7 +1059,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
                         {/* Payment Section */}
                         {isPaid ? (
-                          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 space-y-3">
                             <div className="flex items-center gap-2 text-green-400 mb-2">
                               <CheckCircle2 className="h-5 w-5" />
                               <span className="font-semibold">PAID</span>
@@ -1025,6 +1081,14 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                               </p>
                               <p>Amount: ${total.toFixed(2)}</p>
                             </div>
+                            <Button
+                              onClick={() => unpayInvoice(seat)}
+                              disabled={processingPayment === seat}
+                              variant="outline"
+                              className="w-full bg-red-500/10 border-red-500/30 hover:bg-red-500/20 text-red-400 hover:text-red-300"
+                            >
+                              {processingPayment === seat ? 'Processing...' : 'Cancel Payment'}
+                            </Button>
                           </div>
                         ) : (
                           <div className="space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
@@ -1190,7 +1254,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                             <>
                               <CheckCircle2 className="h-4 w-4 text-green-400" />
                               <span className="text-xs text-green-400 font-semibold">PAID</span>
-                              <span className="text-xs text-slate-400 font-mono">${(payment?.total || 0).toFixed(2)}</span>
+                              <span className="text-xs text-slate-400 font-mono">${(parseFloat(String(payment?.total || 0)) || 0).toFixed(2)}</span>
                             </>
                           ) : (
                             <>
@@ -1211,18 +1275,9 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
                 {/* Totals */}
                 <div className="space-y-2 font-mono text-sm">
-                  <div className="flex justify-between text-slate-300">
-                    <span>Room Booking</span>
-                    <span>${(parseFloat(String(booking.price || 0))).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-300">
-                    <span>Food & Drinks</span>
-                    <span>${getTotalPaid().toFixed(2)}</span>
-                  </div>
-                  <Separator className="bg-slate-700" />
                   <div className="flex justify-between text-white font-bold text-base">
                     <span>Total Collected</span>
-                    <span className="text-green-400">${(parseFloat(String(booking.price || 0)) + getTotalPaid()).toFixed(2)}</span>
+                    <span className="text-green-400">${getTotalPaid().toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-slate-300 text-xs">
                     <span>Total Due</span>

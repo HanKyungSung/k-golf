@@ -1283,6 +1283,84 @@ router.patch('/invoices/:invoiceId/pay', requireAuth, async (req, res) => {
   }
 });
 
+// PATCH /api/bookings/invoices/:invoiceId/unpay - Cancel payment/refund invoice
+const unpayInvoiceSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
+router.patch('/invoices/:invoiceId/unpay', requireAuth, async (req, res) => {
+  const { invoiceId } = req.params;
+
+  try {
+    const parsed = unpayInvoiceSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const { bookingId } = parsed.data;
+
+    // Verify booking exists
+    const booking = await getBooking(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Get invoice
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    if (invoice.status !== 'PAID') {
+      return res.status(400).json({ error: 'Invoice is not paid' });
+    }
+
+    // Reset invoice to unpaid
+    const updatedInvoice = await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        status: 'UNPAID',
+        paymentMethod: null,
+        paidAt: null,
+        tip: null,
+      },
+    });
+
+    // Recalculate totals without tip
+    const recalculated = await invoiceRepo.recalculateInvoice(bookingId, updatedInvoice.seatIndex);
+
+    // Update booking payment status to UNPAID since at least one invoice is now unpaid
+    await updatePaymentStatus(bookingId, {
+      paymentStatus: 'UNPAID',
+      paidAt: null,
+    });
+
+    return res.json({
+      invoice: {
+        id: recalculated.id,
+        seatIndex: recalculated.seatIndex,
+        subtotal: recalculated.subtotal,
+        tax: recalculated.tax,
+        tip: recalculated.tip,
+        totalAmount: recalculated.totalAmount,
+        status: recalculated.status,
+        paymentMethod: recalculated.paymentMethod,
+        paidAt: recalculated.paidAt,
+      },
+      bookingPaymentStatus: 'UNPAID',
+    });
+  } catch (error) {
+    console.error('[UNPAY INVOICE] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/bookings/:bookingId/payment-status - Get payment status for booking
 router.get('/:bookingId/payment-status', async (req, res) => {
   const { bookingId } = req.params;
