@@ -33,16 +33,18 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - Cancellation policy
 - individual payment collection from the customer
 
-## 🚨 URGENT TASKS (2025-12-02)
+## 🚨 URGENT TASKS (2025-12-03)
 
-### 1. **Backend API Integration for Orders & Invoices** 🔥 CRITICAL
-- **Priority:** VERY URGENT
+### 1. **Backend API Integration for Orders & Invoices** ✅ COMPLETED (2025-12-03)
+- **Priority:** COMPLETED
 - **Component:** POS Booking Detail Page + Backend APIs
-- **Problem:** Orders/payments stored in localStorage only, not persisted to database
-- **Current State:** 
-  - UI works with localStorage
-  - Backend has Order/Invoice tables and APIs
-  - No connection between frontend and backend for orders/invoices
+- **Status:** All 6 phases implemented and tested
+- **Features Added:**
+  - Full backend integration for orders and invoices
+  - Payment cancellation/refund functionality
+  - Invoice starting at $0 (no base price)
+  - Booking completion with completedAt timestamp
+  - Proper Decimal/number type handling
 
 #### Implementation Plan:
 
@@ -93,62 +95,100 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - [x] Show loading indicators during API calls (`orderLoading` state)
 - [x] Handle API errors gracefully with try/catch and alerts
 
+**Additional Features Completed:**
+- [x] Payment cancellation/refund feature
+  - [x] Added `PATCH /api/bookings/invoices/:invoiceId/unpay` endpoint
+  - [x] "Cancel Payment" button on paid seats
+  - [x] Confirmation dialog before canceling
+  - [x] Resets invoice to UNPAID, clears payment data
+  - [x] Updates booking paymentStatus when payment canceled
+- [x] Invoice initialization improvements
+  - [x] Invoices start at $0 (no base room price)
+  - [x] Updated bookingSimple.ts and seed.ts
+  - [x] Only order totals included in invoice calculations
+- [x] Booking completion enhancements
+  - [x] Sets `completedAt` timestamp when marked as COMPLETED
+  - [x] Clears `completedAt` if status changes from COMPLETED
+  - [x] Admin has flexibility to complete without payment validation
+- [x] Type safety fixes
+  - [x] Fixed Decimal to number conversions throughout
+  - [x] Proper parseFloat handling for backend Decimal values
+  - [x] Fixed TypeScript compilation errors in orderRepo and booking routes
+
 #### Manual Testing Checklist:
 
-**Test 1: Order Management**
-- [ ] Open booking detail page
-- [ ] Verify existing orders load from database (if any)
-- [ ] Add menu item to Seat 1 → verify POST to `/api/bookings/:id/orders`
-- [ ] Check database: verify Order record created with correct seatIndex
-- [ ] Verify invoice subtotal/tax/total updated automatically
-- [ ] Remove order → verify DELETE to `/api/bookings/orders/:orderId`
-- [ ] Check database: verify Order deleted and invoice recalculated
+**Test 1: Order Management** ✅ PASSED
+- [x] Open booking detail page
+- [x] Verify existing orders load from database (if any)
+- [x] Add menu item to Seat 1 → verify POST to `/api/bookings/:id/orders`
+- [x] Check database: verify Order record created with correct seatIndex
+- [x] Verify invoice subtotal/tax/total updated automatically
+- [x] Remove order → verify DELETE to `/api/bookings/orders/:orderId`
+- [x] Check database: verify Order deleted and invoice recalculated
 
-**Test 2: Multiple Seats & Orders**
-- [ ] Increase seats to 3
-- [ ] Add different items to each seat
-- [ ] Verify each order saved with correct seatIndex (1, 2, 3)
-- [ ] Check database Invoice table: verify 3 invoices exist (one per seat)
-- [ ] Verify each invoice has correct subtotal from its seat's orders
+**Test 2: Multiple Seats & Orders** ✅ PASSED
+- [x] Increase seats to 3
+- [x] Add different items to each seat
+- [x] Verify each order saved with correct seatIndex (1, 2, 3)
+- [x] Check database Invoice table: verify 3 invoices exist (one per seat)
+- [x] Verify each invoice has correct subtotal from its seat's orders
 
-**Test 3: Payment Collection**
-- [ ] Add orders to Seat 1
-- [ ] Click "Collect Payment" on Seat 1
-- [ ] Select payment method (CARD/CASH), add optional tip
-- [ ] Click "Confirm Payment"
-- [ ] Verify PATCH to `/api/invoices/:invoiceId/pay`
-- [ ] Check database: Invoice status = 'PAID', paidAt timestamp set
-- [ ] Verify seat shows green "PAID" badge
-- [ ] Verify Payment Summary updates (paid count, progress bar)
+**Test 3: Payment Collection** ✅ PASSED
+- [x] Add orders to Seat 1
+- [x] Click "Collect Payment" on Seat 1
+- [x] Select payment method (CARD/CASH), add optional tip
+- [x] Click "Confirm Payment"
+- [x] Verify PATCH to `/api/invoices/:invoiceId/pay`
+- [x] Check database: Invoice status = 'PAID', paidAt timestamp set
+- [x] Verify seat shows green "PAID" badge
+- [x] Verify Payment Summary updates (paid count, progress bar)
 
-**Test 4: Complete Booking**
-- [ ] Pay all seats for a booking
-- [ ] Verify booking paymentStatus changes to 'PAID'
-- [ ] Click "Complete Booking"
-- [ ] Verify booking bookingStatus changes to 'COMPLETED'
-- [ ] Verify completedAt timestamp set
+**Test 4: Complete Booking** ✅ PASSED
+- [x] Pay all seats for a booking
+- [x] Verify booking paymentStatus changes to 'PAID'
+- [x] Click "Complete Booking"
+- [x] Verify booking bookingStatus changes to 'COMPLETED'
+- [x] Verify completedAt timestamp set
 
-**Test 5: Persistence**
-- [ ] Add orders and pay some seats
-- [ ] Close browser tab
-- [ ] Reopen booking detail page
-- [ ] Verify all orders still shown (loaded from database)
-- [ ] Verify paid seats still show PAID status
-- [ ] Verify unpaid seats still show UNPAID with correct totals
+**Test 5: Persistence** ✅ PASSED
+- [x] Add orders and pay some seats
+- [x] Close browser tab
+- [x] Reopen booking detail page
+- [x] Verify all orders still shown (loaded from database)
+- [x] Verify paid seats still show PAID status
+- [x] Verify unpaid seats still show UNPAID with correct totals
 
-**Test 6: Error Handling**
-- [ ] Try adding order with invalid menuItemId → verify error message
-- [ ] Try paying already-paid invoice → verify error handled
-- [ ] Disconnect backend → verify graceful error messages
-- [ ] Reconnect → verify page recovers and syncs data
+**Test 6: Error Handling** ✅ PASSED
+- [x] Try adding order with invalid menuItemId → verify error message
+- [x] Try paying already-paid invoice → verify error handled
+- [x] Disconnect backend → verify graceful error messages
+- [x] Reconnect → verify page recovers and syncs data
 
-**Test 7: Invoice Recalculation**
-- [ ] Add 3 items to Seat 1
-- [ ] Note the invoice total
-- [ ] Delete 1 item
-- [ ] Verify invoice total decreased automatically
-- [ ] Add item back
-- [ ] Verify invoice total increased again
+**Test 7: Invoice Recalculation** ✅ PASSED
+- [x] Add 3 items to Seat 1
+- [x] Note the invoice total
+- [x] Delete 1 item
+- [x] Verify invoice total decreased automatically
+- [x] Add item back
+- [x] Verify invoice total increased again
+
+**Test 8: Payment Cancellation (NEW)** ✅ PASSED
+- [x] Pay invoice for a seat with CARD or CASH
+- [x] Verify "Cancel Payment" button appears on paid seat
+- [x] Click "Cancel Payment" → verify confirmation dialog
+- [x] Confirm cancellation
+- [x] Verify PATCH to `/api/bookings/invoices/:invoiceId/unpay`
+- [x] Check database: Invoice status = 'UNPAID', paymentMethod/paidAt/tip cleared
+- [x] Verify seat shows "Collect Payment" button again
+- [x] Verify booking paymentStatus updates correctly
+- [x] Verify invoice totals recalculated without tip
+
+**Test 9: Zero-Amount Invoice Creation (NEW)** ✅ PASSED
+- [x] Create new booking with 2 players
+- [x] Verify invoices created with $0 totals (no room price)
+- [x] Verify Payment Summary shows $0 before any orders added
+- [x] Add orders → verify totals calculate correctly from $0 base
+- [x] Tested with booking b7f5244d-9f5b-476e-9d71-4d2bd33c5da0
 
 ---
 
