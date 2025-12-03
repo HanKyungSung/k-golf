@@ -5,11 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { Users, Plus, Minus, Trash2, Printer, Edit } from 'lucide-react';
-import InvoiceDisplay from '@/components/InvoiceDisplay';
-import PaymentForm from '@/components/PaymentForm';
+import { Progress } from '@/components/ui/progress';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, User, Clock, Calendar } from 'lucide-react';
 import OrderForm from '@/components/OrderForm';
-import PaymentSummary from '@/components/PaymentSummary';
 import { 
   getBooking, 
   updateBookingStatus as apiUpdateBookingStatus, 
@@ -59,6 +61,13 @@ const seatColors = [
   'bg-cyan-500', 'bg-yellow-500', 'bg-red-500', 'bg-indigo-500', 'bg-teal-500'
 ];
 
+const roomColors: Record<string, string> = {
+  '1': 'bg-blue-500',
+  '2': 'bg-green-500',
+  '3': 'bg-purple-500',
+  '4': 'bg-orange-500',
+};
+
 const MAX_SEATS = 10;
 
 export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetailProps) {
@@ -75,7 +84,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   
   // Seat payment tracking
-  const [seatPayments, setSeatPayments] = useState<Record<number, { status: 'UNPAID' | 'PAID'; method?: string; tip?: number }>>({});
+  const [seatPayments, setSeatPayments] = useState<Record<number, { status: 'UNPAID' | 'PAID'; method?: string; tip?: number; total?: number }>>({});
   
   // Dialog state
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
@@ -87,8 +96,15 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [showTaxEditDialog, setShowTaxEditDialog] = useState(false);
   const [taxRateInput, setTaxRateInput] = useState<string>('');
   const [printingSeat, setPrintingSeat] = useState<number | null>(null);
+  const [expandedSeats, setExpandedSeats] = useState<string[]>([]);
+  
+  // Payment form state (for accordion-based payments)
+  const [paymentMethodBySeat, setPaymentMethodBySeat] = useState<Record<number, 'CARD' | 'CASH'>>({});
+  const [tipAmountBySeat, setTipAmountBySeat] = useState<Record<number, string>>({});
+  const [processingPayment, setProcessingPayment] = useState<number | null>(null);
   
   const seatsInitialized = React.useRef(false);
+  const seatRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
 
   // Load data on mount
   useEffect(() => {
@@ -112,10 +128,16 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
     if (savedSeats) {
       try {
-        setNumberOfSeats(JSON.parse(savedSeats));
+        const seats = JSON.parse(savedSeats);
+        setNumberOfSeats(seats);
+        // Expand all seats by default
+        setExpandedSeats(Array.from({ length: seats }, (_, i) => `seat-${i + 1}`));
       } catch (e) {
         console.error('[BookingDetail] Failed to load saved seats:', e);
       }
+    } else {
+      // Default: expand seat 1
+      setExpandedSeats(['seat-1']);
     }
 
     if (savedTaxRate) {
@@ -259,6 +281,15 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     setShowSplitDialog(true);
   };
 
+  const handleMoveItem = (item: OrderItem) => {
+    setSelectedOrderItem(item);
+    setShowMoveDialog(true);
+  };
+
+  const handleSplitItem = (item: OrderItem) => {
+    openSplitDialog(item);
+  };
+
   const toggleSeatForSplit = (seat: number) => {
     if (selectedSeatsForSplit.includes(seat)) {
       setSelectedSeatsForSplit(selectedSeatsForSplit.filter((s) => s !== seat));
@@ -296,6 +327,88 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
   const handlePrintReceipt = () => {
     window.print();
+  };
+
+  // Payment processing for accordion-based interface
+  const processPayment = async (seat: number) => {
+    setProcessingPayment(seat);
+
+    // Simulate payment processing
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const tipAmount = parseFloat(tipAmountBySeat[seat] || '0') || 0;
+    const subtotal = calculateSeatSubtotal(seat);
+    const tax = calculateSeatTax(seat);
+    const total = subtotal + tax + tipAmount;
+
+    // Update seat payment status
+    setSeatPayments(prev => ({
+      ...prev,
+      [seat]: { 
+        status: 'PAID', 
+        method: paymentMethodBySeat[seat] || 'CARD', 
+        tip: tipAmount,
+        total: total
+      },
+    }));
+
+    setProcessingPayment(null);
+
+    // Auto-scroll to next unpaid seat
+    const nextUnpaidSeat = Array.from({ length: numberOfSeats }, (_, i) => i + 1).find(
+      (s) => s > seat && (seatPayments[s]?.status || 'UNPAID') === 'UNPAID'
+    );
+
+    if (nextUnpaidSeat && seatRefs.current[nextUnpaidSeat]) {
+      setTimeout(() => {
+        seatRefs.current[nextUnpaidSeat]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  };
+
+  const isSeatPaid = (seat: number) => {
+    return seatPayments[seat]?.status === 'PAID';
+  };
+
+  const getSeatPayment = (seat: number) => {
+    return seatPayments[seat];
+  };
+
+  const setQuickTip = (seat: number, percentage: number) => {
+    const subtotal = calculateSeatSubtotal(seat);
+    const tipAmount = ((subtotal * percentage) / 100).toFixed(2);
+    setTipAmountBySeat({ ...tipAmountBySeat, [seat]: tipAmount });
+  };
+
+  // Payment Summary helper functions
+  const getPaidSeatsCount = (): number => {
+    return Array.from({ length: numberOfSeats }, (_, i) => i + 1).filter(seat => isSeatPaid(seat)).length;
+  };
+
+  const getPaymentProgress = (): number => {
+    if (numberOfSeats === 0) return 0;
+    return (getPaidSeatsCount() / numberOfSeats) * 100;
+  };
+
+  const getTotalPaid = (): number => {
+    return Array.from({ length: numberOfSeats }, (_, i) => i + 1)
+      .filter(seat => isSeatPaid(seat))
+      .reduce((sum, seat) => {
+        const payment = getSeatPayment(seat);
+        if (!payment) return sum;
+        return sum + (payment.total || 0);
+      }, 0);
+  };
+
+  const getTotalDue = (): number => {
+    return Array.from({ length: numberOfSeats }, (_, i) => i + 1)
+      .filter(seat => !isSeatPaid(seat))
+      .reduce((sum, seat) => {
+        const subtotal = calculateSeatSubtotal(seat);
+        const tax = calculateSeatTax(seat);
+        const tipAmount = parseFloat(tipAmountBySeat[seat] || '0') || 0;
+        return sum + subtotal + tax + tipAmount;
+      }, 0);
   };
 
   // Check if we can safely reduce the number of seats
@@ -357,6 +470,26 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
   const calculateTotal = () => {
     return calculateSubtotal() + calculateTax();
+  };
+
+  const handleCompleteBooking = async () => {
+    try {
+      await apiUpdateBookingStatus(bookingId, 'COMPLETED');
+      await loadData();
+    } catch (err) {
+      console.error('Failed to complete booking:', err);
+      alert(`Failed to complete booking: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const updateStatus = async (status: string) => {
+    try {
+      await apiUpdateBookingStatus(bookingId, status.toUpperCase());
+      await loadData();
+    } catch (err) {
+      console.error('Failed to update booking status:', err);
+      alert(`Failed to update status: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
 
   const changeStatus = async (status: string) => {
@@ -505,16 +638,43 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Order Management */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Seat Management Card */}
-            <Card className="no-print bg-slate-800/50 border-slate-700">
+            {/* Room Card */}
+            <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
+                <CardTitle className="text-white text-2xl flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${roomColors[booking.roomId]}`} />
+                  {roomColor}
+                </CardTitle>
+                <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <User className="h-4 w-4 text-amber-400" />
+                    <span>{booking.customerName}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Calendar className="h-4 w-4 text-amber-400" />
+                    <span>{booking.date}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Clock className="h-4 w-4 text-amber-400" />
+                    <span>
+                      {booking.time} ({booking.duration}h)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Users className="h-4 w-4 text-amber-400" />
+                    <span>{booking.players} players</span>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+
+            {/* Seat Management Card */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
                   <Users className="h-5 w-5 text-amber-400" />
                   Seat Management
                 </CardTitle>
-                <CardDescription className="text-slate-400">
-                  Adjust number of seats for bill splitting (Booking has {booking.players} player{booking.players !== 1 ? 's' : ''})
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
@@ -524,8 +684,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                       size="sm"
                       onClick={handleReduceSeats}
                       disabled={!canReduceSeats()}
-                      className="h-10 w-10 p-0"
-                      title={!canReduceSeats() && numberOfSeats > 1 ? "Cannot reduce: items assigned to higher seats" : ""}
+                      className="h-10 w-10 p-0 bg-slate-700 hover:bg-slate-600 text-white"
                     >
                       <Minus className="h-5 w-5" />
                     </Button>
@@ -534,7 +693,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                       size="sm"
                       onClick={() => setNumberOfSeats(Math.min(MAX_SEATS, numberOfSeats + 1))}
                       disabled={numberOfSeats >= MAX_SEATS}
-                      className="h-10 w-10 p-0"
+                      className="h-10 w-10 p-0 bg-slate-700 hover:bg-slate-600 text-white"
                     >
                       <Plus className="h-5 w-5" />
                     </Button>
@@ -543,68 +702,70 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
               </CardContent>
             </Card>
 
-            {/* Current Order Card */}
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-2xl text-white">Current Order</CardTitle>
-                    <CardDescription className="text-slate-400">{orderItems.length} item(s)</CardDescription>
-                  </div>
-                  <Button size="sm" onClick={handlePrintReceipt} className="no-print bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border-amber-500/50">
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print All
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4 max-h-[700px] overflow-y-auto print-receipt">
-                {orderItems.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400">
-                    <p className="text-lg">No items yet</p>
-                    <p className="text-sm mt-2">Select items from the menu to add</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Seat sections */}
-                    {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => {
-                      const seatItems = getItemsForSeat(seat);
-                      if (seatItems.length === 0) return null;
+            {/* Seat Panels with Order Items and Invoices */}
+            <Accordion type="multiple" value={expandedSeats} onValueChange={setExpandedSeats} className="space-y-4">
+              {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => {
+                const seatItems = getItemsForSeat(seat);
+                const isPaid = isSeatPaid(seat);
+                const payment = getSeatPayment(seat);
+                const subtotal = calculateSeatSubtotal(seat);
+                const tax = calculateSeatTax(seat);
+                const tipAmount = isPaid
+                  ? payment?.tip || 0
+                  : parseFloat(tipAmountBySeat[seat] || '0') || 0;
+                const total = subtotal + tax + tipAmount;
 
-                      return (
-                        <div
-                          key={seat}
-                          className={`space-y-3 pt-4 border-t-2 border-slate-700 first:border-t-0 first:pt-0 seat-section seat-section-${seat}`}
-                        >
-                          <div className="flex items-center justify-between pb-2">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 rounded-full ${seatColors[seat - 1]}`} />
-                              <h4 className="font-bold text-white uppercase text-lg">Seat {seat}</h4>
-                            </div>
-                            <Button
-                              size="sm"
-                              onClick={() => handlePrintSeat(seat)}
-                              variant="outline"
-                              className="no-print bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border-amber-500/50"
-                            >
-                              <Printer className="h-4 w-4 mr-1" />
-                              Print Seat {seat}
-                            </Button>
+                return (
+                  <AccordionItem
+                    key={seat}
+                    value={`seat-${seat}`}
+                    className="border border-slate-700 rounded-lg bg-slate-800/50 overflow-hidden"
+                    ref={(el) => {
+                      seatRefs.current[seat] = el;
+                    }}
+                  >
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-800/80">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full ${seatColors[seat - 1]}`} />
+                          <span className="font-bold text-white text-lg">Seat {seat}</span>
+                          <Badge variant="outline" className="text-slate-300 border-slate-600">
+                            {seatItems.length} items
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isPaid ? (
+                            <Badge className="bg-green-500 text-white flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              PAID
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-amber-500 text-black flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              UNPAID
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <div className="space-y-4 pt-2">
+                        {/* Order Items */}
+                        {seatItems.length === 0 ? (
+                          <div className="text-center py-8 text-slate-400 bg-slate-900/30 rounded-lg">
+                            <p>No items ordered yet</p>
+                            <p className="text-sm mt-1">Add items from the menu</p>
                           </div>
-
-                          {/* Print-only seat header */}
-                          <div className="print-only mb-4">
-                            <h2 className="text-2xl font-bold mb-2">Seat {seat} Bill</h2>
-                            <p><strong>Customer:</strong> {booking?.customerName}</p>
-                            <p><strong>Room:</strong> {roomColor}</p>
-                            <p><strong>Date:</strong> {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
-                            <hr className="my-3 border-black" />
-                          </div>
-
-                          {seatItems.map((item) => (
-                            <div key={item.id} className="p-4 bg-slate-900/50 rounded-lg space-y-3 border border-slate-700">
-                              <div className="flex items-start justify-between">
+                        ) : (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-slate-300 mb-2">Order Items</h4>
+                            {seatItems.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-700"
+                              >
                                 <div className="flex-1">
-                                  <p className="text-white font-semibold text-lg">{item.menuItem.name}</p>
+                                  <p className="text-white font-medium">{item.menuItem.name}</p>
                                   <p className="text-sm text-slate-400">
                                     {item.splitPrice ? (
                                       <>
@@ -612,222 +773,327 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                         <span className="text-amber-400">(split)</span>
                                       </>
                                     ) : (
-                                      `$${item.menuItem.price.toFixed(2)} each`
+                                      `$${item.menuItem.price.toFixed(2)} × ${item.quantity}`
                                     )}
                                   </p>
                                 </div>
-                                <p className="text-amber-400 font-bold text-xl">
-                                  ${((item.splitPrice || item.menuItem.price) * item.quantity).toFixed(2)}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-amber-400 font-bold min-w-[80px] text-right">
+                                    ${((item.splitPrice || item.menuItem.price) * item.quantity).toFixed(2)}
+                                  </span>
+                                  {!isPaid && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleMoveItem(item)}
+                                        className="h-8 px-2 bg-blue-500/20 border-blue-500/50 hover:bg-blue-500/30 text-blue-400"
+                                        title="Move to another seat"
+                                      >
+                                        Move
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleSplitItem(item)}
+                                        className="h-8 px-2 bg-purple-500/20 border-purple-500/50 hover:bg-purple-500/30 text-purple-400"
+                                        title="Split to multiple seats"
+                                      >
+                                        Split
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => updateItemQuantity(item.id, -1)}
+                                        className="h-8 w-8 p-0 bg-slate-700 border-slate-600 hover:bg-slate-600"
+                                      >
+                                        <Minus className="h-3 w-3 text-white" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => updateItemQuantity(item.id, 1)}
+                                        className="h-8 w-8 p-0 bg-slate-700 border-slate-600 hover:bg-slate-600"
+                                      >
+                                        <Plus className="h-3 w-3 text-white" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => removeOrderItem(item.id)}
+                                        className="h-8 w-8 p-0 bg-red-500/20 border-red-500/50 hover:bg-red-500/30"
+                                      >
+                                        <Trash2 className="h-3 w-3 text-red-400" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
                               </div>
+                            ))}
+                          </div>
+                        )}
 
-                              {/* Quantity controls */}
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => updateItemQuantity(item.id, -1)}
-                                  className="h-10 w-10 p-0 no-print"
-                                  variant="outline"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                <span className="text-white font-bold w-16 text-center text-xl">{item.quantity}</span>
-                                <Button
-                                  size="sm"
-                                  onClick={() => updateItemQuantity(item.id, 1)}
-                                  className="h-10 w-10 p-0 no-print"
-                                  variant="outline"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                              </div>
+                        <Separator className="bg-slate-700" />
 
-                              {/* Action buttons */}
-                              <div className="grid grid-cols-3 gap-2 no-print">
-                                <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedOrderItem(item);
-                                    setShowMoveDialog(true);
-                                  }}
-                                  variant="outline"
-                                  className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border-blue-500/50 h-10"
-                                >
-                                  Move
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => openSplitDialog(item)}
-                                  variant="outline"
-                                  className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 border-purple-500/50 h-10"
-                                >
-                                  Split
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => removeOrderItem(item.id)}
-                                  variant="outline"
-                                  className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/50 h-10"
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-
-                          {/* Seat totals */}
-                          <div className="space-y-1 pt-2 bg-slate-900/30 p-4 rounded-lg">
+                        {/* Invoice */}
+                        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3">
+                          <h4 className="text-sm font-semibold text-white mb-3">Invoice</h4>
+                          <div className="space-y-2 font-mono text-sm">
                             <div className="flex justify-between text-slate-300">
-                              <span>Seat {seat} Subtotal</span>
-                              <span>${calculateSeatSubtotal(seat).toFixed(2)}</span>
+                              <span>Subtotal</span>
+                              <span>${subtotal.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-slate-300">
                               <span>Tax ({effectiveTaxRate}%)</span>
-                              <span>${calculateSeatTax(seat).toFixed(2)}</span>
+                              <span>${tax.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between text-white font-bold text-lg">
-                              <span>Seat {seat} Total</span>
-                              <span className="text-amber-400">${calculateSeatTotal(seat).toFixed(2)}</span>
+                            {tipAmount > 0 && (
+                              <div className="flex justify-between text-slate-300">
+                                <span>Tip</span>
+                                <span>${tipAmount.toFixed(2)}</span>
+                              </div>
+                            )}
+                            <Separator className="bg-slate-600" />
+                            <div className="flex justify-between text-white font-bold text-base">
+                              <span>Total</span>
+                              <span className="text-amber-400">${total.toFixed(2)}</span>
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
 
-                    {/* Grand Total */}
-                    <div className="space-y-2 pt-4 border-t-2 border-amber-500/30 grand-total-section">
-                      <div className="flex justify-between text-slate-300">
-                        <span>Subtotal</span>
-                        <span>${calculateSubtotal().toFixed(2)}</span>
+                        {/* Payment Section */}
+                        {isPaid ? (
+                          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                            <div className="flex items-center gap-2 text-green-400 mb-2">
+                              <CheckCircle2 className="h-5 w-5" />
+                              <span className="font-semibold">PAID</span>
+                            </div>
+                            <div className="text-sm text-slate-300 space-y-1">
+                              <p>
+                                Method:{' '}
+                                {payment?.method === 'CARD' ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <CreditCard className="h-3 w-3" />
+                                    Card
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Banknote className="h-3 w-3" />
+                                    Cash
+                                  </span>
+                                )}
+                              </p>
+                              <p>Amount: ${total.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+                            <h4 className="text-sm font-semibold text-white">Payment</h4>
+
+                            {/* Payment Method Selection */}
+                            <div className="space-y-2">
+                              <Label className="text-slate-300">Payment Method</Label>
+                              <RadioGroup
+                                value={paymentMethodBySeat[seat] || 'CARD'}
+                                onValueChange={(value) =>
+                                  setPaymentMethodBySeat({ ...paymentMethodBySeat, [seat]: value as 'CARD' | 'CASH' })
+                                }
+                                className="grid grid-cols-2 gap-3"
+                              >
+                                <label
+                                  htmlFor={`card-${seat}`}
+                                  className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                    paymentMethodBySeat[seat] === 'CARD' || !paymentMethodBySeat[seat]
+                                      ? 'border-amber-500 bg-amber-500/10'
+                                      : 'border-slate-600 bg-slate-800/50'
+                                  }`}
+                                >
+                                  <RadioGroupItem value="CARD" id={`card-${seat}`} className="sr-only" />
+                                  <CreditCard className="h-5 w-5 text-white" />
+                                  <span className="text-white font-medium">Card</span>
+                                </label>
+                                <label
+                                  htmlFor={`cash-${seat}`}
+                                  className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                    paymentMethodBySeat[seat] === 'CASH'
+                                      ? 'border-amber-500 bg-amber-500/10'
+                                      : 'border-slate-600 bg-slate-800/50'
+                                  }`}
+                                >
+                                  <RadioGroupItem value="CASH" id={`cash-${seat}`} className="sr-only" />
+                                  <Banknote className="h-5 w-5 text-white" />
+                                  <span className="text-white font-medium">Cash</span>
+                                </label>
+                              </RadioGroup>
+                            </div>
+
+                            {/* Tip Input */}
+                            <div className="space-y-2">
+                              <Label className="text-slate-300">Add Tip (optional)</Label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  placeholder="0.00"
+                                  value={tipAmountBySeat[seat] || ''}
+                                  onChange={(e) => setTipAmountBySeat({ ...tipAmountBySeat, [seat]: e.target.value })}
+                                  className="pl-7 bg-slate-800 border-slate-600 text-white"
+                                />
+                              </div>
+                              <div className="grid grid-cols-4 gap-2">
+                                {[10, 15, 18, 20].map((percentage) => (
+                                  <Button
+                                    key={percentage}
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setQuickTip(seat, percentage)}
+                                    className="bg-slate-700 border-slate-600 hover:bg-amber-500 hover:text-black text-white"
+                                  >
+                                    {percentage}%
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Submit Payment Button */}
+                            <Button
+                              onClick={() => processPayment(seat)}
+                              disabled={processingPayment === seat || subtotal === 0}
+                              className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold h-12"
+                            >
+                              {processingPayment === seat ? 'Processing...' : 'Collect Payment'}
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex justify-between items-center text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <span>Tax ({effectiveTaxRate}%)</span>
-                          {bookingTaxRate !== null ? (
-                            <Badge className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.5">Custom</Badge>
-                          ) : (
-                            <Badge className="bg-slate-600/30 text-slate-400 text-[10px] px-1.5 py-0.5">Global</Badge>
-                          )}
-                          <button
-                            onClick={() => {
-                              setTaxRateInput(effectiveTaxRate.toString());
-                              setShowTaxEditDialog(true);
-                            }}
-                            className="text-amber-400 hover:text-amber-300 transition-colors no-print"
-                            title="Edit tax rate for this booking"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <span>${calculateTax().toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-white font-bold text-xl pt-2">
-                        <span>Total</span>
-                        <span className="text-amber-400">${calculateTotal().toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
           </div>
 
           {/* Right Column - Info & Menu */}
-          <div className="space-y-6">
-            {/* Customer Info */}
+          <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+            {/* Quick Actions */}
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-white">Customer Information</CardTitle>
+                <CardTitle className="text-white text-lg">Quick Actions</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-lg">
-                    {booking.customerName.charAt(0)}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <h3 className="text-lg font-medium text-white">{booking.customerName}</h3>
-                    {booking.customerEmail && <div className="text-xs text-slate-400">{booking.customerEmail}</div>}
-                    {booking.customerPhone && <div className="text-xs text-slate-400">{booking.customerPhone}</div>}
-                  </div>
-                </div>
+              <CardContent className="space-y-2">
+                <Button
+                  onClick={handleCompleteBooking}
+                  disabled={booking.status === 'completed'}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Complete Booking
+                </Button>
+                <Button
+                  onClick={() => updateStatus('cancelled')}
+                  disabled={booking.status === 'cancelled'}
+                  variant="outline"
+                  className="w-full border-red-500 text-red-400 hover:bg-red-500/10"
+                >
+                  Cancel Booking
+                </Button>
+                <Button
+                  onClick={handlePrintReceipt}
+                  variant="outline"
+                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print Receipt
+                </Button>
               </CardContent>
             </Card>
 
-            {/* Booking Info */}
+            {/* Payment Summary */}
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-white">Booking Information</CardTitle>
-                <CardDescription className="text-slate-400">Session details</CardDescription>
+                <CardTitle className="text-white text-lg">Payment Summary</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <InfoBlock label="Room" value={roomColor} />
-                  <InfoBlock label="Date" value={booking.date} />
-                  <InfoBlock label="Start Time" value={booking.time} />
-                  <InfoBlock label="Duration" value={`${booking.duration} hour(s)`} />
-                  <InfoBlock label="Players" value={`${booking.players}`} />
-                  <InfoBlock label="Booking Source" value={booking.source || 'N/A'} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Seat Payment Summary */}
-            <Card className="no-print bg-gradient-to-br from-blue-900/30 to-purple-900/30 border-blue-700/50">
-              <CardHeader>
-                <CardTitle className="text-white">Seat Payments</CardTitle>
-                <CardDescription className="text-slate-400">Per-seat payment collection</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => {
-                  const seatPayment = seatPayments[seat] || { status: 'UNPAID' };
-                  const seatTotal = calculateSeatTotal(seat);
-                  
-                  return (
-                    <div key={seat} className="p-3 rounded-lg bg-slate-900/50 border border-slate-700 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-6 h-6 rounded text-xs font-bold flex items-center justify-center text-white ${seatColors[seat % seatColors.length]}`}>
-                            {seat}
-                          </div>
-                          <span className="text-sm font-medium text-slate-300">${seatTotal.toFixed(2)}</span>
-                        </div>
-                        <Badge className={seatPayment.status === 'PAID' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}>
-                          {seatPayment.status}
-                        </Badge>
-                      </div>
-                      {seatPayment.method && (
-                        <div className="text-xs text-slate-400">via {seatPayment.method}</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-
-            {/* Payment Information */}
-            {booking.paymentStatus && (
-              <Card className="bg-slate-800/50 border-slate-700">
-                <CardHeader>
-                  <CardTitle className="text-white">Payment Information</CardTitle>
-                  <CardDescription className="text-slate-400">Payment status and details</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <InfoBlock
-                      label="Payment Status"
-                      value={
-                        <Badge className={`${paymentStatusStyles[booking.paymentStatus]} text-xs`}>
-                          {booking.paymentStatus}
-                        </Badge>
-                      }
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm text-slate-300">
+                    <span>Seats Paid</span>
+                    <span className="font-semibold">
+                      {getPaidSeatsCount()} / {numberOfSeats}
+                    </span>
+                  </div>
+                  <Progress value={getPaymentProgress()} className="h-2 bg-slate-700">
+                    <div
+                      className="h-full bg-green-500 rounded-full transition-all"
+                      style={{ width: `${getPaymentProgress()}%` }}
                     />
+                  </Progress>
+                </div>
+
+                <Separator className="bg-slate-700" />
+
+                {/* Per-Seat Status */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-slate-300 mb-2">Seat Status</h4>
+                  {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => {
+                    const isPaid = isSeatPaid(seat);
+                    const payment = getSeatPayment(seat);
+                    return (
+                      <div key={seat} className="flex items-center justify-between p-2 bg-slate-900/50 rounded">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${seatColors[seat - 1]}`} />
+                          <span className="text-sm text-white">Seat {seat}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isPaid ? (
+                            <>
+                              <CheckCircle2 className="h-4 w-4 text-green-400" />
+                              <span className="text-xs text-green-400 font-semibold">PAID</span>
+                              <span className="text-xs text-slate-400 font-mono">${(payment?.total || 0).toFixed(2)}</span>
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="h-4 w-4 text-amber-400" />
+                              <span className="text-xs text-amber-400 font-semibold">UNPAID</span>
+                              <span className="text-xs text-slate-400 font-mono">
+                                ${(calculateSeatTotal(seat) + (parseFloat(tipAmountBySeat[seat] || '0') || 0)).toFixed(2)}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Separator className="bg-slate-700" />
+
+                {/* Totals */}
+                <div className="space-y-2 font-mono text-sm">
+                  <div className="flex justify-between text-slate-300">
+                    <span>Room Booking</span>
+                    <span>${(parseFloat(String(booking.price || 0))).toFixed(2)}</span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <div className="flex justify-between text-slate-300">
+                    <span>Food & Drinks</span>
+                    <span>${getTotalPaid().toFixed(2)}</span>
+                  </div>
+                  <Separator className="bg-slate-700" />
+                  <div className="flex justify-between text-white font-bold text-base">
+                    <span>Total Collected</span>
+                    <span className="text-green-400">${(parseFloat(String(booking.price || 0)) + getTotalPaid()).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-300 text-xs">
+                    <span>Total Due</span>
+                    <span>${getTotalDue().toFixed(2)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Menu */}
-            <Card className="no-print bg-slate-800/50 border-slate-700">
+            <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader>
                 <CardTitle className="text-white">Menu</CardTitle>
                 <CardDescription className="text-slate-400">Click items to add to order</CardDescription>
@@ -873,112 +1139,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
               </CardContent>
             </Card>
 
-            {/* Actions */}
-            <Card className="no-print bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white">Actions</CardTitle>
-                <CardDescription className="text-slate-400">Update booking status</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {booking.bookingStatus === 'CONFIRMED' && (
-                  <>
-                    <Button onClick={() => changeStatus('COMPLETED')} className="w-full bg-green-500 hover:bg-green-600">
-                      Mark as Completed
-                    </Button>
-                    <Button
-                      onClick={() => changeStatus('CANCELLED')}
-                      variant="outline"
-                      className="w-full border-red-400/50 text-red-400 hover:bg-red-500/10 bg-transparent"
-                    >
-                      Cancel Booking
-                    </Button>
-                  </>
-                )}
-                {booking.bookingStatus === 'CANCELLED' && (
-                  <Button onClick={() => changeStatus('CONFIRMED')} className="w-full">
-                    Restore Booking
-                  </Button>
-                )}
-                {booking.bookingStatus === 'COMPLETED' && (
-                  <div className="text-center text-slate-400 py-4">Booking completed</div>
-                )}
-              </CardContent>
-            </Card>
 
-            {/* Metadata */}
-            <Card className="no-print bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white">Metadata</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div>
-                  <p className="text-slate-400">Created</p>
-                  <p className="text-white">{booking.createdAt ? new Date(booking.createdAt).toLocaleString() : '—'}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400">Booking ID</p>
-                  <p className="text-white font-mono">{booking.id}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Seat Invoices & Payments Section */}
-        <div className="no-print mt-8 border-t border-slate-700 pt-8">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-            <span className="text-amber-400">💳</span>
-            Seat Invoices & Payments
-          </h2>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => {
-              const seatItems = getItemsForSeat(seat);
-              const seatSubtotal = calculateSeatSubtotal(seat);
-              const seatTax = calculateSeatTax(seat);
-              const seatTotal = calculateSeatTotal(seat);
-              const seatPayment = seatPayments[seat] || { status: 'UNPAID' };
-              
-              return (
-                <div key={seat} className="space-y-3">
-                  {/* Invoice Display */}
-                  <InvoiceDisplay
-                    seatIndex={seat}
-                    subtotal={seatSubtotal}
-                    tax={seatTax}
-                    tip={seatPayment.tip}
-                    totalAmount={seatTotal + (seatPayment.tip || 0)}
-                    status={seatPayment.status as 'UNPAID' | 'PAID'}
-                    paymentMethod={seatPayment.method}
-                    orders={seatItems.map(item => ({
-                      id: item.id,
-                      description: item.menuItem.name,
-                      quantity: item.quantity,
-                      unitPrice: item.splitPrice || item.menuItem.price,
-                      totalPrice: (item.splitPrice || item.menuItem.price) * item.quantity,
-                    }))}
-                  />
-                  
-                  {/* Payment Form */}
-                  <PaymentForm
-                    seatIndex={seat}
-                    totalAmount={seatTotal}
-                    currentStatus={seatPayment.status as 'UNPAID' | 'PAID'}
-                    currentPaymentMethod={seatPayment.method}
-                    onPayment={async (method, tip) => {
-                      // Update seat payment status
-                      setSeatPayments(prev => ({
-                        ...prev,
-                        [seat]: { status: 'PAID', method, tip },
-                      }));
-                      
-                      // In a real app, this would call the backend payment API
-                      console.log(`Seat ${seat} paid with ${method}, tip: ${tip || 0}`);
-                    }}
-                  />
-                </div>
-              );
-            })}
           </div>
         </div>
       </main>
