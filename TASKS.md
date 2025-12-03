@@ -46,18 +46,18 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 #### Implementation Plan:
 
-**Phase 1: Add API Functions to Frontend** `[~]`
-- [ ] Add to `frontend/services/pos-api.ts`:
-  - [ ] `getInvoices(bookingId)` → `GET /api/bookings/:bookingId/invoices`
-  - [ ] `createOrder(bookingId, menuItemId, seatIndex, quantity)` → `POST /api/bookings/:bookingId/orders`
-  - [ ] `deleteOrder(orderId)` → `DELETE /api/bookings/orders/:orderId`
-  - [ ] `payInvoice(invoiceId, bookingId, seatIndex, paymentMethod, tip)` → `PATCH /api/invoices/:invoiceId/pay`
-  - [ ] `getPaymentStatus(bookingId)` → `GET /api/bookings/:bookingId/payment-status`
+**Phase 1: Add API Functions to Frontend** `[x]` ✅ DONE
+- [x] Add to `frontend/services/pos-api.ts`:
+  - [x] `getInvoices(bookingId)` → `GET /api/bookings/:bookingId/invoices`
+  - [x] `createOrder(bookingId, menuItemId, seatIndex, quantity)` → `POST /api/bookings/:bookingId/orders`
+  - [x] `deleteOrder(orderId)` → `DELETE /api/bookings/orders/:orderId`
+  - [x] `payInvoice(invoiceId, bookingId, seatIndex, paymentMethod, tip)` → `PATCH /api/invoices/:invoiceId/pay`
+  - [x] `getPaymentStatus(bookingId)` → `GET /api/bookings/:bookingId/payment-status`
 
-**Phase 2: Auto-Create Invoices** `[ ]`
-- [ ] Backend: Create empty invoices when booking is created (one per player/seat)
-- [ ] Or lazy-create invoices when first order is added
-- [ ] Ensure seed script creates invoices for existing bookings (already done)
+**Phase 2: Auto-Create Invoices** `[x]` ✅ DONE
+- [x] Backend: Create empty invoices when booking is created (one per player/seat)
+- [x] Invoices initialized with base room price per seat + 10% tax
+- [x] Ensure seed script creates invoices for existing bookings (already done)
 
 **Phase 3: Integrate Orders** `[ ]`
 - [ ] Load existing orders from backend on page load via `getInvoices()`

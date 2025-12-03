@@ -18,9 +18,15 @@ import {
   listRooms,
   listMenuItems,
   getGlobalTaxRate,
+  getInvoices,
+  createOrder as apiCreateOrder,
+  deleteOrder as apiDeleteOrder,
+  payInvoice as apiPayInvoice,
   type Booking,
   type Room,
-  type MenuItem 
+  type MenuItem,
+  type Invoice,
+  type Order 
 } from '@/services/pos-api';
 
 interface POSBookingDetailProps {
@@ -79,9 +85,14 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [globalTaxRate, setGlobalTaxRate] = useState(8);
   const [bookingTaxRate, setBookingTaxRate] = useState<number | null>(null);
   
+  // Invoice and order data from backend
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [backendOrders, setBackendOrders] = useState<Order[]>([]);
+  
   // Order management
   const [numberOfSeats, setNumberOfSeats] = useState<number>(1);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [orderLoading, setOrderLoading] = useState(false);
   
   // Seat payment tracking
   const [seatPayments, setSeatPayments] = useState<Record<number, { status: 'UNPAID' | 'PAID'; method?: string; tip?: number; total?: number }>>({});
