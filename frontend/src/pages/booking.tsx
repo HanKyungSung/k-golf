@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TimePicker } from "@/components/ui/time-picker";
 import { useAuth } from "@/hooks/use-auth";
 import { Clock, Users, Star, CalendarIcon } from "lucide-react";
 
@@ -341,15 +340,14 @@ export default function BookingPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="space-y-8">
           {/* Room Selection */}
-          <div className="lg:col-span-2 space-y-8">
-            <div>
-              <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
-                <Star className="h-6 w-6 text-amber-400" />
-                Choose Your Room
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div>
+            <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
+              <Star className="h-6 w-6 text-amber-400" />
+              Choose Your Room
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 {rooms.map((room) => {
                   const roomNumber = room.name.match(/\d+/)?.[0] || '1';
                   const handPreference = ['1', '2'].includes(roomNumber) ? 'Right-Handed' : 'Both Hands';
@@ -423,280 +421,298 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {selectedRoom && (
-              <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div>
-                    <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
-                      <CalendarIcon className="h-6 w-6 text-amber-400" />
-                      Select Date
-                    </h3>
-                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                      />
-                    </div>
-                  </div>
+          {/* Date and Time Selection */}
+          {selectedRoom && (
+            <div>
+              <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
+                <CalendarIcon className="h-6 w-6 text-amber-400" />
+                Select Date & Time
+              </h3>
 
-                  <div>
-                    <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
-                      <Clock className="h-6 w-6 text-amber-400" />
-                      Choose Start Time
-                    </h3>
-                    <div className="space-y-4 bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                      <div className="space-y-2">
-                        <Label htmlFor="players" className="text-white font-medium">
-                          Number of Players
-                        </Label>
-                        <Select value={numberOfPlayers} onValueChange={setNumberOfPlayers}>
-                          <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-slate-800 border-slate-700">
-                            <SelectItem value="1" className="text-white hover:bg-slate-700">
-                              1 Player (1 hour)
-                            </SelectItem>
-                            <SelectItem value="2" className="text-white hover:bg-slate-700">
-                              2 Players (2 hours)
-                            </SelectItem>
-                            <SelectItem value="3" className="text-white hover:bg-slate-700">
-                              3 Players (3 hours)
-                            </SelectItem>
-                            <SelectItem value="4" className="text-white hover:bg-slate-700">
-                              4 Players (4 hours)
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-white font-medium">
-                          Start Time (9:00 AM - 10:00 PM)
-                        </Label>
-                        <TimePicker
-                          value={startTime}
-                          onChange={setStartTime}
-                          minTime="09:00"
-                          maxTime="22:00"
-                        />
-                      </div>
-
-                      {startTime && endTime && (
-                        <div className="pt-4 border-t border-slate-700">
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-400 text-sm">Session Duration:</span>
-                            <span className="text-white font-semibold">
-                              {startTime} - {endTime}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex items-center gap-2">
-                            <div
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                canBook
-                                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                                  : "bg-red-500/20 text-red-400 border border-red-500/30"
-                              }`}
-                            >
-                              {canBook ? "✓ Available" : "✗ Not Available"}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                    <CalendarIcon className="h-5 w-5 text-amber-400" />
+                    Select Date
+                  </h4>
+                  <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      className="rounded-md border border-slate-700 bg-slate-800 p-3"
+                      classNames={{
+                        months: "flex flex-col",
+                        month: "space-y-4 w-full",
+                        caption: "flex justify-center pt-1 relative items-center",
+                        caption_label: "text-sm font-medium text-white",
+                        nav: "space-x-1 flex items-center",
+                        nav_button:
+                          "h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100 text-white hover:bg-slate-700 rounded-md",
+                        nav_button_previous: "absolute left-1",
+                        nav_button_next: "absolute right-1",
+                        table: "w-full border-collapse",
+                        head_row: "flex w-full",
+                        head_cell: "text-slate-400 rounded-md w-full font-normal text-xs flex-1",
+                        row: "flex w-full mt-2",
+                        cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex-1",
+                        day: "h-9 w-full p-0 font-normal text-white hover:bg-slate-700 rounded-md inline-flex items-center justify-center",
+                        day_selected:
+                          "bg-amber-500 text-slate-900 hover:bg-amber-600 hover:text-slate-900 focus:bg-amber-500 focus:text-slate-900 font-semibold",
+                        day_today: "bg-slate-700 text-white font-medium",
+                        day_outside: "text-slate-600 opacity-50",
+                        day_disabled: "text-slate-600 opacity-30 cursor-not-allowed",
+                        day_range_middle: "aria-selected:bg-slate-700 aria-selected:text-white",
+                        day_hidden: "invisible",
+                      }}
+                    />
                   </div>
                 </div>
 
-                {selectedDate && (
-                  <div>
-                    <h3 className="text-2xl font-semibold text-white mb-6">
-                      Current Bookings for {selectedRoomData?.name}
-                    </h3>
-                    <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                      <div className="relative">
-                        {/* Timeline */}
-                        <div className="flex items-center mb-4">
-                          <div className="text-xs text-slate-500 w-16">9 AM</div>
-                          <div className="flex-1 h-12 bg-slate-900/50 rounded-lg relative border border-slate-700">
-                            {/* Hour markers */}
-                            {Array.from({ length: 13 }).map((_, i) => (
-                              <div
-                                key={i}
-                                className="absolute top-0 bottom-0 border-l border-slate-700/50"
-                                style={{ left: `${(i / 13) * 100}%` }}
-                              >
-                                <span className="absolute -top-5 -left-3 text-[10px] text-slate-600">{9 + i}</span>
-                              </div>
-                            ))}
-
-                            {/* Existing bookings */}
-                            {timelineBookings.map((booking) => {
-                              const [startHour, startMin] = booking.startTime.split(":").map(Number);
-                              const [endHour, endMin] = booking.endTime.split(":").map(Number);
-                              const startMinutes = (startHour - 9) * 60 + startMin;
-                              const endMinutes = (endHour - 9) * 60 + endMin;
-                              const duration = endMinutes - startMinutes;
-                              const totalMinutes = 13 * 60;
-                              const left = (startMinutes / totalMinutes) * 100;
-                              const width = (duration / totalMinutes) * 100;
-
-                              return (
-                                <div
-                                  key={booking.id}
-                                  className="absolute top-1 bottom-1 bg-red-500/30 border border-red-500/50 rounded px-1 flex items-center justify-center"
-                                  style={{
-                                    left: `${left}%`,
-                                    width: `${width}%`,
-                                  }}
-                                >
-                                  <span className="text-[10px] text-red-300 font-medium truncate">
-                                    {booking.startTime}-{booking.endTime}
-                                  </span>
-                                </div>
-                              );
-                            })}
-
-                            {/* Proposed booking */}
-                            {startTime &&
-                              endTime &&
-                              (() => {
-                                const [startHour, startMin] = startTime.split(":").map(Number);
-                                const [endHour, endMin] = endTime.split(":").map(Number);
-                                if (startHour < 9 || endHour > 22) return null;
-                                const startMinutes = (startHour - 9) * 60 + startMin;
-                                const endMinutes = (endHour - 9) * 60 + endMin;
-                                const duration = endMinutes - startMinutes;
-                                const totalMinutes = 13 * 60;
-                                const left = (startMinutes / totalMinutes) * 100;
-                                const width = (duration / totalMinutes) * 100;
-
-                                return (
-                                  <div
-                                    className={`absolute top-1 bottom-1 rounded px-1 flex items-center justify-center ${
-                                      canBook
-                                        ? "bg-green-500/30 border border-green-500/50"
-                                        : "bg-amber-500/30 border border-amber-500/50"
-                                    }`}
-                                    style={{
-                                      left: `${left}%`,
-                                      width: `${width}%`,
-                                    }}
-                                  >
-                                    <span
-                                      className={`text-[10px] font-medium truncate ${
-                                        canBook ? "text-green-300" : "text-amber-300"
-                                      }`}
-                                    >
-                                      {startTime}-{endTime}
-                                    </span>
-                                  </div>
-                                );
-                              })()}
-                          </div>
-                          <div className="text-xs text-slate-500 w-16 text-right">10 PM</div>
-                        </div>
-
-                        {/* Legend */}
-                        <div className="flex gap-4 text-xs mt-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-red-500/30 border border-red-500/50 rounded"></div>
-                            <span className="text-slate-400">Booked</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-green-500/30 border border-green-500/50 rounded"></div>
-                            <span className="text-slate-400">Your Selection (Available)</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-amber-500/30 border border-amber-500/50 rounded"></div>
-                            <span className="text-slate-400">Your Selection (Conflict)</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Booking Summary */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24 bg-slate-800/50 border-slate-700 shadow-xl">
-              <div className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-b border-slate-700 h-16 flex items-center justify-center">
-                <h3 className="text-white text-xl font-semibold">
-                  Booking Summary
-                </h3>
-              </div>
-              <CardContent className="space-y-6 p-6">
-                {selectedRoomData ? (
-                  <>
+                <div>
+                  <h4 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-amber-400" />
+                    Choose Start Time
+                  </h4>
+                  <div className="space-y-4 bg-slate-800/50 p-6 rounded-lg border border-slate-700">
                     <div className="space-y-2">
-                      <p className="font-semibold text-white text-lg">
-                        {selectedRoomData.name}
-                      </p>
-                      <p className="text-slate-400 flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        {numberOfPlayers} player{numberOfPlayers !== "1" ? "s" : ""}
-                      </p>
-                      <div className="text-amber-400 font-semibold">
-                        $35 per hour
-                      </div>
+                      <Label htmlFor="players" className="text-white font-medium">
+                        Number of Players
+                      </Label>
+                      <Select value={numberOfPlayers} onValueChange={setNumberOfPlayers}>
+                        <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-700">
+                          <SelectItem value="1" className="text-white hover:bg-slate-700">
+                            1 Player (1 hour)
+                          </SelectItem>
+                          <SelectItem value="2" className="text-white hover:bg-slate-700">
+                            2 Players (2 hours)
+                          </SelectItem>
+                          <SelectItem value="3" className="text-white hover:bg-slate-700">
+                            3 Players (3 hours)
+                          </SelectItem>
+                          <SelectItem value="4" className="text-white hover:bg-slate-700">
+                            4 Players (4 hours)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    {selectedDate && (
-                      <div className="space-y-2">
-                        <p className="font-semibold text-white">Date</p>
-                        <p className="text-slate-300 bg-slate-700/50 px-3 py-2 rounded-md">
-                          {selectedDate.toDateString()}
-                        </p>
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="start-time" className="text-white font-medium">
+                        Start Time (9:00 AM - 10:00 PM)
+                      </Label>
+                      <Input
+                        id="start-time"
+                        type="time"
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        min="09:00"
+                        max="22:00"
+                        className="bg-slate-700/50 border-slate-600 text-white [color-scheme:dark]"
+                      />
+                    </div>
 
                     {startTime && endTime && (
-                      <div className="space-y-2">
-                        <p className="font-semibold text-white">Time</p>
-                        <p className="text-slate-300 bg-slate-700/50 px-3 py-2 rounded-md">
-                          {startTime} - {endTime}
-                        </p>
+                      <div className="pt-4 border-t border-slate-700">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-sm">Session Duration:</span>
+                          <span className="text-white font-semibold">
+                            {startTime} - {endTime}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <div
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              canBook
+                                ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                : "bg-red-500/20 text-red-400 border border-red-500/30"
+                            }`}
+                          >
+                            {canBook ? "✓ Available" : "✗ Not Available"}
+                          </div>
+                        </div>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-                    <div className="border-t border-slate-700 pt-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <span className="font-semibold text-white text-lg">
-                          Total
-                        </span>
-                        <span className="text-3xl font-bold text-amber-400">
-                          ${totalPrice}
-                        </span>
+          {/* Booking Summary and Timeline */}
+          {selectedDate && selectedRoom && (
+            <div className="space-y-6">
+              {/* Current Bookings Timeline */}
+              <div>
+                <h3 className="text-2xl font-semibold text-white mb-6">
+                  Current Bookings for {selectedRoomData?.name}
+                </h3>
+                <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+                  <div className="relative">
+                    {/* Timeline */}
+                    <div className="flex items-center mb-4">
+                      <div className="text-xs text-slate-500 w-16">9 AM</div>
+                      <div className="flex-1 h-12 bg-slate-900/50 rounded-lg relative border border-slate-700 overflow-hidden">
+                        {/* Hour markers */}
+                        {Array.from({ length: 14 }).map((_, i) => (
+                          <div
+                            key={i}
+                            className="absolute top-0 bottom-0 border-l border-slate-700/50"
+                            style={{ left: `${(i / 13) * 100}%` }}
+                          >
+                            {i < 13 && (
+                              <span className="absolute -top-5 -left-3 text-[10px] text-slate-600">{9 + i}</span>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Existing bookings */}
+                        {timelineBookings.map((booking) => {
+                          const [startHour, startMin] = booking.startTime.split(":").map(Number);
+                          const [endHour, endMin] = booking.endTime.split(":").map(Number);
+                          const startMinutes = (startHour - 9) * 60 + startMin;
+                          const endMinutes = (endHour - 9) * 60 + endMin;
+                          const duration = endMinutes - startMinutes;
+                          const totalMinutes = 13 * 60;
+                          const left = (startMinutes / totalMinutes) * 100;
+                          const width = (duration / totalMinutes) * 100;
+
+                          return (
+                            <div
+                              key={booking.id}
+                              className="absolute top-1 bottom-1 bg-slate-600/50 border border-slate-500/50 rounded px-1 flex items-center justify-center"
+                              style={{
+                                left: `${Math.max(0, Math.min(100, left))}%`,
+                                width: `${Math.max(0, Math.min(100 - left, width))}%`,
+                              }}
+                            >
+                              <span className="text-[10px] text-slate-300 font-medium truncate">Booked</span>
+                            </div>
+                          );
+                        })}
+
+                        {/* Proposed booking */}
+                        {startTime &&
+                          endTime &&
+                          (() => {
+                            const [startHour, startMin] = startTime.split(":").map(Number);
+                            const [endHour, endMin] = endTime.split(":").map(Number);
+                            if (startHour < 9 || endHour > 22) return null;
+                            const startMinutes = (startHour - 9) * 60 + startMin;
+                            const endMinutes = (endHour - 9) * 60 + endMin;
+                            const duration = endMinutes - startMinutes;
+                            const totalMinutes = 13 * 60;
+                            const left = (startMinutes / totalMinutes) * 100;
+                            const width = (duration / totalMinutes) * 100;
+                            const available = canBook;
+
+                            return (
+                              <div
+                                className={`absolute top-1 bottom-1 border-2 rounded px-1 flex items-center justify-center ${
+                                  available
+                                    ? "bg-green-500/30 border-green-500/70"
+                                    : "bg-amber-500/30 border-amber-500/70"
+                                }`}
+                                style={{
+                                  left: `${Math.max(0, Math.min(100, left))}%`,
+                                  width: `${Math.max(0, Math.min(100 - left, width))}%`,
+                                }}
+                              >
+                                <span
+                                  className={`text-[10px] font-medium truncate ${
+                                    available ? "text-green-300" : "text-amber-300"
+                                  }`}
+                                >
+                                  Your Booking
+                                </span>
+                              </div>
+                            );
+                          })()}
                       </div>
-                      <div className="text-xs text-slate-400 mb-4">
-                        {numberOfPlayers} player{numberOfPlayers !== "1" ? "s" : ""} × {totalHours} hour
-                        {totalHours !== 1 ? "s" : ""}
-                      </div>
+                      <div className="text-xs text-slate-500 w-16 text-right">10 PM</div>
                     </div>
 
+                    {/* Legend */}
+                    <div className="flex gap-6 justify-center pt-4 border-t border-slate-700">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-slate-600/50 border border-slate-500/50 rounded" />
+                        <span className="text-xs text-slate-400">Booked</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-green-500/30 border-2 border-green-500/70 rounded" />
+                        <span className="text-xs text-slate-400">Your Booking (Available)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-amber-500/30 border-2 border-amber-500/70 rounded" />
+                        <span className="text-xs text-slate-400">Your Booking (Conflict)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Booking Summary */}
+              <div>
+                <h3 className="text-2xl font-semibold text-white mb-6">Booking Summary</h3>
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-white">Confirm Your Booking</CardTitle>
+                    <CardDescription className="text-slate-400">Review your selection before booking</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-slate-400">Room</p>
+                        <p className="text-white font-semibold">{selectedRoomData?.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400">Date</p>
+                        <p className="text-white font-semibold">{selectedDate?.toDateString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400">Time</p>
+                        <p className="text-white font-semibold">
+                          {startTime || "--:--"} - {endTime || "--:--"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400">Players</p>
+                        <p className="text-white font-semibold">{numberOfPlayers}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400">Duration</p>
+                        <p className="text-white font-semibold">{totalHours} hour(s)</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400">Rate</p>
+                        <p className="text-white font-semibold">$35/hour</p>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-slate-700">
+                      <div className="flex justify-between items-center text-lg font-bold">
+                        <span className="text-white">Total (before tax)</span>
+                        <span className="text-amber-400">${totalPrice}</span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        $35 × {numberOfPlayers} player(s) × {totalHours} hour(s)
+                      </p>
+                    </div>
                     <Button
                       onClick={handleBooking}
-                      className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold py-3 text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={!canBook || !user}
+                      disabled={!canBook}
+                      className="w-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white font-semibold py-6 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {!user ? "Login to Book" : !canBook ? "Time Unavailable" : "Confirm Booking"}
+                      {!user ? "Login to Book" : !canBook && startTime ? "Time Slot Not Available" : "Confirm Booking"}
                     </Button>
-                  </>
-                ) : (
-                  <div className="text-center py-12">
-                    <Star className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-                    <p className="text-slate-500">
-                      Select a room to see booking details
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
