@@ -403,23 +403,19 @@ async function main() {
 			continue;
 		}
 
-		// Create invoices for each seat (1 per player)
+		// Create empty invoices for each seat (1 per player)
+		// Start at $0, orders will be added later
 		const invoicesForBooking = [];
-		
-		// Calculate price per seat
-		const pricePerSeat = Number(booking.price) / booking.players;
-		const taxPerSeat = pricePerSeat * TAX_RATE;
-		const totalPerSeat = pricePerSeat + taxPerSeat;
 
 		for (let seatIndex = 1; seatIndex <= booking.players; seatIndex++) {
 			const invoice = await prisma.invoice.create({
 				data: {
 					bookingId: booking.id,
 					seatIndex,
-					subtotal: pricePerSeat,
-					tax: taxPerSeat,
+					subtotal: 0,
+					tax: 0,
 					tip: null,
-					totalAmount: totalPerSeat,
+					totalAmount: 0,
 					status: booking.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID',
 					paymentMethod: booking.paymentStatus === 'PAID' ? (Math.random() > 0.5 ? 'CARD' : 'CASH') : null,
 					paidAt: booking.paymentStatus === 'PAID' ? booking.paidAt : null,
@@ -461,7 +457,7 @@ async function main() {
 						ordersCreated++;
 					}
 
-					// Recalculate invoice totals with orders
+					// Recalculate invoice totals with orders (no base price)
 					const orders = await prisma.order.findMany({
 						where: {
 							bookingId: booking.id,
@@ -470,15 +466,13 @@ async function main() {
 					});
 
 					const orderSubtotal = orders.reduce((sum, o) => sum + Number(o.totalPrice), 0);
-					const basePrice = Number(booking.price) / booking.players;
-					const newSubtotal = basePrice + orderSubtotal;
-					const newTax = newSubtotal * TAX_RATE;
-					const newTotal = newSubtotal + newTax;
+					const newTax = orderSubtotal * TAX_RATE;
+					const newTotal = orderSubtotal + newTax;
 
 					await prisma.invoice.update({
 						where: { id: invoice.id },
 						data: {
-							subtotal: newSubtotal,
+							subtotal: orderSubtotal,
 							tax: newTax,
 							totalAmount: newTotal,
 						},

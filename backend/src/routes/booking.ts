@@ -1001,7 +1001,7 @@ router.patch('/:id/payment-status', requireAuth, requireAdmin, async (req, res) 
 
 // POST /api/bookings/:bookingId/orders - Add order to booking
 const createOrderSchema = z.object({
-  menuItemId: z.string().uuid(),
+  menuItemId: z.string().min(1),
   seatIndex: z.number().int().min(1).max(4).optional(), // null for shared orders
   quantity: z.number().int().min(1),
 });
@@ -1092,6 +1092,52 @@ router.post('/:bookingId/orders', requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('[CREATE ORDER] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/bookings/orders/:orderId - Update order quantity
+router.patch('/orders/:orderId', requireAuth, async (req, res) => {
+  const { orderId } = req.params;
+  const { quantity } = req.body;
+
+  try {
+    if (!quantity || quantity < 1) {
+      return res.status(400).json({ error: 'Quantity must be at least 1' });
+    }
+
+    // Get order to know booking and seat for recalc
+    const order = await orderRepo.getOrder(orderId);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const { bookingId, seatIndex } = order;
+
+    // Update order
+    const updatedOrder = await orderRepo.updateOrder(orderId, quantity);
+
+    // Recalculate invoice if seat-specific
+    if (seatIndex) {
+      const updatedInvoice = await invoiceRepo.recalculateInvoice(bookingId, seatIndex);
+      return res.json({
+        order: updatedOrder,
+        updatedInvoice: {
+          id: updatedInvoice.id,
+          seatIndex: updatedInvoice.seatIndex,
+          subtotal: updatedInvoice.subtotal,
+          tax: updatedInvoice.tax,
+          tip: updatedInvoice.tip,
+          totalAmount: updatedInvoice.totalAmount,
+          status: updatedInvoice.status,
+          paymentMethod: updatedInvoice.paymentMethod,
+        },
+      });
+    }
+
+    return res.json({ order: updatedOrder });
+  } catch (error) {
+    console.error('[PATCH /orders/:orderId] Error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

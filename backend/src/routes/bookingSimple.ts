@@ -149,12 +149,8 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
       },
     });
     
-    // Auto-create invoices for each seat (1 per player)
-    const TAX_RATE = 0.1; // 10% tax
-    const pricePerSeat = Number(price) / data.players;
-    const taxPerSeat = pricePerSeat * TAX_RATE;
-    const totalPerSeat = pricePerSeat + taxPerSeat;
-    
+    // Auto-create empty invoices for each seat (1 per player)
+    // Start at 0, orders will be added later
     const invoicePromises = [];
     for (let seatIndex = 1; seatIndex <= data.players; seatIndex++) {
       invoicePromises.push(
@@ -162,10 +158,10 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
           data: {
             bookingId: booking.id,
             seatIndex,
-            subtotal: pricePerSeat,
-            tax: taxPerSeat,
+            subtotal: 0,
+            tax: 0,
             tip: null,
-            totalAmount: totalPerSeat,
+            totalAmount: 0,
             status: 'UNPAID',
             paymentMethod: null,
             paidAt: null,

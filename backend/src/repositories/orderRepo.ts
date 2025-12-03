@@ -26,6 +26,23 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
   });
 }
 
+export async function updateOrder(id: string, quantity: number): Promise<Order> {
+  const order = await prisma.order.findUnique({ where: { id } });
+  if (!order) {
+    throw new Error('Order not found');
+  }
+
+  const totalPrice = order.unitPrice * quantity;
+
+  return prisma.order.update({
+    where: { id },
+    data: {
+      quantity,
+      totalPrice,
+    },
+  });
+}
+
 export async function deleteOrder(id: string): Promise<Order> {
   return prisma.order.delete({
     where: { id },

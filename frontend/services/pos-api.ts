@@ -386,6 +386,29 @@ export async function createOrder(data: {
 }
 
 /**
+ * Update order quantity
+ */
+export async function updateOrder(orderId: string, quantity: number): Promise<{ order: Order; updatedInvoice?: Invoice }> {
+  const res = await fetch(`${API_BASE}/api/bookings/orders/${orderId}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-pos-admin-key': 'pos-dev-key-change-in-production'
+    },
+    body: JSON.stringify({ quantity })
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to update order' }));
+    throw new Error(error.error || 'Failed to update order');
+  }
+
+  const json = await res.json();
+  return json;
+}
+
+/**
  * Delete an order
  */
 export async function deleteOrder(orderId: string): Promise<{ updatedInvoice?: Invoice }> {

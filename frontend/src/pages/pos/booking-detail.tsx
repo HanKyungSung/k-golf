@@ -20,6 +20,7 @@ import {
   getGlobalTaxRate,
   getInvoices,
   createOrder as apiCreateOrder,
+  updateOrder as apiUpdateOrder,
   deleteOrder as apiDeleteOrder,
   payInvoice as apiPayInvoice,
   type Booking,
@@ -122,34 +123,10 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     loadData();
   }, [bookingId]);
 
-  // Load saved orders and seats from localStorage
+  // Keep only UI preferences in localStorage (like expanded seats, custom tax rate)
   useEffect(() => {
     if (!bookingId) return;
-    const savedOrders = localStorage.getItem(`booking-${bookingId}-orders`);
-    const savedSeats = localStorage.getItem(`booking-${bookingId}-seats`);
     const savedTaxRate = localStorage.getItem(`booking-${bookingId}-taxRate`);
-
-    if (savedOrders) {
-      try {
-        setOrderItems(JSON.parse(savedOrders));
-      } catch (e) {
-        console.error('[BookingDetail] Failed to load saved orders:', e);
-      }
-    }
-
-    if (savedSeats) {
-      try {
-        const seats = JSON.parse(savedSeats);
-        setNumberOfSeats(seats);
-        // Expand all seats by default
-        setExpandedSeats(Array.from({ length: seats }, (_, i) => `seat-${i + 1}`));
-      } catch (e) {
-        console.error('[BookingDetail] Failed to load saved seats:', e);
-      }
-    } else {
-      // Default: expand seat 1
-      setExpandedSeats(['seat-1']);
-    }
 
     if (savedTaxRate) {
       try {
@@ -160,63 +137,43 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     }
   }, [bookingId]);
 
-  // Save to localStorage whenever orders or seats change
-  useEffect(() => {
-    if (!bookingId) return;
-    if (orderItems.length > 0 || numberOfSeats > 1) {
-      localStorage.setItem(`booking-${bookingId}-orders`, JSON.stringify(orderItems));
-      localStorage.setItem(`booking-${bookingId}-seats`, JSON.stringify(numberOfSeats));
-    }
-  }, [orderItems, numberOfSeats, bookingId]);
-
-  // Initialize seats based on booking hours
-  useEffect(() => {
-    if (booking && menu.length > 0 && !seatsInitialized.current) {
-      const savedOrders = localStorage.getItem(`booking-${bookingId}-orders`);
-      
-      // Add booking hours as a menu item to seat 1 if no saved orders
-      if (!savedOrders || JSON.parse(savedOrders).length === 0) {
-        const hoursMenuItem = menu.find((item: MenuItem) => 
-          item.category === 'hours' && parseInt(item.name.replace(/\D/g, '')) === booking.duration
-        );
-        
-        if (hoursMenuItem) {
-          const hourOrderItem: OrderItem = {
-            id: `hours-${booking.id}-${Date.now()}`,
-            menuItem: hoursMenuItem,
-            quantity: 1,
-            seat: 1,
-          };
-          setOrderItems([hourOrderItem]);
-        }
-      }
-      
-      seatsInitialized.current = true;
-    }
-  }, [booking, menu, bookingId]);
-
   async function loadData() {
     try {
       setLoading(true);
       
       console.log('[BookingDetail] Loading data for booking ID:', bookingId);
       
-      const [bookingData, roomsData, menuData, taxRate] = await Promise.all([
+      const [bookingData, roomsData, menuData, taxRate, invoicesData] = await Promise.all([
         getBooking(bookingId),
         listRooms(),
         listMenuItems().catch(() => [] as MenuItem[]), // Menu might not exist yet
-        getGlobalTaxRate()
+        getGlobalTaxRate(),
+        getInvoices(bookingId).catch(() => [] as Invoice[]) // Load invoices with orders
       ]);
       
       console.log('[BookingDetail] Booking data:', bookingData);
       console.log('[BookingDetail] Rooms:', roomsData.length);
       console.log('[BookingDetail] Menu items:', menuData.length);
       console.log('[BookingDetail] Tax rate:', taxRate);
+      console.log('[BookingDetail] Invoices:', invoicesData.length);
       
       setBooking(bookingData);
       setRooms(roomsData);
       setMenu(menuData);
       setGlobalTaxRate(taxRate);
+      setInvoices(invoicesData);
+      
+      // Convert backend invoices/orders to UI format
+      loadOrdersFromInvoices(invoicesData, menuData);
+      
+      // Set number of seats from booking
+      if (bookingData.players) {
+        setNumberOfSeats(bookingData.players);
+        setExpandedSeats(Array.from({ length: bookingData.players }, (_, i) => `seat-${i + 1}`));
+      }
+      
+      // Load payment status from invoices
+      loadPaymentStatusFromInvoices(invoicesData);
       
       console.log('[BookingDetail] Successfully loaded all data');
     } catch (err) {
@@ -228,6 +185,47 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     }
   }
 
+  // Convert backend invoices/orders to UI OrderItem format
+  function loadOrdersFromInvoices(invoicesData: Invoice[], menuData: MenuItem[]) {
+    const items: OrderItem[] = [];
+    
+    invoicesData.forEach((invoice) => {
+      if (invoice.orders && invoice.orders.length > 0) {
+        invoice.orders.forEach((order) => {
+          const menuItem = menuData.find((m) => m.id === order.menuItemId);
+          if (menuItem) {
+            items.push({
+              id: order.id,
+              menuItem: menuItem,
+              quantity: order.quantity,
+              seat: invoice.seatIndex,
+            });
+          }
+        });
+      }
+    });
+    
+    setOrderItems(items);
+    console.log('[BookingDetail] Loaded', items.length, 'order items from backend');
+  }
+
+  // Load payment status from invoices
+  function loadPaymentStatusFromInvoices(invoicesData: Invoice[]) {
+    const payments: Record<number, { status: 'UNPAID' | 'PAID'; method?: string; tip?: number; total?: number }> = {};
+    
+    invoicesData.forEach((invoice) => {
+      payments[invoice.seatIndex] = {
+        status: invoice.status,
+        method: invoice.paymentMethod || undefined,
+        tip: invoice.tip ? parseFloat(String(invoice.tip)) : undefined,
+        total: parseFloat(String(invoice.totalAmount)) || 0,
+      };
+    });
+    
+    setSeatPayments(payments);
+    console.log('[BookingDetail] Loaded payment status for', Object.keys(payments).length, 'seats');
+  }
+
   const roomColor = useMemo(
     () => {
       const room = rooms.find((r) => r.id === booking?.roomId);
@@ -237,28 +235,106 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   );
 
   // Order management functions
-  const addItemToSeat = (menuItem: MenuItem, seat: number) => {
-    const newItem: OrderItem = {
-      id: `${menuItem.id}-${Date.now()}-${Math.random()}`,
-      menuItem,
-      quantity: 1,
-      seat,
-    };
-    setOrderItems([...orderItems, newItem]);
+  const addItemToSeat = async (menuItem: MenuItem, seat: number) => {
+    if (!booking) return;
+    
+    setOrderLoading(true);
+    try {
+      console.log('[BookingDetail] Creating order:', { menuItemId: menuItem.id, seat, quantity: 1 });
+      
+      const result = await apiCreateOrder({
+        bookingId: booking.id,
+        menuItemId: menuItem.id,
+        seatIndex: seat,
+        quantity: 1,
+      });
+      
+      console.log('[BookingDetail] Order created:', result.order);
+      
+      // Add to local state immediately for responsive UI
+      const newItem: OrderItem = {
+        id: result.order.id,
+        menuItem,
+        quantity: result.order.quantity,
+        seat,
+      };
+      setOrderItems([...orderItems, newItem]);
+      
+      // Refetch invoices to get updated totals
+      const updatedInvoices = await getInvoices(booking.id);
+      setInvoices(updatedInvoices);
+      
+      console.log('[BookingDetail] Invoice updated, new total:', result.updatedInvoice?.totalAmount);
+    } catch (err) {
+      console.error('[BookingDetail] Failed to add item:', err);
+      alert(`Failed to add item: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setOrderLoading(false);
+    }
   };
 
-  const updateItemQuantity = (orderItemId: string, change: number) => {
-    setOrderItems(
-      orderItems
-        .map((item) =>
-          item.id === orderItemId ? { ...item, quantity: Math.max(0, item.quantity + change) } : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
+  const updateItemQuantity = async (orderItemId: string, change: number) => {
+    if (!booking) return;
+    
+    const item = orderItems.find(i => i.id === orderItemId);
+    if (!item) return;
+    
+    const newQuantity = item.quantity + change;
+    
+    // If quantity becomes 0, delete the order
+    if (newQuantity <= 0) {
+      await removeOrderItem(orderItemId);
+      return;
+    }
+    
+    setOrderLoading(true);
+    try {
+      console.log('[BookingDetail] Updating order quantity:', orderItemId, newQuantity);
+      
+      // Call API to update quantity
+      const result = await apiUpdateOrder(orderItemId, newQuantity);
+      console.log('[BookingDetail] Order updated:', result);
+      
+      // Update local state
+      setOrderItems(prev => 
+        prev.map(i => i.id === orderItemId ? { ...i, quantity: newQuantity } : i)
+      );
+      
+      // Refetch invoices to get updated totals
+      const updatedInvoices = await getInvoices(booking.id);
+      setInvoices(updatedInvoices.invoices);
+    } catch (error) {
+      console.error('[BookingDetail] Failed to update order:', error);
+      alert(error instanceof Error ? error.message : 'Failed to update order');
+    } finally {
+      setOrderLoading(false);
+    }
   };
 
-  const removeOrderItem = (orderItemId: string) => {
-    setOrderItems(orderItems.filter((item) => item.id !== orderItemId));
+  const removeOrderItem = async (orderItemId: string) => {
+    if (!booking) return;
+    
+    setOrderLoading(true);
+    try {
+      console.log('[BookingDetail] Deleting order:', orderItemId);
+      
+      await apiDeleteOrder(orderItemId);
+      
+      console.log('[BookingDetail] Order deleted');
+      
+      // Remove from local state
+      setOrderItems(orderItems.filter((item) => item.id !== orderItemId));
+      
+      // Refetch invoices to get updated totals
+      const updatedInvoices = await getInvoices(booking.id);
+      setInvoices(updatedInvoices);
+      
+    } catch (err) {
+      console.error('[BookingDetail] Failed to remove item:', err);
+      alert(`Failed to remove item: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setOrderLoading(false);
+    }
   };
 
   const moveItemToSeat = (orderItemId: string, newSeat: number | undefined) => {
@@ -342,28 +418,63 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
   // Payment processing for accordion-based interface
   const processPayment = async (seat: number) => {
+    if (!booking) return;
+    
     setProcessingPayment(seat);
 
-    // Simulate payment processing
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const tipAmount = parseFloat(tipAmountBySeat[seat] || '0') || 0;
-    const subtotal = calculateSeatSubtotal(seat);
-    const tax = calculateSeatTax(seat);
-    const total = subtotal + tax + tipAmount;
-
-    // Update seat payment status
-    setSeatPayments(prev => ({
-      ...prev,
-      [seat]: { 
-        status: 'PAID', 
-        method: paymentMethodBySeat[seat] || 'CARD', 
+    try {
+      const tipAmount = parseFloat(tipAmountBySeat[seat] || '0') || 0;
+      const paymentMethod = paymentMethodBySeat[seat] || 'CARD';
+      
+      // Find the invoice for this seat
+      const invoice = invoices.find((inv) => inv.seatIndex === seat);
+      if (!invoice) {
+        throw new Error(`No invoice found for seat ${seat}`);
+      }
+      
+      console.log('[BookingDetail] Processing payment:', { 
+        invoiceId: invoice.id, 
+        seat, 
+        paymentMethod, 
+        tip: tipAmount 
+      });
+      
+      // Call backend API to mark invoice as paid
+      const result = await apiPayInvoice({
+        invoiceId: invoice.id,
+        bookingId: booking.id,
+        seatIndex: seat,
+        paymentMethod,
         tip: tipAmount,
-        total: total
-      },
-    }));
+      });
+      
+      console.log('[BookingDetail] Payment processed:', result.invoice);
+      console.log('[BookingDetail] Booking payment status:', result.bookingPaymentStatus);
 
-    setProcessingPayment(null);
+      // Update seat payment status
+      setSeatPayments(prev => ({
+        ...prev,
+        [seat]: { 
+          status: 'PAID', 
+          method: paymentMethod, 
+          tip: tipAmount,
+          total: result.invoice.totalAmount
+        },
+      }));
+      
+      // Refetch invoices to ensure we have latest data
+      const updatedInvoices = await getInvoices(booking.id);
+      setInvoices(updatedInvoices);
+      
+      // Reload booking to get updated payment status
+      await loadData();
+
+    } catch (err) {
+      console.error('[BookingDetail] Failed to process payment:', err);
+      alert(`Failed to process payment: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setProcessingPayment(null);
+    }
 
     // Auto-scroll to next unpaid seat
     const nextUnpaidSeat = Array.from({ length: numberOfSeats }, (_, i) => i + 1).find(
@@ -456,18 +567,36 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     return orderItems.filter((item) => item.seat === seat);
   };
 
-  const calculateSeatSubtotal = (seat: number) => {
+  const calculateSeatSubtotal = (seat: number): number => {
+    const invoice = invoices.find(inv => inv.seatIndex === seat);
+    if (invoice) {
+      return parseFloat(String(invoice.subtotal)) || 0;
+    }
+    
+    // Fallback to local calculation
     return getItemsForSeat(seat).reduce((sum, item) => {
       const price = item.splitPrice || item.menuItem.price;
       return sum + price * item.quantity;
     }, 0);
   };
 
-  const calculateSeatTax = (seat: number) => {
+  const calculateSeatTax = (seat: number): number => {
+    const invoice = invoices.find(inv => inv.seatIndex === seat);
+    if (invoice) {
+      return parseFloat(String(invoice.tax)) || 0;
+    }
+    
+    // Fallback to local calculation
     return calculateSeatSubtotal(seat) * (effectiveTaxRate / 100);
   };
 
-  const calculateSeatTotal = (seat: number) => {
+  const calculateSeatTotal = (seat: number): number => {
+    const invoice = invoices.find(inv => inv.seatIndex === seat);
+    if (invoice) {
+      return parseFloat(String(invoice.totalAmount)) || 0;
+    }
+    
+    // Fallback to local calculation
     return calculateSeatSubtotal(seat) + calculateSeatTax(seat);
   };
 

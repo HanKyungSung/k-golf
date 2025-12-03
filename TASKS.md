@@ -59,31 +59,39 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - [x] Invoices initialized with base room price per seat + 10% tax
 - [x] Ensure seed script creates invoices for existing bookings (already done)
 
-**Phase 3: Integrate Orders** `[ ]`
-- [ ] Load existing orders from backend on page load via `getInvoices()`
-- [ ] Replace localStorage `addItemToSeat()` with API call to `createOrder()`
-- [ ] Replace localStorage `removeOrderItem()` with API call to `deleteOrder()`
-- [ ] Backend auto-recalculates invoice totals after order changes
-- [ ] Remove localStorage dependency for orders (keep only UI state like expanded seats)
+**Phase 3: Integrate Orders** `[x]` ✅ DONE
+- [x] Load existing orders from backend on page load via `getInvoices()`
+- [x] Replace localStorage `addItemToSeat()` with API call to `createOrder()`
+- [x] Replace localStorage `removeOrderItem()` with API call to `deleteOrder()`
+- [x] Added `updateOrder(orderId, quantity)` API function to backend and frontend
+- [x] Updated `updateItemQuantity()` to use API call instead of local state
+- [x] Backend auto-recalculates invoice totals after order changes
+- [x] Updated calculation functions to use invoice data from backend
+- [x] Removed localStorage dependency for orders (kept only UI prefs like tax rate)
+- [x] Fixed menuItemId validation to accept string IDs (not just UUID)
+- [x] **TESTED**: Created booking, added orders, updated quantities, all working!
 
-**Phase 4: Integrate Payments** `[ ]`
-- [ ] Replace simulated `processPayment()` with real `payInvoice()` API call
-- [ ] Backend marks invoice as PAID, updates booking status if all seats paid
-- [ ] Refresh invoice/payment status after successful payment
-- [ ] Show proper loading/error states
+**Phase 4: Integrate Payments** `[x]` ✅ DONE
+- [x] Replace simulated `processPayment()` with real `payInvoice()` API call
+- [x] Backend marks invoice as PAID, updates booking status if all seats paid
+- [x] Refresh invoice/payment status after successful payment
+- [x] Show proper loading/error states
+- [x] **TESTED**: Paid 2 seats with different methods/tips, booking status→PAID
 
-**Phase 5: Load Initial State from Backend** `[ ]`
-- [ ] On page load: fetch booking + invoices with orders
-- [ ] Populate `orderItems` state from backend Order data
-- [ ] Populate `seatPayments` state from backend Invoice data
-- [ ] Set `numberOfSeats` based on booking.players
-- [ ] Remove localStorage order persistence
+**Phase 5: Load Initial State from Backend** `[x]` ✅ DONE
+- [x] On page load: fetch booking + invoices with orders
+- [x] Populate `orderItems` state from backend Order data via `loadOrdersFromInvoices()`
+- [x] Populate `seatPayments` state from backend Invoice data via `loadPaymentStatusFromInvoices()`
+- [x] Set `numberOfSeats` based on booking.players
+- [x] Removed localStorage order persistence (only UI prefs remain)
 
-**Phase 6: Real-time Sync** `[ ]`
-- [ ] After adding order → refetch invoices to get updated totals
-- [ ] After payment → refetch payment status and invoices
-- [ ] Show loading indicators during API calls
-- [ ] Handle API errors gracefully with user feedback
+**Phase 6: Real-time Sync** `[x]` ✅ DONE
+- [x] After adding order → refetch invoices to get updated totals
+- [x] After deleting order → refetch invoices
+- [x] After updating quantity → refetch invoices
+- [x] After payment → refetch invoices and booking data
+- [x] Show loading indicators during API calls (`orderLoading` state)
+- [x] Handle API errors gracefully with try/catch and alerts
 
 #### Manual Testing Checklist:
 
