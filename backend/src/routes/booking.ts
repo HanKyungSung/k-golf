@@ -1339,7 +1339,7 @@ router.patch('/invoices/:invoiceId/unpay', requireAuth, async (req, res) => {
     // Update booking payment status to UNPAID since at least one invoice is now unpaid
     await updatePaymentStatus(bookingId, {
       paymentStatus: 'UNPAID',
-      paidAt: null,
+      paidAt: undefined,
     });
 
     return res.json({

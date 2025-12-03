@@ -32,7 +32,7 @@ export async function updateOrder(id: string, quantity: number): Promise<Order> 
     throw new Error('Order not found');
   }
 
-  const totalPrice = order.unitPrice * quantity;
+  const totalPrice = Number(order.unitPrice) * quantity;
 
   return prisma.order.update({
     where: { id },
