@@ -57,11 +57,11 @@ async function main() {
 	// Seed menu items (idempotent by ID)
 	const defaultMenuItems = [
 		// Hours (Room booking time)
-		{ id: 'hour-1', name: '1 Hour', description: 'Screen golf room for 1 hour', price: 30.00, category: 'HOURS', hours: 1, available: true, sortOrder: 1 },
-		{ id: 'hour-2', name: '2 Hours', description: 'Screen golf room for 2 hours', price: 60.00, category: 'HOURS', hours: 2, available: true, sortOrder: 2 },
-		{ id: 'hour-3', name: '3 Hours', description: 'Screen golf room for 3 hours', price: 90.00, category: 'HOURS', hours: 3, available: true, sortOrder: 3 },
-		{ id: 'hour-4', name: '4 Hours', description: 'Screen golf room for 4 hours', price: 120.00, category: 'HOURS', hours: 4, available: true, sortOrder: 4 },
-		{ id: 'hour-5', name: '5 Hours', description: 'Screen golf room for 5 hours', price: 150.00, category: 'HOURS', hours: 5, available: true, sortOrder: 5 },
+		{ id: 'hour-1', name: '1 Hour', description: 'Screen golf room for 1 hour', price: 35.00, category: 'HOURS', hours: 1, available: true, sortOrder: 1 },
+		{ id: 'hour-2', name: '2 Hours', description: 'Screen golf room for 2 hours', price: 70.00, category: 'HOURS', hours: 2, available: true, sortOrder: 2 },
+		{ id: 'hour-3', name: '3 Hours', description: 'Screen golf room for 3 hours', price: 105.00, category: 'HOURS', hours: 3, available: true, sortOrder: 3 },
+		{ id: 'hour-4', name: '4 Hours', description: 'Screen golf room for 4 hours', price: 140.00, category: 'HOURS', hours: 4, available: true, sortOrder: 4 },
+		{ id: 'hour-5', name: '5 Hours', description: 'Screen golf room for 5 hours', price: 175.00, category: 'HOURS', hours: 5, available: true, sortOrder: 5 },
 		// Food
 		{ id: '1', name: 'Club Sandwich', description: 'Triple-decker with turkey, bacon, lettuce, and tomato', price: 12.99, category: 'FOOD', hours: null, available: true, sortOrder: 1 },
 		{ id: '2', name: 'Korean Fried Chicken', description: 'Crispy chicken with sweet and spicy sauce', price: 15.99, category: 'FOOD', hours: null, available: true, sortOrder: 2 },
