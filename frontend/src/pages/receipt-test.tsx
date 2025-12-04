@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import Receipt from '../components/Receipt';
 import { getReceipt, getSeatReceipt, sendReceiptEmail, type ReceiptData } from '../../services/pos-api';
 import { Printer, Mail, Eye } from 'lucide-react';
@@ -18,6 +19,8 @@ export default function ReceiptTest() {
   const [success, setSuccess] = useState('');
   const [printMode, setPrintMode] = useState<'full' | 'seat' | null>(null);
   const [printingSeatIndex, setPrintingSeatIndex] = useState<number | null>(null);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printModalData, setPrintModalData] = useState<{ mode: 'full' | 'seat'; seatIndex?: number } | null>(null);
 
   const handleGetFullReceipt = async () => {
     setLoading(true);
@@ -49,23 +52,22 @@ export default function ReceiptTest() {
     }
   };
 
-  const handlePrintFull = () => {
-    setPrintMode('full');
-    setPrintingSeatIndex(null);
-    setTimeout(() => {
-      window.print();
-      setPrintMode(null);
-    }, 100);
+  const handleOpenPrintModal = (mode: 'full' | 'seat', seatIndex?: number) => {
+    setPrintModalData({ mode, seatIndex });
+    setPrintMode(mode);
+    setPrintingSeatIndex(seatIndex || null);
+    setShowPrintModal(true);
   };
 
-  const handlePrintSeat = (seat: number) => {
-    setPrintMode('seat');
-    setPrintingSeatIndex(seat);
-    setTimeout(() => {
-      window.print();
-      setPrintMode(null);
-      setPrintingSeatIndex(null);
-    }, 100);
+  const handleClosePrintModal = () => {
+    setShowPrintModal(false);
+    setPrintModalData(null);
+    setPrintMode(null);
+    setPrintingSeatIndex(null);
+  };
+
+  const handlePrintFromModal = () => {
+    window.print();
   };
 
   const handleSendEmail = async () => {
@@ -152,7 +154,7 @@ export default function ReceiptTest() {
                       <Label className="text-slate-300">Print Options</Label>
                       <div className="space-y-2 mt-2">
                         <Button
-                          onClick={handlePrintFull}
+                          onClick={() => handleOpenPrintModal('full')}
                           className="w-full bg-purple-600 hover:bg-purple-700"
                         >
                           <Printer className="mr-2 h-4 w-4" />
@@ -162,7 +164,7 @@ export default function ReceiptTest() {
                         {receiptData.items.seats.map((seat) => (
                           <Button
                             key={seat.seatIndex}
-                            onClick={() => handlePrintSeat(seat.seatIndex)}
+                            onClick={() => handleOpenPrintModal('seat', seat.seatIndex)}
                             variant="outline"
                             className="w-full border-purple-500 text-purple-400 hover:bg-purple-500/10"
                           >
@@ -256,6 +258,45 @@ export default function ReceiptTest() {
           </div>
         </div>
       </div>
+
+      {/* Print Preview Modal */}
+      <Dialog open={showPrintModal} onOpenChange={setShowPrintModal}>
+        <DialogContent className="max-w-md bg-slate-800 text-white border-slate-700">
+          <DialogHeader>
+            <DialogTitle>Print Preview</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Review the receipt before printing
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="max-h-[60vh] overflow-y-auto border border-slate-700 rounded">
+            {printModalData && (
+              <Receipt
+                data={receiptData!}
+                printMode={printModalData.mode}
+                printingSeatIndex={printModalData.seatIndex}
+              />
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleClosePrintModal}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={handlePrintFromModal}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

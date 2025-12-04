@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, User, Clock, Calendar } from 'lucide-react';
-import OrderForm from '@/components/OrderForm';
+import Receipt from '../../components/Receipt';
 import { 
   getBooking, 
   updateBookingStatus as apiUpdateBookingStatus, 
@@ -24,11 +24,14 @@ import {
   deleteOrder as apiDeleteOrder,
   payInvoice as apiPayInvoice,
   unpayInvoice as apiUnpayInvoice,
+  getReceipt,
+  getSeatReceipt,
   type Booking,
   type Room,
   type MenuItem,
   type Invoice,
-  type Order 
+  type Order,
+  type ReceiptData
 } from '@/services/pos-api';
 
 interface POSBookingDetailProps {
@@ -115,6 +118,13 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [paymentMethodBySeat, setPaymentMethodBySeat] = useState<Record<number, 'CARD' | 'CASH'>>({});
   const [tipAmountBySeat, setTipAmountBySeat] = useState<Record<number, string>>({});
   const [processingPayment, setProcessingPayment] = useState<number | null>(null);
+
+  // Receipt modal state
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+  const [receiptMode, setReceiptMode] = useState<'full' | 'seat'>('full');
+  const [receiptSeatIndex, setReceiptSeatIndex] = useState<number | undefined>(undefined);
+  const [loadingReceipt, setLoadingReceipt] = useState(false);
   
   const seatsInitialized = React.useRef(false);
   const seatRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
@@ -303,7 +313,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       
       // Refetch invoices to get updated totals
       const updatedInvoices = await getInvoices(booking.id);
-      setInvoices(updatedInvoices.invoices);
+      setInvoices(updatedInvoices);
     } catch (error) {
       console.error('[BookingDetail] Failed to update order:', error);
       alert(error instanceof Error ? error.message : 'Failed to update order');
@@ -531,7 +541,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       
       // Refetch invoices to ensure we have latest data
       const updatedInvoices = await getInvoices(booking.id);
-      setInvoices(updatedInvoices.invoices);
+      setInvoices(updatedInvoices);
       
       // Reload booking to get updated payment status
       await loadData();
@@ -556,6 +566,100 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     const subtotal = calculateSeatSubtotal(seat);
     const tipAmount = ((subtotal * percentage) / 100).toFixed(2);
     setTipAmountBySeat({ ...tipAmountBySeat, [seat]: tipAmount });
+  };
+
+  // Receipt modal handlers
+  const handleOpenReceiptModal = async (mode: 'full' | 'seat', seatIndex?: number) => {
+    if (!bookingId) return;
+    setLoadingReceipt(true);
+    try {
+      let data: ReceiptData;
+      if (mode === 'seat' && seatIndex !== undefined) {
+        data = await getSeatReceipt(bookingId, seatIndex);
+        setReceiptSeatIndex(seatIndex);
+      } else {
+        data = await getReceipt(bookingId);
+      }
+      setReceiptData(data);
+      setReceiptMode(mode);
+      setShowReceiptModal(true);
+    } catch (error) {
+      console.error('Failed to load receipt:', error);
+      alert('Failed to load receipt data');
+    } finally {
+      setLoadingReceipt(false);
+    }
+  };
+
+  const handleCloseReceiptModal = () => {
+    setShowReceiptModal(false);
+    setReceiptData(null);
+    setReceiptSeatIndex(undefined);
+  };
+
+  const handlePrintFromModal = () => {
+    if (!receiptData) return;
+    
+    // Get the receipt HTML content
+    const receiptElement = document.querySelector('.receipt');
+    if (!receiptElement) return;
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) return;
+    
+    // Write the receipt content with print styles
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Receipt - ${receiptData.receiptNumber}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: white;
+              padding: 20px;
+              display: flex;
+              justify-content: center;
+              align-items: flex-start;
+            }
+            .receipt {
+              background: white;
+              color: #0f172a;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              @page {
+                margin: 10mm;
+                size: 80mm auto;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${receiptElement.outerHTML}
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    
+    // Wait for content to load then print
+    printWindow.onload = () => {
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    };
   };
 
   // Payment Summary helper functions
@@ -929,7 +1033,20 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                             {seatItems.length} items
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenReceiptModal('seat', seat);
+                            }}
+                            disabled={loadingReceipt || seatItems.length === 0}
+                            className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border-amber-500/50"
+                          >
+                            <Printer className="h-4 w-4 mr-1" />
+                            Print
+                          </Button>
                           {isPaid ? (
                             <Badge className="bg-green-500 text-white flex items-center gap-1">
                               <CheckCircle2 className="h-3 w-3" />
@@ -1202,14 +1319,6 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                   className="w-full border-red-500 text-red-400 hover:bg-red-500/10"
                 >
                   Cancel Booking
-                </Button>
-                <Button
-                  onClick={handlePrintReceipt}
-                  variant="outline"
-                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent"
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print Receipt
                 </Button>
               </CardContent>
             </Card>
@@ -1590,6 +1699,45 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
               }}
             >
               Save Tax Rate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Preview Modal */}
+      <Dialog open={showReceiptModal} onOpenChange={setShowReceiptModal}>
+        <DialogContent className="max-w-md bg-slate-800 text-white border-slate-700">
+          <DialogHeader>
+            <DialogTitle>Receipt Preview</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Review the receipt before printing
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="max-h-[60vh] overflow-y-auto border border-slate-700 rounded">
+            {receiptData && (
+              <Receipt
+                data={receiptData}
+                printMode={receiptMode}
+                printingSeatIndex={receiptSeatIndex}
+              />
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCloseReceiptModal}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={handlePrintFromModal}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print
             </Button>
           </DialogFooter>
         </DialogContent>
