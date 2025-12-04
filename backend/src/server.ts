@@ -9,6 +9,7 @@ import { authRouter } from './routes/auth';
 import settingsRouter from './routes/settings';
 import usersRouter from './routes/users';
 import menuRouter from './routes/menu';
+import receiptRouter from './routes/receipt';
 import cookieParser from 'cookie-parser';
 
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/bookings/simple', bookingSimpleRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/menu', menuRouter);
+app.use('/api/receipts', receiptRouter);
 
 // Serve frontend static files (after API routes to avoid conflicts)
 // With rootDir='.', structure is: dist/src/server.js and dist/public/

@@ -507,3 +507,132 @@ export async function getPaymentStatus(bookingId: string): Promise<PaymentStatus
   const json = await res.json();
   return json;
 }
+
+// ============= Receipt API =============
+
+export interface ReceiptData {
+  receiptNumber: string;
+  bookingId: string;
+  customer: {
+    name: string;
+    phone: string;
+    email?: string | null;
+  };
+  business: {
+    name: string;
+    address: string;
+    phone: string;
+    taxId?: string;
+  };
+  booking: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    duration: number;
+    room: {
+      name: string;
+      rate: number;
+    };
+    players: number;
+  };
+  items: {
+    roomCharge: {
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+    };
+    seats: Array<{
+      seatIndex: number;
+      orders: Array<{
+        name: string;
+        quantity: number;
+        unitPrice: number;
+        total: number;
+      }>;
+      subtotal: number;
+    }>;
+  };
+  totals: {
+    subtotal: string;
+    tax: string;
+    tip: string;
+    grandTotal: string;
+    taxRate: number;
+  };
+  payment: {
+    method?: string | null;
+    status: string;
+    paidAt?: Date | null;
+  };
+  metadata: {
+    generatedAt: Date;
+    generatedBy?: string | null;
+  };
+}
+
+/**
+ * Get full receipt for a booking
+ */
+export async function getReceipt(bookingId: string): Promise<ReceiptData> {
+  const res = await fetch(`${API_BASE}/api/receipts/${bookingId}`, {
+    credentials: 'include',
+    headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' }
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('[POS API] Get receipt error:', errorText);
+    throw new Error(`Failed to fetch receipt: ${res.status} ${errorText}`);
+  }
+
+  const json = await res.json();
+  return json.receipt;
+}
+
+/**
+ * Get receipt for a specific seat
+ */
+export async function getSeatReceipt(bookingId: string, seatIndex: number): Promise<ReceiptData> {
+  const res = await fetch(`${API_BASE}/api/receipts/${bookingId}/seat/${seatIndex}`, {
+    credentials: 'include',
+    headers: { 'x-pos-admin-key': 'pos-dev-key-change-in-production' }
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('[POS API] Get seat receipt error:', errorText);
+    throw new Error(`Failed to fetch seat receipt: ${res.status} ${errorText}`);
+  }
+
+  const json = await res.json();
+  return json.receipt;
+}
+
+/**
+ * Send receipt via email
+ */
+export async function sendReceiptEmail(
+  bookingId: string,
+  email: string,
+  seatIndex?: number
+): Promise<{ success: boolean; receiptNumber: string }> {
+  const res = await fetch(`${API_BASE}/api/receipts/${bookingId}/email`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-pos-admin-key': 'pos-dev-key-change-in-production'
+    },
+    body: JSON.stringify({ email, seatIndex })
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('[POS API] Send receipt email error:', errorText);
+    throw new Error(`Failed to send receipt email: ${res.status} ${errorText}`);
+  }
+
+  const json = await res.json();
+  return json;
+}

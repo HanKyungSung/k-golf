@@ -1,0 +1,92 @@
+/* Print-specific styles for receipts */
+
+@media print {
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only receipt and its children */
+  .receipt,
+  .receipt * {
+    visibility: visible;
+  }
+
+  /* Position receipt at top */
+  .receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 80mm;
+    margin: 0;
+    padding: 10mm;
+  }
+
+  /* Hide UI elements during print */
+  .no-print,
+  .no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Remove backgrounds and shadows */
+  body {
+    background: white !important;
+  }
+
+  /* Optimize for thermal printers */
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  /* Ensure black and white */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Keep borders visible */
+  .receipt .border-t,
+  .receipt .border-b,
+  .receipt [class*="border"] {
+    border-color: black !important;
+  }
+
+  /* Avoid page breaks inside sections */
+  .receipt-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Ensure proper spacing */
+  .receipt-header,
+  .receipt-footer {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+
+/* Screen styles for print preview */
+.print-preview {
+  max-width: 80mm;
+  margin: 0 auto;
+  background: white;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Print button (hidden during actual print) */
+.print-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+@media print {
+  .print-button {
+    display: none !important;
+  }
+}

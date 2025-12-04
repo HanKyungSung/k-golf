@@ -8,6 +8,7 @@ import LoginPage from './pages/login'
 import SignUpPage from './pages/signup'
 import VerifyPage from './pages/verify'
 import POSRoutes from './pages/pos'
+import ReceiptTestPage from './pages/receipt-test'
 import { AuthProvider } from '../hooks/use-auth'
 import { Toaster } from '@/components/ui/toaster'
 import { ThemeProvider } from '../components/theme-provider'
@@ -31,6 +32,7 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/verify" element={<VerifyPage />} />
+        <Route path="/receipt-test" element={<ReceiptTestPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster />

@@ -21,17 +21,14 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 ---
 
 ## Personal note
-- Need to see how to handle the paymentStatus. Confirm with customer.
 - Ask no cleaning time between bookings.
 - The coupon. like every 30 times visit, free hours etc.
-- Cancel booking shouldn't show in visual. Remove it from the timeline. 
-  - timeline shows the bookings the cancelled one.
-  - past time bookings shows grey. not real color
-  - remove it from room management too.
 - When pay button clicks
   - per seat payment closure 
 - Cancellation policy
-- individual payment collection from the customer
+- print functionality
+- tip section color is too dark.
+- after complete the booking the booking should change to grey.
 
 ## 🚨 URGENT TASKS (2025-12-03)
 
