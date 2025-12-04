@@ -87,6 +87,8 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - ✅ Preserves all styling from preview
 - ✅ Email receipts with HTML template
 - ✅ Support for both full and per-seat receipts
+- ✅ Receipt number uses invoice ID for seat receipts (trackable in database)
+- ✅ Receipt number uses booking ID for full receipts
 
 ---
 

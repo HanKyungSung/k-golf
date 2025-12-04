@@ -112,6 +112,17 @@ Quality
 - Centralized error parsing on frontend auth; symmetric cookie handling on logout.
 - Diagrams and docs updated (availability and ER), including Mermaid fixes.
 
+### Receipt Printing (Web Frontend)
+The web frontend includes a complete receipt printing system:
+- **Per-seat receipt printing**: Print icon on each seat accordion in booking detail page
+- **Modal preview**: Shows formatted receipt before printing (80mm thermal printer layout)
+- **Print window**: Opens dedicated window with Tailwind CSS styling for clean output
+- **Email receipts**: Send receipts via email with HTML template
+- **Trackable receipt numbers**: 
+  - Seat receipts use invoice ID as receipt number (directly trackable in database)
+  - Full booking receipts use booking ID as receipt number
+- **Backend API**: `GET /api/receipt/:bookingId`, `GET /api/receipt/:bookingId/seat/:seatIndex`, `POST /api/receipt/:bookingId/email`
+
 ### POS Hub (New)
 A local Electron application that:
 - Hosts an Express server bound to `0.0.0.0` so other devices on the same Wi‑Fi can submit orders.
