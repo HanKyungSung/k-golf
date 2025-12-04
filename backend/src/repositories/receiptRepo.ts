@@ -67,12 +67,12 @@ export interface ReceiptData {
 }
 
 /**
- * Generate a receipt number in format: RCP-YYYY-NNNNNN
+ * Generate a receipt number using the invoice or booking ID
+ * This allows tracking receipts back to their source records
  */
-function generateReceiptNumber(): string {
-  const year = new Date().getFullYear();
-  const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-  return `RCP-${year}-${random}`;
+function generateReceiptNumber(invoiceId?: string, bookingId?: string): string {
+  // Use invoice ID for seat receipts, booking ID for full receipts
+  return invoiceId || bookingId || 'UNKNOWN';
 }
 
 /**
@@ -169,7 +169,7 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
   const paidAt = paidInvoices.length > 0 ? paidInvoices[0].paidAt : null;
 
   const receiptData: ReceiptData = {
-    receiptNumber: generateReceiptNumber(),
+    receiptNumber: generateReceiptNumber(undefined, booking.id),
     bookingId: booking.id,
     customer: {
       name: booking.customerName || booking.user?.name || 'Guest',
@@ -248,6 +248,7 @@ export async function getSeatReceiptData(bookingId: string, seatIndex: number): 
 
   return {
     ...fullReceipt,
+    receiptNumber: invoice ? invoice.id : generateReceiptNumber(undefined, bookingId),
     items: {
       roomCharge: {
         ...fullReceipt.items.roomCharge,
