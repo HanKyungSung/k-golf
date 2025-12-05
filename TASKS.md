@@ -27,8 +27,90 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - per seat payment closure 
 - Cancellation policy
 - [x] print functionality ✅ COMPLETED (2025-12-04)
+- [x] Domain migration from k-golf.inviteyou.ca to k-golf.ca ✅ COMPLETED (2025-12-05)
 - tip section color is too dark.
 - after complete the booking the booking should change to grey.
+
+## 🚨 URGENT TASKS (2025-12-05)
+
+### 1. **Domain Migration to k-golf.ca** ✅ COMPLETED (2025-12-05)
+- **Priority:** COMPLETED
+- **Component:** Production Infrastructure + DNS + SSL
+- **Status:** Fully migrated from k-golf.inviteyou.ca to k-golf.ca
+- **Changes Made:**
+  - DNS A records configured for k-golf.ca and www.k-golf.ca
+  - SSL certificate obtained for k-golf.ca (expires 2026-03-05)
+  - Nginx configuration created and deployed
+  - Backend CORS updated to accept all domains
+  - Admin email addresses updated to @k-golf.ca
+  - Production and local databases updated
+  - SSL auto-renewal configured (systemd timer + snap + cron)
+
+#### Implementation Summary:
+
+**DNS Configuration** `[x]` ✅ DONE
+- [x] A record: k-golf.ca → 147.182.215.135
+- [x] A record: www.k-golf.ca → 147.182.215.135
+- [x] DNS propagated and verified
+
+**SSL Certificate** `[x]` ✅ DONE
+- [x] Certificate obtained via certbot for k-golf.ca and www.k-golf.ca
+- [x] Certificate location: `/etc/letsencrypt/live/k-golf.ca/`
+- [x] Valid until: 2026-03-05 (89 days)
+- [x] Auto-renewal configured:
+  - Systemd timer: runs twice daily
+  - Snap timer: backup mechanism
+  - Cron job: runs every 2 months
+  - Renews 30 days before expiration
+
+**Nginx Configuration** `[x]` ✅ DONE
+- [x] Created `/etc/nginx/sites-available/k-golf.ca`
+- [x] HTTP → HTTPS redirect configured
+- [x] Security headers added (X-Frame-Options, CSP, etc.)
+- [x] Proxies to port 8082 (K-Golf Docker container)
+- [x] Symlinked to sites-enabled
+- [x] Configuration tested and reloaded
+
+**Backend Environment** `[x]` ✅ DONE
+- [x] Updated `.env.production`:
+  - CORS_ORIGIN: Added k-golf.ca, www.k-golf.ca, k-golf.inviteyou.ca
+  - FRONTEND_ORIGIN: Set to https://k-golf.ca
+- [x] Docker container restarted with new config
+- [x] Verified container health
+
+**Database Updates** `[x]` ✅ DONE
+- [x] Updated seed file: admin@kgolf.com → admin@k-golf.ca
+- [x] Updated seed file: admin2@kgolf.com → admin2@k-golf.ca
+- [x] Updated local database admin emails
+- [x] Updated production database admin emails
+- [x] Verified both databases have correct emails
+
+**Testing & Verification** `[x]` ✅ DONE
+- [x] HTTPS access: https://k-golf.ca works
+- [x] API access: https://k-golf.ca/api/* works
+- [x] Frontend loads correctly
+- [x] All domains accessible (k-golf.ca, www.k-golf.ca, k-golf.inviteyou.ca)
+- [x] Container logs show no errors
+
+**Documentation** `[x]` ✅ DONE
+- [x] Created setup guide: `docs/setup_kgolf_ca_domain.md`
+- [x] Updated SERVER_STATUS.md with:
+  - New primary domain information
+  - SSL certificate details
+  - Auto-renewal configuration
+  - Nginx server block documentation
+  - Domain architecture diagram
+- [x] Updated README.md with receipt printing feature
+- [x] Updated TASKS.md with domain migration
+
+**Current Domain Architecture:**
+```
+k-golf.ca (Primary)           → Nginx → Docker:8082 → K-Golf App
+www.k-golf.ca                 → Nginx → Docker:8082 → K-Golf App
+k-golf.inviteyou.ca (Legacy)  → Nginx → Docker:8082 → K-Golf App (backward compatibility)
+```
+
+---
 
 ## 🚨 URGENT TASKS (2025-12-04)
 
