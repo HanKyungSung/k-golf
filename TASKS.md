@@ -20,7 +20,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ---
 
-## Personal note
+## Personal note (Do not touch)
 - Ask no cleaning time between bookings.
 - The coupon. like every 30 times visit, free hours etc.
 - When pay button clicks
@@ -28,7 +28,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - Cancellation policy
 - [x] print functionality ✅ COMPLETED (2025-12-04)
 - [x] Domain migration from k-golf.inviteyou.ca to k-golf.ca ✅ COMPLETED (2025-12-05)
-- tip section color is too dark.
+- [x] tip section color is too dark. ✅ COMPLETED (2025-12-05)
 - after complete the booking the booking should change to grey.
 
 ## 🚨 URGENT TASKS (2025-12-05)

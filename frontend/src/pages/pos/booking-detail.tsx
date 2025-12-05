@@ -1250,9 +1250,9 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
                             {/* Tip Input */}
                             <div className="space-y-2">
-                              <Label className="text-slate-300">Add Tip (optional)</Label>
+                              <Label className="text-white font-medium">Add Tip (optional)</Label>
                               <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300">$</span>
                                 <Input
                                   type="number"
                                   step="0.01"
@@ -1260,7 +1260,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                   placeholder="0.00"
                                   value={tipAmountBySeat[seat] || ''}
                                   onChange={(e) => setTipAmountBySeat({ ...tipAmountBySeat, [seat]: e.target.value })}
-                                  className="pl-7 bg-slate-800 border-slate-600 text-white"
+                                  className="pl-7 bg-slate-700 border-slate-500 text-white placeholder:text-slate-400 focus:border-amber-500 focus:ring-amber-500"
                                 />
                               </div>
                               <div className="grid grid-cols-4 gap-2">
@@ -1270,7 +1270,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                     size="sm"
                                     variant="outline"
                                     onClick={() => setQuickTip(seat, percentage)}
-                                    className="bg-slate-700 border-slate-600 hover:bg-amber-500 hover:text-black text-white"
+                                    className="bg-slate-600 !border-slate-500 border-2 hover:bg-amber-500 hover:text-black hover:!border-amber-500 text-white font-medium"
                                   >
                                     {percentage}%
                                   </Button>
