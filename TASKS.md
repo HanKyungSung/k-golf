@@ -33,7 +33,27 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ## 🚨 URGENT TASKS (2025-12-05)
 
-### 1. **Domain Migration to k-golf.ca** ✅ COMPLETED (2025-12-05)
+### 1. **Email Invoice/Receipt to Customer**
+- **Priority:** HIGH
+- **Component:** Backend Email Service + POS Booking Detail Page
+- **Status:** Pending
+- **Description:** Add ability to send invoice/receipt to customer via email after booking completion or payment
+- **Requirements:**
+  - [ ] Backend endpoint to send receipt email
+  - [ ] Email template for invoice/receipt (similar to print receipt format)
+  - [ ] UI button in POS booking detail page to trigger email send
+  - [ ] Customer email validation
+  - [ ] Email delivery confirmation/error handling
+  - [ ] Include all booking details, orders, payments, and totals in email
+- **Technical Notes:**
+  - Backend already has nodemailer configured
+  - Can reuse existing receipt data structure from print functionality
+  - Need to create HTML email template
+  - Consider adding email field to booking form or payment modal
+
+---
+
+### 2. **Domain Migration to k-golf.ca** ✅ COMPLETED (2025-12-05)
 - **Priority:** COMPLETED
 - **Component:** Production Infrastructure + DNS + SSL
 - **Status:** Fully migrated from k-golf.inviteyou.ca to k-golf.ca
