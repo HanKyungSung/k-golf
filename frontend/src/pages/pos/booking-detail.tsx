@@ -49,7 +49,6 @@ const Split = ({ className = '' }: { className?: string }) => (
 
 const statusStyles: Record<string, string> = {
   booked: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  confirmed: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
   completed: 'bg-green-500/20 text-green-300 border-green-500/30',
   cancelled: 'bg-red-500/20 text-red-300 border-red-500/30'
 };
@@ -785,7 +784,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
   const handleReopenBooking = async () => {
     try {
-      await apiUpdateBookingStatus(bookingId, 'CONFIRMED');
+      await apiUpdateBookingStatus(bookingId, 'BOOKED');
       await loadData();
     } catch (err) {
       console.error('Failed to reopen booking:', err);
@@ -930,8 +929,8 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
             <p className="text-slate-400 text-sm mt-1">ID: {booking.id}</p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge className={`${statusStyles[booking.bookingStatus?.toLowerCase() || 'confirmed']} capitalize text-lg px-4 py-2`}>
-              {booking.bookingStatus?.toLowerCase() || 'confirmed'}
+            <Badge className={`${statusStyles[booking.bookingStatus?.toLowerCase() || 'booked']} capitalize text-lg px-4 py-2`}>
+              {booking.bookingStatus?.toLowerCase() || 'booked'}
             </Badge>
             {booking.paymentStatus && (
               <Badge className={`${paymentStatusStyles[booking.paymentStatus]} text-base px-3 py-1.5`}>

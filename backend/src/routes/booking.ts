@@ -179,7 +179,7 @@ router.get('/:id', async (req, res) => {
 
 // Update booking status (admin only)
 const updateStatusSchema = z.object({
-  status: z.enum(['CONFIRMED', 'COMPLETED', 'CANCELLED']),
+  status: z.enum(['BOOKED', 'COMPLETED', 'CANCELLED']),
 });
 
 router.patch('/:id/status', requireAuth, requireAdmin, async (req, res) => {
