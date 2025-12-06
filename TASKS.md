@@ -22,14 +22,14 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ## Personal note (Do not touch)
 - [x] guest password creation ✅ COMPLETED (2025-12-05)
-- after click complete booking button, the color on timeline doesn't turn into grey (mostly likely a bug)
+- [x] after click complete booking button, the color on timeline doesn't turn into grey ✅ COMPLETED (2025-12-06)
+- [x] after complete the booking the booking should change to grey ✅ COMPLETED (2025-12-06)
 - Check the email can be forward without buying a new google account.
 - Ask no cleaning time between bookings.
 - The coupon. like every 30 times visit, free hours etc.
 - When pay button clicks
   - per seat payment closure 
 - Cancellation policy
-- after complete the booking the booking should change to grey.
 
 ## 🚨 URGENT TASKS (2025-12-05)
 
