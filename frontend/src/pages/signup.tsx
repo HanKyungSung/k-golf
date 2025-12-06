@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/use-auth"
-import { Mail } from "lucide-react"
+import { Mail, CheckCircle2, XCircle } from "lucide-react"
 import { FormError } from "@/components/form/form-error"
 
 export default function SignUpPage() {
@@ -49,19 +49,8 @@ export default function SignUpPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => {
-      const next = { ...prev, [name]: value }
-      if (
-        next.password &&
-        next.confirmPassword &&
-        next.password !== next.confirmPassword
-      ) {
-        setErrorText("Passwords do not match")
-      } else {
-        setErrorText(null)
-      }
-      return next
-    })
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    setErrorText(null)
   }
 
   return (
@@ -173,6 +162,44 @@ export default function SignUpPage() {
                   required
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
                 />
+                {formData.password && (
+                  <div className="mt-2 space-y-1 text-xs">
+                    <div className={`flex items-center gap-1.5 ${formData.password.length >= 10 ? 'text-green-400' : 'text-slate-400'}`}>
+                      {formData.password.length >= 10 ? (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5" />
+                      )}
+                      <span>At least 10 characters</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 ${/[A-Za-z]/.test(formData.password) ? 'text-green-400' : 'text-slate-400'}`}>
+                      {/[A-Za-z]/.test(formData.password) ? (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5" />
+                      )}
+                      <span>Contains a letter</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 ${/\d/.test(formData.password) ? 'text-green-400' : 'text-slate-400'}`}>
+                      {/\d/.test(formData.password) ? (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5" />
+                      )}
+                      <span>Contains a number</span>
+                    </div>
+                    {formData.confirmPassword && (
+                      <div className={`flex items-center gap-1.5 ${formData.password === formData.confirmPassword ? 'text-green-400' : 'text-red-400'}`}>
+                        {formData.password === formData.confirmPassword ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5" />
+                        )}
+                        <span>Passwords match</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-slate-300">
@@ -189,7 +216,7 @@ export default function SignUpPage() {
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
                 />
               </div>
-              <FormError message={errorText} />
+              {errorText && !formData.confirmPassword && <FormError message={errorText} />}
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"
