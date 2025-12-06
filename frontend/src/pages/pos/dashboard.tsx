@@ -735,10 +735,11 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
   // Assign colors to rooms
   const roomColors = ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-orange-600'];
 
-  // Helper: Check if booking has ended (past)
+  // Helper: Check if booking has ended (past) or is completed
   const isBookingPast = (booking: Booking) => {
     const endTime = new Date(booking.endTime);
-    return endTime < currentTime;
+    const bookingStatus = (booking.bookingStatus || booking.status || '').toUpperCase();
+    return endTime < currentTime || bookingStatus === 'COMPLETED';
   };
 
   // Helper: Filter bookings by status (show BOOKED and COMPLETED, hide CANCELLED/EXPIRED)
