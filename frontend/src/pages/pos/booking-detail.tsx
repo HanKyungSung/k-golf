@@ -48,9 +48,10 @@ const Split = ({ className = '' }: { className?: string }) => (
 );
 
 const statusStyles: Record<string, string> = {
-  confirmed: 'bg-green-500/20 text-green-300',
-  completed: 'bg-blue-500/20 text-blue-300',
-  cancelled: 'bg-red-500/20 text-red-300'
+  booked: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  confirmed: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  completed: 'bg-green-500/20 text-green-300 border-green-500/30',
+  cancelled: 'bg-red-500/20 text-red-300 border-red-500/30'
 };
 
 const paymentStatusStyles: Record<string, string> = {
@@ -782,6 +783,16 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     }
   };
 
+  const handleReopenBooking = async () => {
+    try {
+      await apiUpdateBookingStatus(bookingId, 'CONFIRMED');
+      await loadData();
+    } catch (err) {
+      console.error('Failed to reopen booking:', err);
+      alert(`Failed to reopen booking: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
   const updateStatus = async (status: string) => {
     try {
       await apiUpdateBookingStatus(bookingId, status.toUpperCase());
@@ -919,8 +930,8 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
             <p className="text-slate-400 text-sm mt-1">ID: {booking.id}</p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge className={`${statusStyles[booking.status]} capitalize text-lg px-4 py-2`}>
-              {booking.status}
+            <Badge className={`${statusStyles[booking.bookingStatus?.toLowerCase() || 'confirmed']} capitalize text-lg px-4 py-2`}>
+              {booking.bookingStatus?.toLowerCase() || 'confirmed'}
             </Badge>
             {booking.paymentStatus && (
               <Badge className={`${paymentStatusStyles[booking.paymentStatus]} text-base px-3 py-1.5`}>
@@ -1304,22 +1315,32 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                 <CardTitle className="text-white text-lg">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button
-                  onClick={handleCompleteBooking}
-                  disabled={booking.status === 'completed'}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Complete Booking
-                </Button>
-                <Button
-                  onClick={() => updateStatus('cancelled')}
-                  disabled={booking.status === 'cancelled'}
-                  variant="outline"
-                  className="w-full border-red-500 text-red-400 hover:bg-red-500/10"
-                >
-                  Cancel Booking
-                </Button>
+                {booking.bookingStatus?.toUpperCase() === 'COMPLETED' ? (
+                  <Button
+                    onClick={handleReopenBooking}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Reopen Booking
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      onClick={handleCompleteBooking}
+                      className="w-full bg-green-500 hover:bg-green-600 text-white"
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Complete Booking
+                    </Button>
+                    <Button
+                      onClick={() => updateStatus('cancelled')}
+                      variant="outline"
+                      className="w-full border-red-500 text-red-400 hover:bg-red-500/10"
+                    >
+                      Cancel Booking
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
 
