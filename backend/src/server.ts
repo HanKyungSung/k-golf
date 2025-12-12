@@ -61,7 +61,7 @@ try {
   wsManager = new WebSocketManager(server);
   logger.info('WebSocket server initialized for print services');
 } catch (error) {
-  logger.error('Failed to initialize WebSocket server', error);
+  logger.error({ err: error }, 'Failed to initialize WebSocket server');
   process.exit(1);
 }
 

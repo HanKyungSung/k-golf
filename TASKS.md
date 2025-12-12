@@ -25,7 +25,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - the calendar input for date of birth and selecting year is not working correctly. maybe need some enhancement.
 - Comment out the gmail login for now.
 - QR Code (for what? need some clarification).
-- Ask for the birthday when user create the account.
+- [x] Ask for the birthday when user create the account. ✅ COMPLETED (2025-12-12)
 - booking count for the specific customer.
 - [x] guest password creation ✅ COMPLETED (2025-12-05)
 - [x] after click complete booking button, the color on timeline doesn't turn into grey ✅ COMPLETED (2025-12-06)

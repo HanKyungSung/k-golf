@@ -37,15 +37,15 @@ export class WebSocketManager {
         try {
           const message = JSON.parse(data.toString()) as JobStatusMessage;
           if (message.type === 'job-status') {
-            logger.info('Job status received', {
+            logger.info({
               jobId: message.jobId,
               status: message.status,
               error: message.error
-            });
+            }, 'Job status received');
             // TODO: Store job status in database or emit event
           }
         } catch (error) {
-          logger.error('Failed to parse WebSocket message', error);
+          logger.error({ err: error }, 'Failed to parse WebSocket message');
         }
       });
 
@@ -55,7 +55,7 @@ export class WebSocketManager {
       });
 
       ws.on('error', (error) => {
-        logger.error('WebSocket error', error);
+        logger.error({ err: error }, 'WebSocket error');
         this.clients.delete(ws);
       });
 
@@ -83,14 +83,14 @@ export class WebSocketManager {
       }
     });
 
-    logger.info('Print job broadcasted', {
+    logger.info({
       jobId: job.id,
       type: job.type,
       clients: sentCount
-    });
+    }, 'Print job broadcasted');
 
     if (sentCount === 0) {
-      logger.warn('No print servers connected to receive job', { jobId: job.id });
+      logger.warn({ jobId: job.id }, 'No print servers connected to receive job');
     }
   }
 

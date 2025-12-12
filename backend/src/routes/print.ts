@@ -26,11 +26,24 @@ router.post('/receipt', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
-    // Get or create receipt data
-    const receiptData = await receiptRepo.getOrCreateReceipt(bookingId);
+    // Get receipt data
+    const receiptData = await receiptRepo.getReceiptData(bookingId);
 
     // Format receipt for thermal printer
     const formatter = new ReceiptFormatter(48);
+    
+    // Collect all items from seats
+    const allItems: Array<{ name: string; quantity: number; price: number }> = [];
+    receiptData.items.seats.forEach((seat) => {
+      seat.orders.forEach((order) => {
+        allItems.push({
+          name: order.name,
+          quantity: order.quantity,
+          price: order.total
+        });
+      });
+    });
+    
     const commands = formatter.formatReceipt({
       receiptNumber: receiptData.receiptNumber,
       date: new Date().toLocaleDateString('en-US', {
@@ -43,15 +56,11 @@ router.post('/receipt', requireAuth, async (req, res) => {
       customerName: booking.customerName,
       customerPhone: booking.customerPhone,
       customerEmail: booking.customerEmail || undefined,
-      roomName: booking.room.name,
-      items: receiptData.items.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: item.unitPrice * item.quantity
-      })),
-      subtotal: receiptData.subtotal,
-      tax: receiptData.tax,
-      total: receiptData.total
+      roomName: receiptData.booking.room.name,
+      items: allItems,
+      subtotal: parseFloat(receiptData.totals.subtotal),
+      tax: parseFloat(receiptData.totals.tax),
+      total: parseFloat(receiptData.totals.grandTotal)
     });
 
     // Create print job with formatted commands
