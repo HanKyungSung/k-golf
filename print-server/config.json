@@ -1,0 +1,17 @@
+{
+  "serverUrl": "wss://k-golf.ca",
+  "reconnectInterval": 5000,
+  "updateCheckInterval": 21600000,
+  "printer": {
+    "type": "epson",
+    "interface": "tcp://192.168.1.93:9100",
+    "characterSet": "PC437_USA",
+    "removeSpecialCharacters": false,
+    "lineCharacter": "-",
+    "width": 48
+  },
+  "logging": {
+    "level": "info",
+    "file": "print-server.log"
+  }
+}

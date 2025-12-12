@@ -36,6 +36,7 @@
     "nodemailer": "^6.9.13",
     "pino": "^9.9.0",
     "pino-pretty": "^11.2.2",
+    "ws": "^8.18.3",
     "zod": "^3.25.67"
   },
   "devDependencies": {
@@ -46,6 +47,7 @@
     "@types/node": "^22.0.0",
     "@types/nodemailer": "^7.0.0",
     "@types/supertest": "^6.0.2",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.57.0",

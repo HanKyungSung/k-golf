@@ -1,0 +1,33 @@
+{
+  "name": "k-golf-print-server",
+  "version": "1.0.0",
+  "description": "K-Golf thermal printer service for Windows",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "build:exe": "npm run build && pkg dist/server.js --targets node18-win-x64 --output release/k-golf-printer.exe",
+    "build:macos": "npm run build && pkg dist/server.js --targets node18-macos-x64 --output release/k-golf-printer",
+    "build:all": "npm run build && pkg dist/server.js --targets node18-win-x64,node18-macos-x64 --output release/k-golf-printer",
+    "start": "node dist/server.js"
+  },
+  "bin": "dist/server.js",
+  "pkg": {
+    "assets": [
+      "config.json"
+    ],
+    "outputPath": "release"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "node-thermal-printer": "^4.4.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/ws": "^8.5.10",
+    "pkg": "^5.8.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

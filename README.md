@@ -5,18 +5,25 @@ This monorepo contains:
 - **frontend**: Customer-facing booking web app (React + TypeScript + Tailwind)
 - **backend**: Express API (TypeScript) – PostgreSQL + Prisma
 - **pos**: Point-of-Sale (POS) hub (Electron + Express + SQLite offline + PostgreSQL sync) – newly scaffolded
+- **print-server**: Windows service for thermal printer integration via WebSocket
 
 ## High-Level Architecture
 
 ```
 [Customer Browsers] --(HTTPS)--> [Backend API (Express + Postgres)]
                                      ^
-                                     | periodic sync
-[Electron POS Hub Laptop] <----> [PostgreSQL Server]
-        |  
-        |-- Local SQLite (offline buffer)
-        |-- Printer Control (USB / Network)
-        |-- Embedded Express server (LAN access)
+                                     |
+                    +----------------+----------------+
+                    |                                 |
+             periodic sync                      WebSocket
+                    |                                 |
+                    v                                 v
+[Electron POS Hub Laptop]              [Print Server (Windows Service)]
+        |                                            |
+        |-- Local SQLite (offline buffer)           |
+        |-- Printer Control (USB / Network)         |
+        |-- Embedded Express server (LAN access)    +-- Thermal Printer
+                                                         (ESC/POS)
 ```
 
 ### POS Sync Architecture (Offline-First)
@@ -136,6 +143,59 @@ A local Electron application that:
 - `order_items(id, order_id, product_id, qty, price_cents, version, updated_at, deleted_at)`
 - `products(id, name, sku, price_cents, active, version, updated_at, deleted_at)`
 - `operations(id, entity, entity_id, op_type, payload, version, device_id, status, created_at, last_error)`
+
+### Print Server (New)
+A lightweight Windows service for thermal printer integration:
+
+**Architecture:**
+```
+Backend API --> WebSocket Server --> Print Server --> Thermal Printer
+                                          |
+                                     [Auto-Update]
+```
+
+**Key Features:**
+- **WebSocket Client**: Connects to backend, receives print jobs in real-time
+- **Thermal Printer Support**: ESC/POS protocol (Epson, Star, Tanca printers)
+- **Auto-Update**: Checks for new versions every 6 hours, updates silently
+- **Offline Resilient**: Auto-reconnects on network failure
+- **Windows Service**: Runs on startup via Task Scheduler
+
+**Structure:**
+```
+print-server/
+├── src/
+│   ├── server.ts              # Main entry point
+│   ├── websocket-client.ts    # WebSocket connection manager
+│   ├── printer-service.ts     # Thermal printer integration
+│   ├── update-service.ts      # Auto-update functionality
+│   ├── config.ts              # Configuration loader
+│   └── logger.ts              # File + console logging
+├── config.json                # User configuration (printer IP, etc.)
+├── install.bat                # Windows installer script
+├── uninstall.bat              # Windows uninstaller script
+└── README.md                  # Deployment documentation
+```
+
+**Deployment:**
+1. Build with `pkg` → Creates standalone `k-golf-printer.exe` (~50MB)
+2. No Node.js installation required on target machine
+3. User runs `install.bat` → Creates Windows scheduled task
+4. Starts on boot, connects to backend WebSocket
+5. Updates automatically (downloads new .exe, replaces itself, restarts)
+
+**Configuration:**
+```json
+{
+  "serverUrl": "wss://k-golf.inviteyou.ca",
+  "printer": {
+    "type": "epson",
+    "interface": "tcp://192.168.1.100"  // Network printer
+  }
+}
+```
+
+See [print-server/README.md](print-server/README.md) for detailed setup and deployment guide.
 ## Roadmap & Status (Consolidated)
 - Done
   - Frontend SPA with routing, auth screens, booking flow, and availability UI wired to backend.
