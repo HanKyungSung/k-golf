@@ -21,6 +21,9 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 ---
 
 ## Personal note (Do not touch)
+- force the phone number input from signup page. ex, when user enter number should change to 111-1111-1111 for better visibility.
+- the calendar input for date of birth and selecting year is not working correctly. maybe need some enhancement.
+- Comment out the gmail login for now.
 - QR Code (for what? need some clarification).
 - Ask for the birthday when user create the account.
 - booking count for the specific customer.

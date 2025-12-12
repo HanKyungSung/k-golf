@@ -23,6 +23,7 @@ model User {
   email                  String?                 @unique // Made nullable for phone-only registrations
   name                   String
   phone                  String                  @unique // Made unique and required (primary identifier)
+  dateOfBirth            DateTime?               @db.Date // Optional at DB level, required in online registration
   phoneVerifiedAt        DateTime?               @db.Timestamptz // For future SMS verification (Phase 2)
   emailVerifiedAt        DateTime?               @db.Timestamptz // retained but unused in password-only flow (can drop later)
   passwordHash           String?

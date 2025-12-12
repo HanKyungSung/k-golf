@@ -170,7 +170,20 @@ export async function listRoomBookingsBetween(
 }
 
 export async function getBooking(id: string): Promise<Booking | null> {
-  return prisma.booking.findUnique({ where: { id } });
+  return prisma.booking.findUnique({ 
+    where: { id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          dateOfBirth: true,
+        }
+      }
+    }
+  }) as any;
 }
 
 export async function cancelBooking(id: string): Promise<Booking> {

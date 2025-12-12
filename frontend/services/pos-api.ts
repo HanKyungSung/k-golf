@@ -38,6 +38,13 @@ export interface Booking {
   source: string;
   createdAt: string;
   updatedAt: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    dateOfBirth: string;
+  } | null;
 }
 
 export interface BookingFilters {
@@ -84,7 +91,20 @@ export async function getBooking(id: string): Promise<Booking> {
   if (!res.ok) throw new Error('Failed to fetch booking');
   
   const json = await res.json();
-  return json.booking;
+  const rawBooking = json.booking;
+  
+  // Transform backend data to frontend format
+  const startTime = new Date(rawBooking.startTime);
+  const endTime = new Date(rawBooking.endTime);
+  const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60));
+  
+  return {
+    ...rawBooking,
+    date: startTime.toISOString().split('T')[0], // YYYY-MM-DD
+    time: startTime.toTimeString().slice(0, 5), // HH:MM
+    duration: duration,
+    roomName: rawBooking.roomName || `Room ${rawBooking.roomId}`, // Fallback if not provided
+  };
 }
 
 export async function createBooking(data: {

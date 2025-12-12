@@ -14,6 +14,7 @@ export default function SignUpPage() {
     name: "",
     email: "",
     phone: "",
+    dateOfBirth: "",
     password: "",
     confirmPassword: "",
   })
@@ -36,7 +37,7 @@ export default function SignUpPage() {
     setErrorText(null)
 
     try {
-      const result = await signup(formData.name, formData.email, formData.phone, formData.password)
+      const result = await signup(formData.name, formData.email, formData.phone, formData.password, formData.dateOfBirth)
       setSent({ email: formData.email, expiresAt: result.expiresAt })
     } catch (error) {
       console.error("Signup failed:", error)
@@ -145,6 +146,21 @@ export default function SignUpPage() {
                   value={formData.phone}
                   onChange={handleChange}
                   required
+                  className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth" className="text-slate-300">
+                  Date of Birth
+                </Label>
+                <Input
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={handleChange}
+                  required
+                  max={new Date().toISOString().split('T')[0]}
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
                 />
               </div>

@@ -12,7 +12,8 @@ const registerSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   phone: z.string().min(1, 'Phone number is required'),
-  password: z.string().min(10).regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, 'Password must contain a letter and a number')
+  password: z.string().min(10).regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, 'Password must contain a letter and a number'),
+  dateOfBirth: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date format')
 });
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 const verifySchema = z.object({ email: z.string().email(), token: z.string().min(10) });
@@ -22,7 +23,7 @@ const resendSchema = z.object({ email: z.string().email() });
 router.post('/register', async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const { email, name, phone, password } = parsed.data;
+  const { email, name, phone, password, dateOfBirth } = parsed.data;
   const normEmail = email.toLowerCase();
   const normPhone = normalizePhone(phone);
   
@@ -35,7 +36,7 @@ router.post('/register', async (req, res) => {
   if (existingPhone) return res.status(409).json({ error: 'Phone number already in use' });
   
   const passwordHash = await hashPassword(password);
-  const user = await createUser(normEmail, name, normPhone, passwordHash);
+  const user = await createUser(normEmail, name, normPhone, passwordHash, new Date(dateOfBirth));
   
   // Auto-link existing guest bookings with matching phone number
   const linkedCount = await prisma.$executeRaw`

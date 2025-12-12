@@ -39,6 +39,13 @@ function presentBooking(b: any) {
     tipAmount: b.tipAmount,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
+    user: b.user ? {
+      id: b.user.id,
+      name: b.user.name,
+      email: b.user.email,
+      phone: b.user.phone,
+      dateOfBirth: b.user.dateOfBirth ? new Date(b.user.dateOfBirth).toISOString().split('T')[0] : null,
+    } : null,
   };
 }
 

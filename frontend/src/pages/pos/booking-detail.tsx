@@ -957,22 +957,36 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                 </CardTitle>
                 <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
                   <div className="flex items-center gap-2 text-slate-300">
-                    <User className="h-4 w-4 text-amber-400" />
+                    <span className="text-amber-400">Name:</span>
                     <span>{booking.customerName}</span>
                   </div>
                   <div className="flex items-center gap-2 text-slate-300">
-                    <Calendar className="h-4 w-4 text-amber-400" />
+                    <span className="text-amber-400">Phone:</span>
+                    <span>{booking.customerPhone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <span className="text-amber-400">Booking Date:</span>
                     <span>{booking.date}</span>
                   </div>
                   <div className="flex items-center gap-2 text-slate-300">
-                    <Clock className="h-4 w-4 text-amber-400" />
+                    <span className="text-amber-400">Start Time:</span>
                     <span>
                       {booking.time} ({booking.duration}h)
                     </span>
                   </div>
+                  {booking.customerEmail && (
+                    <div className="flex items-center gap-2 text-slate-300 col-span-2">
+                      <span className="text-amber-400">Email:</span>
+                      <span className="truncate">{booking.customerEmail}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-slate-300">
-                    <Users className="h-4 w-4 text-amber-400" />
+                    <span className="text-amber-400">Players:</span>
                     <span>{booking.players} players</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <span className="text-amber-400">Date of Birth:</span>
+                    <span>{booking.user?.dateOfBirth || 'N/A'}</span>
                   </div>
                 </div>
               </CardHeader>
