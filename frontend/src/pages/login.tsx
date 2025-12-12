@@ -78,7 +78,8 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            {/* Google login temporarily disabled */}
+            {/* <div className="space-y-4">
               <Button
                 type="button"
                 onClick={handleGoogleLogin}
@@ -101,7 +102,7 @@ export default function LoginPage() {
                   <span className="bg-slate-800 px-2 text-slate-400">Or continue with email</span>
                 </div>
               </div>
-            </div>
+            </div> */
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-slate-300">

@@ -142,10 +142,23 @@ export default function SignUpPage() {
                   id="phone"
                   name="phone"
                   type="tel"
-                  placeholder="Enter your phone number"
+                  placeholder="123-456-7890"
                   value={formData.phone}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const input = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                    if (input.length <= 10) {
+                      let formatted = input;
+                      if (input.length > 6) {
+                        formatted = `${input.slice(0, 3)}-${input.slice(3, 6)}-${input.slice(6)}`;
+                      } else if (input.length > 3) {
+                        formatted = `${input.slice(0, 3)}-${input.slice(3)}`;
+                      }
+                      setFormData(prev => ({ ...prev, phone: formatted }));
+                    }
+                    setErrorText(null);
+                  }}
                   required
+                  maxLength={12}
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
                 />
               </div>
