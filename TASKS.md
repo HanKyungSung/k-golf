@@ -34,9 +34,47 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - per seat payment closure 
 - Cancellation policy
 
-## 🚨 URGENT TASKS (2025-12-05)
+## 🚨 URGENT TASKS (2025-12-12)
 
-### 1. **Email Invoice/Receipt to Customer**
+### 1. **Thermal Print Server System** 🔄 IN PROGRESS
+- **Priority:** HIGH
+- **Component:** Print Server + Backend WebSocket + Receipt Formatter
+- **Status:** Core functionality complete, build system needs testing
+- **Description:** Standalone print server application that connects to backend via WebSocket to print receipts on thermal printers
+
+#### Completed ✅
+- [x] Backend WebSocket server for print job broadcasting
+- [x] Backend receipt formatter service (formats on server, not client)
+- [x] Backend print routes (`/api/print/receipt`, `/api/print/test`)
+- [x] Print server WebSocket client with auto-reconnect
+- [x] Thermal printer integration with `node-thermal-printer`
+- [x] Auto-discovery of network printers (mDNS + network scan)
+- [x] Config auto-creation on first run
+- [x] Environment variable support (.env)
+- [x] Simulation mode (runs without physical printer)
+- [x] Receipt formatting commands executed by print server
+- [x] Graceful shutdown and error handling
+- [x] Documentation (README, AUTO_DISCOVERY.md, etc.)
+
+#### Pending 🔄
+- [ ] **Test build system** - Verify pkg can bundle with node-thermal-printer
+- [ ] **Test Windows .exe** - Ensure executable works on Windows
+- [ ] **Test macOS executable** - Ensure executable works on macOS
+- [ ] **Fix native module bundling** - If pkg fails with node-thermal-printer
+- [ ] **Production deployment** - Deploy to actual store with printer
+- [ ] **Integration with POS UI** - Add "Print Receipt" button in booking detail
+- [ ] **Auto-update mechanism testing** - Verify update service works
+
+#### Technical Notes
+- Print server connects to `wss://k-golf.ca` or `ws://localhost:8080` (via .env)
+- Receipt formatting happens on backend (easy to modify layouts)
+- Print server executes thermal commands (text, bold, align, cut, etc.)
+- Nginx already configured for WebSocket upgrades
+- Build scripts ready: `./build.sh` creates Windows/macOS executables
+
+---
+
+### 2. **Email Invoice/Receipt to Customer**
 - **Priority:** HIGH
 - **Component:** Backend Email Service + POS Booking Detail Page
 - **Status:** Pending
@@ -56,7 +94,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ---
 
-### 2. **Domain Migration to k-golf.ca** ✅ COMPLETED (2025-12-05)
+### 3. **Domain Migration to k-golf.ca** ✅ COMPLETED (2025-12-05)
 - **Priority:** COMPLETED
 - **Component:** Production Infrastructure + DNS + SSL
 - **Status:** Fully migrated from k-golf.inviteyou.ca to k-golf.ca
