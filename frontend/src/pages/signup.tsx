@@ -160,8 +160,9 @@ export default function SignUpPage() {
                   value={formData.dateOfBirth}
                   onChange={handleChange}
                   required
+                  min="1900-01-01"
                   max={new Date().toISOString().split('T')[0]}
-                  className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
+                  className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500 [color-scheme:dark]"
                 />
               </div>
               <div className="space-y-2">
