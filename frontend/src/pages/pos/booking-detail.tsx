@@ -125,6 +125,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [receiptMode, setReceiptMode] = useState<'full' | 'seat'>('full');
   const [receiptSeatIndex, setReceiptSeatIndex] = useState<number | undefined>(undefined);
   const [loadingReceipt, setLoadingReceipt] = useState(false);
+  const [printerType, setPrinterType] = useState<'thermal' | 'regular'>('thermal');
   
   const seatsInitialized = React.useRef(false);
   const seatRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
@@ -597,69 +598,93 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     setReceiptSeatIndex(undefined);
   };
 
-  const handlePrintFromModal = () => {
+  const handlePrintFromModal = async () => {
     if (!receiptData) return;
     
-    // Get the receipt HTML content
-    const receiptElement = document.querySelector('.receipt');
-    if (!receiptElement) return;
-    
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) return;
-    
-    // Write the receipt content with print styles
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Receipt - ${receiptData.receiptNumber}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-          <style>
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              background: white;
-              padding: 20px;
-              display: flex;
-              justify-content: center;
-              align-items: flex-start;
-            }
-            .receipt {
-              background: white;
-              color: #0f172a;
-            }
-            @media print {
-              body {
+    if (printerType === 'thermal') {
+      // Send to thermal printer via backend API
+      try {
+        const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+        const endpoint = receiptSeatIndex 
+          ? `/api/print/seat-receipt?bookingId=${bookingId}&seatIndex=${receiptSeatIndex}`
+          : `/api/print/receipt?bookingId=${bookingId}`;
+        
+        const res = await fetch(`${apiBase}${endpoint}`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+        
+        if (!res.ok) {
+          throw new Error('Failed to send to thermal printer');
+        }
+        
+        alert('Sent to thermal printer!');
+        setShowReceiptModal(false);
+      } catch (error) {
+        console.error('Thermal print error:', error);
+        alert('Failed to send to thermal printer. Make sure the print server is running.');
+      }
+    } else {
+      // Regular printer - use browser print dialog
+      const receiptElement = document.querySelector('.receipt');
+      if (!receiptElement) return;
+      
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      if (!printWindow) return;
+      
+      // Write the receipt content with print styles
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Receipt - ${receiptData.receiptNumber}</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <style>
+              * {
+                margin: 0;
                 padding: 0;
+                box-sizing: border-box;
               }
-              @page {
-                margin: 10mm;
-                size: 80mm auto;
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: white;
+                padding: 20px;
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
               }
-            }
-          </style>
-        </head>
-        <body>
-          ${receiptElement.outerHTML}
-        </body>
-      </html>
-    `);
-    
-    printWindow.document.close();
-    
-    // Wait for content to load then print
-    printWindow.onload = () => {
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 250);
-    };
+              .receipt {
+                background: white;
+                color: #0f172a;
+              }
+              @media print {
+                body {
+                  padding: 0;
+                }
+                @page {
+                  margin: 10mm;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            ${receiptElement.outerHTML}
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      
+      // Wait for content to load then print
+      printWindow.onload = () => {
+        printWindow.focus();
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+        }, 250);
+      };
+    }
   };
 
   // Payment Summary helper functions
@@ -1756,6 +1781,26 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                 printingSeatIndex={receiptSeatIndex}
               />
             )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-slate-300">Printer Type</Label>
+              <RadioGroup value={printerType} onValueChange={(value) => setPrinterType(value as 'thermal' | 'regular')}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="thermal" id="thermal" />
+                  <Label htmlFor="thermal" className="text-slate-300 cursor-pointer">
+                    Thermal Printer (Default)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="regular" id="regular" />
+                  <Label htmlFor="regular" className="text-slate-300 cursor-pointer">
+                    Regular Printer
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
           </div>
 
           <DialogFooter>
