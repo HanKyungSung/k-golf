@@ -34,12 +34,8 @@ export default function POSDashboard() {
   // Timeline navigation state
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const now = new Date();
-    const dayOfWeek = now.getDay();
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() + daysToMonday);
-    weekStart.setHours(0, 0, 0, 0);
-    return weekStart;
+    now.setHours(0, 0, 0, 0);
+    return now;
   });
   
   // Component navigation state
