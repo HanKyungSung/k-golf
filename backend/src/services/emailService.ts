@@ -40,7 +40,7 @@ export async function sendVerificationEmail({ to, token, expiresAt, email }: Ver
     console.log(`[email:dev-log] to=${to} token=${token} link=${link}`);
     return;
   }
-  await transport.sendMail({ from: 'K-Golf <noreply@k-golf.ca>', to, subject, text, html });
+  await transport.sendMail({ from: 'K-Golf <kgolf.general@gmail.com>', to, subject, text, html });
 }
 
 /**
@@ -219,7 +219,7 @@ ${receipt.business.phone}
   }
 
   await transport.sendMail({
-    from: 'K-Golf <noreply@k-golf.ca>',
+    from: 'K-Golf <kgolf.general@gmail.com>',
     to,
     subject,
     text,

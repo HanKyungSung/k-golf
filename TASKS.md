@@ -37,6 +37,12 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - When pay button clicks
   - per seat payment closure 
 - Cancellation policy
+- **Setup Gmail "Send As" for k-golf.ca domain** 🔄 FUTURE TASK
+  - Create email account on Postfix server (noreply@k-golf.ca)
+  - Configure Postfix SMTP authentication
+  - Set up Gmail "Send As" with k-golf.ca SMTP credentials
+  - Remove "via gmail.com" notice from sent emails
+  - Alternative: Consider using SendGrid (already integrated in DNS)
 
 ## 🚨 URGENT TASKS (2025-12-12)
 
