@@ -37,12 +37,19 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 - When pay button clicks
   - per seat payment closure 
 - Cancellation policy
+- User signup
+  - phone number duplication
+  - If that happens how user can find the email address associate with it?
+  - when user sign up we should link up all bookings with associated phone number.
+
 - **Setup Gmail "Send As" for k-golf.ca domain** 🔄 FUTURE TASK
   - Create email account on Postfix server (noreply@k-golf.ca)
   - Configure Postfix SMTP authentication
   - Set up Gmail "Send As" with k-golf.ca SMTP credentials
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
+
+## 🎉 Recently Completed (2025-12-18)
 
 ## 🚨 URGENT TASKS (2025-12-12)
 
@@ -2287,12 +2294,37 @@ This feature will be implemented after the web POS is stable and in use. See `/P
 - [x] Verified guest bookings show "N/A" for DOB
 - [x] TypeScript build passes with no errors
 
+**Email Service Migration** `[x]` ✅ DONE (2025-12-18)
+- [x] Updated email service to use kgolf.general@gmail.com
+- [x] Changed sender from personal Gmail to business Gmail account
+- [x] Updated Gmail credentials in production .env.production
+- [x] Restarted backend container to apply new credentials
+- [x] Applied to both verification and receipt emails
+- [x] Email format: "K-Golf <kgolf.general@gmail.com>"
+
+**Signup Form Error Handling** `[x]` ✅ DONE (2025-12-18)
+- [x] Fixed error message visibility on signup form
+- [x] Added `errorField` state to track which field has error ('email' | 'phone' | null)
+- [x] Red borders highlight specific fields causing validation errors
+- [x] Email input shows red border when email validation fails
+- [x] Phone input shows red border when phone validation fails
+- [x] Errors clear when user modifies the problematic field
+- [x] FormError component displays error message below form
+
+**Login Flow Enhancement** `[x]` ✅ DONE (2025-12-18)
+- [x] Added EMAIL_NOT_VERIFIED error handling in login
+- [x] Non-verified users attempting login are redirected to verification page
+- [x] Automatic redirect to /verify page with email pre-filled
+- [x] Users can resend verification email from verification page
+- [x] Error message: "Email not verified. Please check your email."
+
 **Commits:**
 - Add date of birth field to user registration and booking details (1ceae5b)
 - Fix TypeScript build errors in print routes and WebSocket manager (6f3a532)
 - Improve date of birth input with min date and dark mode styling (4840c57)
 - Comment out Google login and add phone number formatting (cf9fcdd)
 - Fix JSX comment syntax error in login page (9d1488d)
+- Update email service to use kgolf.general Gmail account (94e1390)
 
 ### 1.1 POS API Key Security Improvement – ⚠️ CRITICAL
 
