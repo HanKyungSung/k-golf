@@ -178,9 +178,9 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
     },
     business: {
       name: 'K-Golf',
-      address: '123 Golf Street, City, State 12345',
-      phone: '(555) 123-4567',
-      taxId: 'TAX-ID-12345',
+      address: '5 Keltic Dr #6 Sydney, NS B1S 1P4',
+      phone: '(902) 270-2259',
+      taxId: 'HST: 820374569 RT0001',
     },
     booking: {
       date: startTime.toISOString().split('T')[0],
