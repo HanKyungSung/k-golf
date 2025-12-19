@@ -49,9 +49,13 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
-## 🎉 Recently Completed (2025-12-18)
+## 🎉 Recently Completed (2025-12-19)
+- [x] Fixed critical production database connection pool issue with Prisma singleton pattern
+- [x] E2E test infrastructure setup with Playwright (19 tests created)
+- [x] Configured auto-server startup for E2E tests
+- [x] Fixed webpack dev server crashes during test runs
 
-## 🚨 URGENT TASKS (2025-12-12)
+## 🚨 URGENT TASKS (2025-12-19)
 
 ### 1. **Thermal Print Server System** 🔄 IN PROGRESS
 - **Priority:** HIGH
@@ -1107,6 +1111,22 @@ Replace complex booking status with simplified states (BOOKED/COMPLETED/CANCELLE
   - Tax calculations correct
 
 #### E2E Tests
+- [~] **E2E Test Infrastructure (Playwright)** 🔄 IN PROGRESS (2025-12-19)
+  - [x] Playwright installed and configured
+  - [x] 4 test suites created (19 tests total):
+    - `01-signup-flow.spec.ts` - User registration (4 tests)
+    - `02-booking-flow.spec.ts` - Booking creation (4 tests)
+    - `03-pos-order-flow.spec.ts` - POS orders (4 tests)
+    - `04-admin-management.spec.ts` - Admin functions (7 tests)
+  - [x] Auto-server startup configured (`test:e2e:full` command)
+  - [x] GitHub Actions workflow created (disabled)
+  - [x] Fixed webpack dev server crashes during test runs
+  - [x] Fixed test selectors to match actual UI
+  - [ ] **PAUSED** - Need to debug signup flow (backend not receiving request)
+  - [ ] Fix login flow for booking/POS/admin tests
+  - [ ] Update selectors to match real UI components
+  - [ ] Consider adding data-testid attributes to components
+  
 - [ ] **booking-workflow.test.ts**
   - Create booking → invoices created
   - Add order → invoice updated

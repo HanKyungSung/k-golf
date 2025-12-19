@@ -99,12 +99,15 @@ module.exports = {
   ],
   devServer: {
     static: [
-      { directory: path.resolve(__dirname, 'public') },
+      { 
+        directory: path.resolve(__dirname, 'public'),
+        serveIndex: false, // Disable serve-index to prevent header conflicts
+      },
     ],
     historyApiFallback: true,
     compress: true,
     port: 5173,
-    open: true,
+    open: false, // Don't auto-open browser
     hot: true,
   },
 }

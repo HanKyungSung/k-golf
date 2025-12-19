@@ -23,9 +23,18 @@
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f db",
     "db:ps": "docker compose ps",
-    "db:exec": "docker compose exec db psql -U kgolf -d kgolf_app"
+    "db:exec": "docker compose exec db psql -U kgolf -d kgolf_app",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:full": "concurrently -k -s first \"npm:dev:frontend\" \"npm:dev:backend\" \"npm:test:e2e:wait\"",
+    "test:e2e:wait": "wait-on http://localhost:5173 http://localhost:8080 && playwright test"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^25.0.3",
+    "concurrently": "^8.2.2",
+    "wait-on": "^9.0.3"
   }
 }

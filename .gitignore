@@ -84,3 +84,10 @@ mcp-server/
 
 # Server status markdown file
 SERVER_STATUS.md
+
+# Playwright
+node_modules/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
