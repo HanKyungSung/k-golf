@@ -7,12 +7,12 @@
 
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import { requireAuth } from '../middleware/requireAuth';
+import { prisma } from '../lib/prisma';
 import { normalizePhone, validatePhone } from '../utils/phoneUtils';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * Middleware to require ADMIN role

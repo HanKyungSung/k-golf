@@ -22,6 +22,7 @@ export default function SignUpPage() {
   const { signup, resendVerification } = useAuth()
   const [sent, setSent] = useState<{ email: string; expiresAt?: string } | null>(null)
   const [errorText, setErrorText] = useState<string | null>(null)
+  const [errorField, setErrorField] = useState<'email' | 'phone' | null>(null)
   const [resendInfo, setResendInfo] = useState<{ message?: string; retryAfterSeconds?: number } | null>(null)
   const navigate = useNavigate()
 
@@ -35,6 +36,7 @@ export default function SignUpPage() {
 
     setIsLoading(true)
     setErrorText(null)
+    setErrorField(null)
 
     try {
       const result = await signup(formData.name, formData.email, formData.phone, formData.password, formData.dateOfBirth)
@@ -43,6 +45,12 @@ export default function SignUpPage() {
       console.error("Signup failed:", error)
       const msg = error instanceof Error ? error.message : 'Signup failed'
       setErrorText(msg)
+      // Determine which field has the error
+      if (msg.toLowerCase().includes('email')) {
+        setErrorField('email')
+      } else if (msg.toLowerCase().includes('phone')) {
+        setErrorField('phone')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -52,6 +60,7 @@ export default function SignUpPage() {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
     setErrorText(null)
+    setErrorField(null)
   }
 
   return (
@@ -131,7 +140,11 @@ export default function SignUpPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
+                  className={`w-full bg-slate-700/50 text-white placeholder:text-slate-400 ${
+                    errorField === 'email'
+                      ? 'border-red-500 focus:border-red-500'
+                      : 'border-slate-600 focus:border-amber-500'
+                  }`}
                 />
               </div>
               <div className="space-y-2">
@@ -156,10 +169,15 @@ export default function SignUpPage() {
                       setFormData(prev => ({ ...prev, phone: formatted }));
                     }
                     setErrorText(null);
+                    setErrorField(null);
                   }}
                   required
                   maxLength={12}
-                  className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
+                  className={`w-full bg-slate-700/50 text-white placeholder:text-slate-400 ${
+                    errorField === 'phone'
+                      ? 'border-red-500 focus:border-red-500'
+                      : 'border-slate-600 focus:border-amber-500'
+                  }`}
                 />
               </div>
               <div className="space-y-2">
@@ -246,7 +264,7 @@ export default function SignUpPage() {
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
                 />
               </div>
-              {errorText && !formData.confirmPassword && <FormError message={errorText} />}
+              {errorText && <FormError message={errorText} />}
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"

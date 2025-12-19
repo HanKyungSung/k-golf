@@ -1,10 +1,9 @@
 import { Router } from 'express';
+import { prisma } from '../lib/prisma';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
 import { normalizePhone } from '../utils/phoneUtils';
 import { requireAuth } from '../middleware/requireAuth';
 
-const prisma = new PrismaClient();
 const router = Router();
 
 // Admin check middleware

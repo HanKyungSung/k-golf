@@ -1,11 +1,10 @@
 // Settings API Routes
+import { prisma } from '../lib/prisma';
 // Provides endpoints for managing system-wide key-value settings
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { requireAuth } from '../middleware/requireAuth';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Helper to parse value based on value_type
 function parseSettingValue(value: string, valueType: string): any {

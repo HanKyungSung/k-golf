@@ -1,9 +1,8 @@
-import { PrismaClient, Booking } from '@prisma/client';
+import { Booking } from '@prisma/client';
 import * as bookingRepo from './bookingRepo';
 import * as invoiceRepo from './invoiceRepo';
 import * as orderRepo from './orderRepo';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export interface ReceiptData {
   receiptNumber: string;

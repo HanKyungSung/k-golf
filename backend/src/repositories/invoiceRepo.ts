@@ -1,7 +1,6 @@
-import { PrismaClient, Invoice } from '@prisma/client';
+import { Invoice } from '@prisma/client';
 import * as orderRepo from './orderRepo';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 const TAX_RATE = 0.1; // 10% tax
 

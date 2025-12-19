@@ -5,9 +5,8 @@ import { getBooking, cancelBooking, updatePaymentStatus, completeBooking, update
 import * as orderRepo from '../repositories/orderRepo';
 import * as invoiceRepo from '../repositories/invoiceRepo';
 import { requireAuth } from '../middleware/requireAuth';
-import { PrismaClient, UserRole } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { UserRole } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
@@ -83,9 +82,6 @@ router.get('/', async (req, res) => {
 // Optional helper to fetch rooms (basic list)
 router.get('/rooms', async (_req, res) => {
   try {
-    // Lazy import prisma to avoid circulars; small helper here
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
     const rooms = await prisma.room.findMany({ where: { active: true }, orderBy: { name: 'asc' } });
     res.json({ rooms });
   } catch (e) {

@@ -30,6 +30,13 @@ export default function LoginPage() {
     } catch (error) {
       console.error("Login failed:", error)
       const msg = error instanceof Error ? error.message : 'Login failed'
+      
+      // If email not verified, redirect to verify page
+      if (msg.toLowerCase().includes('email not verified')) {
+        navigate(`/verify?email=${encodeURIComponent(email)}`)
+        return
+      }
+      
       setErrorText(msg)
     } finally {
       setIsLoading(false)

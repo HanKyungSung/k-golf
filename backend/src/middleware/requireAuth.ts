@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
+import { prisma } from '../lib/prisma';
 import { getSession } from '../services/authService';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
 
 // POS admin API key (for Electron app that can't use cookies)
 const POS_ADMIN_KEY = process.env.POS_ADMIN_KEY || 'pos-dev-key-change-in-production';

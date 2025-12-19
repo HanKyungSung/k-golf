@@ -1,10 +1,9 @@
 import { Router } from 'express';
+import { prisma } from '../lib/prisma';
 import { z } from 'zod';
 import { createUser, findUserByEmail, findUserByPhone, hashPassword, verifyPassword, createSession, getSession, invalidateSession, createEmailVerificationToken, consumeEmailVerificationToken } from '../services/authService';
 import { sendVerificationEmail } from '../services/emailService';
 import { normalizePhone } from '../utils/phoneUtils';
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
 
 const router = Router();
 

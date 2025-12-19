@@ -1,6 +1,5 @@
-import { PrismaClient, Booking } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Booking } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 export interface CreateBookingInput {
   roomId: string;

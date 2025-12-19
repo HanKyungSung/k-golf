@@ -1,6 +1,5 @@
-import { PrismaClient, Order } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Order } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 export interface CreateOrderInput {
   bookingId: string;

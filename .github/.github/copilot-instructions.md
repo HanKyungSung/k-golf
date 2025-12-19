@@ -23,6 +23,7 @@
 - Mark completed tasks, add new ones if discovered, and keep the task list current
 - This ensures the project's task tracking and documentation stay synchronized with actual progress
 - **Before committing or completing work** (if user wants to commit), verify all related documentation is updated
+- **IMPORTANT**: Never modify or remove items from the "Personal note (Do not touch)" section in TASKS.md - this is the user's private task list
 
 ## POS Release Process
 
