@@ -163,6 +163,13 @@ function generateReceiptHTML(receipt: ReceiptData): string {
         ${receipt.payment.method ? `<p style="margin: 4px 0 0 0; color: #64748b; font-size: 12px;">Payment Method: ${receipt.payment.method}</p>` : ''}
       </div>
       
+      <!-- Sign-Up CTA -->
+      <div style="margin-top: 24px; padding: 24px; background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%); border-radius: 12px; text-align: center;">
+        <p style="margin: 0 0 8px 0; color: white; font-size: 18px; font-weight: 700;">📱 Book Faster Next Time!</p>
+        <p style="margin: 0 0 16px 0; color: rgba(255,255,255,0.95); font-size: 14px;">Create a free account to view your booking history and enjoy a streamlined booking experience.</p>
+        <a href="${process.env.FRONTEND_ORIGIN || 'http://localhost:5173'}/signup" style="display: inline-block; padding: 12px 32px; background: white; color: #f59e0b; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">Create Free Account</a>
+      </div>
+      
       <!-- Footer -->
       <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #f1f5f9; text-align: center;">
         <p style="margin: 0; color: #0f172a; font-size: 14px; font-weight: 600;">${receipt.business.name}</p>

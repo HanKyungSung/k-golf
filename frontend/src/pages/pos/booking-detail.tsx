@@ -1061,42 +1061,24 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                 const total = subtotal + tax + tipAmount;
 
                 return (
-                  <div
+                  <AccordionItem
                     key={seat}
+                    value={`seat-${seat}`}
+                    className="border border-slate-700 rounded-lg bg-slate-800/50 overflow-hidden"
                     ref={(el) => {
                       seatRefs.current[seat] = el;
                     }}
                   >
-                    <AccordionItem
-                      value={`seat-${seat}`}
-                      className="border border-slate-700 rounded-lg bg-slate-800/50 overflow-hidden"
-                    >
-                      <div className="relative">
-                        <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-800/80">
-                          <div className="flex items-center justify-between w-full pr-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-4 h-4 rounded-full ${seatColors[seat - 1]}`} />
-                              <span className="font-bold text-white text-lg">Seat {seat}</span>
-                              <Badge variant="outline" className="text-slate-300 border-slate-600">
-                                {seatItems.length} items
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              {isPaid ? (
-                                <Badge className="bg-green-500 text-white flex items-center gap-1">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  PAID
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-amber-500 text-black flex items-center gap-1">
-                                  <AlertCircle className="h-3 w-3" />
-                                  UNPAID
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </AccordionTrigger>
-                        <div className="absolute top-4 right-16">
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-800/80">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full ${seatColors[seat - 1]}`} />
+                          <span className="font-bold text-white text-lg">Seat {seat}</span>
+                          <Badge variant="outline" className="text-slate-300 border-slate-600">
+                            {seatItems.length} items
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3">
                           <Button
                             size="sm"
                             variant="outline"
@@ -1110,8 +1092,20 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                             <Printer className="h-4 w-4 mr-1" />
                             Print
                           </Button>
+                          {isPaid ? (
+                            <Badge className="bg-green-500 text-white flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              PAID
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-amber-500 text-black flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              UNPAID
+                            </Badge>
+                          )}
                         </div>
                       </div>
+                    </AccordionTrigger>
                     <AccordionContent className="px-6 pb-6">
                       <div className="space-y-4 pt-2">
                         {/* Order Items */}
@@ -1342,7 +1336,6 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                       </div>
                     </AccordionContent>
                   </AccordionItem>
-                  </div>
                 );
               })}
             </Accordion>
