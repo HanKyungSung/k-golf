@@ -2,10 +2,15 @@ import { Invoice } from '@prisma/client';
 import * as orderRepo from './orderRepo';
 import { prisma } from '../lib/prisma';
 
-const TAX_RATE = 0.1; // 10% tax
-
 export interface InvoiceWithItems extends Invoice {
   orders?: any[];
+}
+
+async function getGlobalTaxRate(): Promise<number> {
+  const setting = await prisma.setting.findUnique({
+    where: { key: 'global_tax_rate' }
+  });
+  return setting ? parseFloat(setting.value) / 100 : 0.13; // Default 13% if not set
 }
 
 export async function getInvoiceBySeat(bookingId: string, seatIndex: number): Promise<InvoiceWithItems | null> {
@@ -55,7 +60,10 @@ export async function recalculateInvoice(bookingId: string, seatIndex: number): 
 
   // Calculate totals from orders
   const subtotal = orders.reduce((sum, order) => sum + Number(order.totalPrice), 0);
-  const tax = subtotal * TAX_RATE;
+  
+  // Get current tax rate from settings
+  const taxRate = await getGlobalTaxRate();
+  const tax = subtotal * taxRate;
 
   // Get current invoice to preserve tip if any
   const currentInvoice = await prisma.invoice.findUnique({

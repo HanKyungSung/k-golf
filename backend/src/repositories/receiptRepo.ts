@@ -152,8 +152,11 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
   const foodBeverageSubtotal = seats.reduce((sum, seat) => sum + seat.subtotal, 0);
   const totalSubtotal = roomChargeTotal + foodBeverageSubtotal;
 
-  // Get tax rate from global settings or use default 8%
-  const taxRate = 8; // TODO: Get from global settings if needed
+  // Get tax rate from global settings
+  const taxRateSetting = await prisma.setting.findUnique({
+    where: { key: 'global_tax_rate' }
+  });
+  const taxRate = taxRateSetting ? parseFloat(taxRateSetting.value) : 13;
   const tax = (totalSubtotal * taxRate) / 100;
 
   // Get tip from invoices (sum all tips)

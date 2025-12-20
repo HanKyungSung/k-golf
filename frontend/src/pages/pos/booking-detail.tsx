@@ -766,13 +766,9 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   };
 
   const calculateSeatTax = (seat: number): number => {
-    const invoice = invoices.find(inv => inv.seatIndex === seat);
-    if (invoice) {
-      return parseFloat(String(invoice.tax)) || 0;
-    }
-    
-    // Fallback to local calculation
-    return calculateSeatSubtotal(seat) * (effectiveTaxRate / 100);
+    // Always calculate dynamically with current tax rate
+    const subtotal = calculateSeatSubtotal(seat);
+    return subtotal * (effectiveTaxRate / 100);
   };
 
   const calculateSeatTotal = (seat: number): number => {
