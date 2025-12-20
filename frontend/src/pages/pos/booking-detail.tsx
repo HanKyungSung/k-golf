@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, User, Clock, Calendar } from 'lucide-react';
+import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, User, Clock, Calendar, Mail } from 'lucide-react';
 import Receipt from '../../components/Receipt';
 import { 
   getBooking, 
@@ -26,6 +26,7 @@ import {
   unpayInvoice as apiUnpayInvoice,
   getReceipt,
   getSeatReceipt,
+  sendReceiptEmail,
   type Booking,
   type Room,
   type MenuItem,
@@ -125,7 +126,10 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [receiptMode, setReceiptMode] = useState<'full' | 'seat'>('full');
   const [receiptSeatIndex, setReceiptSeatIndex] = useState<number | undefined>(undefined);
   const [loadingReceipt, setLoadingReceipt] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<'print' | 'email'>('print');
   const [printerType, setPrinterType] = useState<'thermal' | 'regular'>('thermal');
+  const [emailAddress, setEmailAddress] = useState<string>('');
+  const [sendingEmail, setSendingEmail] = useState(false);
   
   const seatsInitialized = React.useRef(false);
   const seatRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
@@ -583,6 +587,8 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       }
       setReceiptData(data);
       setReceiptMode(mode);
+      setEmailAddress(booking?.customerEmail || '');
+      setDeliveryMethod('print');
       setShowReceiptModal(true);
     } catch (error) {
       console.error('Failed to load receipt:', error);
@@ -596,10 +602,32 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     setShowReceiptModal(false);
     setReceiptData(null);
     setReceiptSeatIndex(undefined);
+    setEmailAddress('');
+    setDeliveryMethod('print');
   };
 
   const handlePrintFromModal = async () => {
     if (!receiptData) return;
+    
+    if (deliveryMethod === 'email') {
+      if (!emailAddress || !emailAddress.includes('@')) {
+        alert('Please enter a valid email address');
+        return;
+      }
+      
+      setSendingEmail(true);
+      try {
+        await sendReceiptEmail(bookingId, emailAddress, receiptSeatIndex);
+        alert(`Receipt sent successfully to ${emailAddress}!`);
+        setShowReceiptModal(false);
+      } catch (error) {
+        console.error('Email send error:', error);
+        alert(`Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setSendingEmail(false);
+      }
+      return;
+    }
     
     if (printerType === 'thermal') {
       // Send to thermal printer via backend API
@@ -1766,13 +1794,13 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       <Dialog open={showReceiptModal} onOpenChange={setShowReceiptModal}>
         <DialogContent className="max-w-md bg-slate-800 text-white border-slate-700">
           <DialogHeader>
-            <DialogTitle>Receipt Preview</DialogTitle>
+            <DialogTitle>Send Receipt</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Review the receipt before printing
+              Choose how to send the receipt
             </DialogDescription>
           </DialogHeader>
           
-          <div className="max-h-[60vh] overflow-y-auto border border-slate-700 rounded">
+          <div className="max-h-[50vh] overflow-y-auto border border-slate-700 rounded">
             {receiptData && (
               <Receipt
                 data={receiptData}
@@ -1784,22 +1812,66 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-slate-300">Printer Type</Label>
-              <RadioGroup value={printerType} onValueChange={(value) => setPrinterType(value as 'thermal' | 'regular')}>
+              <Label className="text-slate-300">Delivery Method</Label>
+              <RadioGroup value={deliveryMethod} onValueChange={(value) => setDeliveryMethod(value as 'print' | 'email')}>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="thermal" id="thermal" />
-                  <Label htmlFor="thermal" className="text-slate-300 cursor-pointer">
-                    Thermal Printer (Default)
+                  <RadioGroupItem value="print" id="print" />
+                  <Label htmlFor="print" className="text-slate-300 cursor-pointer flex items-center gap-2">
+                    <Printer className="h-4 w-4" />
+                    Print
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="regular" id="regular" />
-                  <Label htmlFor="regular" className="text-slate-300 cursor-pointer">
-                    Regular Printer
+                  <RadioGroupItem value="email" id="email" />
+                  <Label htmlFor="email" className="text-slate-300 cursor-pointer flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email
                   </Label>
                 </div>
               </RadioGroup>
             </div>
+
+            {deliveryMethod === 'print' && (
+              <div className="space-y-2">
+                <Label className="text-slate-300">Printer Type</Label>
+                <RadioGroup value={printerType} onValueChange={(value) => setPrinterType(value as 'thermal' | 'regular')}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="thermal" id="thermal" />
+                    <Label htmlFor="thermal" className="text-slate-300 cursor-pointer">
+                      Thermal Printer (Default)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="regular" id="regular" />
+                    <Label htmlFor="regular" className="text-slate-300 cursor-pointer">
+                      Regular Printer
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+
+            {deliveryMethod === 'email' && (
+              <div className="space-y-2">
+                <Label htmlFor="email-input" className="text-slate-300">Email Address</Label>
+                <Input
+                  id="email-input"
+                  type="email"
+                  placeholder="customer@example.com"
+                  value={emailAddress}
+                  onChange={(e) => setEmailAddress(e.target.value)}
+                  className="bg-slate-700/50 border-slate-600 text-white"
+                />
+                {booking?.customerEmail && emailAddress !== booking.customerEmail && (
+                  <button
+                    onClick={() => setEmailAddress(booking.customerEmail || '')}
+                    className="text-xs text-amber-400 hover:text-amber-300"
+                  >
+                    Use booking email: {booking.customerEmail}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -1812,10 +1884,22 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
             </Button>
             <Button
               onClick={handlePrintFromModal}
+              disabled={sendingEmail || (deliveryMethod === 'email' && !emailAddress)}
               className="bg-amber-600 hover:bg-amber-700"
             >
-              <Printer className="h-4 w-4 mr-2" />
-              Print
+              {sendingEmail ? (
+                <>Processing...</>
+              ) : deliveryMethod === 'email' ? (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </>
+              ) : (
+                <>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
