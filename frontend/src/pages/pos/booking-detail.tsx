@@ -1061,14 +1061,16 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                 const total = subtotal + tax + tipAmount;
 
                 return (
-                  <AccordionItem
+                  <div
                     key={seat}
-                    value={`seat-${seat}`}
-                    className="border border-slate-700 rounded-lg bg-slate-800/50 overflow-hidden"
                     ref={(el) => {
                       seatRefs.current[seat] = el;
                     }}
                   >
+                    <AccordionItem
+                      value={`seat-${seat}`}
+                      className="border border-slate-700 rounded-lg bg-slate-800/50 overflow-hidden"
+                    >
                     <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-800/80">
                       <div className="flex items-center justify-between w-full pr-4">
                         <div className="flex items-center gap-3">
@@ -1336,6 +1338,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+                  </div>
                 );
               })}
             </Accordion>
