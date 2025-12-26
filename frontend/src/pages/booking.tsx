@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { Clock, Users, Star, CalendarIcon } from "lucide-react";
+import { TimePicker } from "../components/pos/TimePicker";
 
 interface Room {
   // Unique UI id per card to control selection/highlight
@@ -505,14 +506,11 @@ export default function BookingPage() {
                       <Label htmlFor="start-time" className="text-white font-medium">
                         Start Time (9:00 AM - 10:00 PM)
                       </Label>
-                      <Input
+                      <TimePicker
                         id="start-time"
-                        type="time"
                         value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        min="09:00"
-                        max="22:00"
-                        className="bg-slate-700/50 border-slate-600 text-white [color-scheme:dark]"
+                        onChange={(value) => setStartTime(value)}
+                        className="bg-slate-700/50 border-slate-600 text-white"
                       />
                     </div>
 
