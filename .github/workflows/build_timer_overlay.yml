@@ -29,7 +29,7 @@ jobs:
         pyinstaller --noconsole --onefile --name "TimerOverlay" main.py
         
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: TimerOverlay-Windows-Exe
         path: timer-overlay-python/dist/TimerOverlay.exe
