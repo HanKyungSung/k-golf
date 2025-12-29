@@ -27,9 +27,12 @@ jobs:
       run: |
         cd timer-overlay-python
         pyinstaller --noconsole --onefile --name "TimerOverlay" main.py
+        pyinstaller --onefile --name "ForceWindowed" force_windowed.py
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: TimerOverlay-Windows-Exe
-        path: timer-overlay-python/dist/TimerOverlay.exe
+        path: |
+          timer-overlay-python/dist/TimerOverlay.exe
+          timer-overlay-python/dist/ForceWindowed.exe
