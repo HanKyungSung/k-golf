@@ -149,12 +149,14 @@ class TimerOverlay:
                 # SWP_NOMOVE = 0x0002
                 # SWP_NOSIZE = 0x0001
                 # SWP_NOACTIVATE = 0x0010
-                windll.user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0003)
+                # SWP_SHOWWINDOW = 0x0040
+                # Flags: NOMOVE | NOSIZE | NOACTIVATE | SHOWWINDOW
+                windll.user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0053)
             except Exception as e:
                 print(f"Error forcing topmost: {e}")
         
-        # Re-schedule this check every 2 seconds
-        self.root.after(2000, self.force_topmost)
+        # Re-schedule this check every 500ms (more aggressive)
+        self.root.after(500, self.force_topmost)
 
 if __name__ == "__main__":
     root = tk.Tk()
