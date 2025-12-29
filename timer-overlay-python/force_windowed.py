@@ -1,5 +1,6 @@
 import ctypes
 import sys
+import time
 
 user32 = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
@@ -50,25 +51,33 @@ def force_windowed(hwnd):
     print("Attempted to force windowed mode.")
 
 def main():
-    print("Scanning for windows...")
-    windows = enum_windows()
-    
-    print("\nFound Windows:")
-    for i, (hwnd, title) in enumerate(windows):
-        print(f"{i}: {title}")
+    target_name = "CITEEZON"
+    print(f"Searching for window containing '{target_name}'...")
+    print("This tool will automatically apply windowed mode when the game is found.")
+    print("Press Ctrl+C to exit if the game is not running.")
+
+    while True:
+        windows = enum_windows()
+        found_hwnd = None
+        found_title = ""
+
+        for hwnd, title in windows:
+            if target_name.lower() in title.lower():
+                found_hwnd = hwnd
+                found_title = title
+                break
         
-    try:
-        selection = int(input("\nEnter the number of the game window to force windowed (or -1 to cancel): "))
-        if 0 <= selection < len(windows):
-            hwnd, title = windows[selection]
-            print(f"Forcing '{title}' to windowed mode...")
-            force_windowed(hwnd)
-        else:
-            print("Cancelled.")
-    except ValueError:
-        print("Invalid input.")
+        if found_hwnd:
+            print(f"\nFound target: '{found_title}'")
+            force_windowed(found_hwnd)
+            print("Successfully modified window style.")
+            print("You should now be able to see the overlay.")
+            break
+        
+        time.sleep(2)
     
-    input("Press Enter to exit...")
+    print("Exiting in 5 seconds...")
+    time.sleep(5)
 
 if __name__ == "__main__":
     main()
