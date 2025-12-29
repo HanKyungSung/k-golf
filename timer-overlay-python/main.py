@@ -48,6 +48,33 @@ class TimerOverlay:
         
         # Force Topmost Loop (Aggressive)
         self.force_topmost()
+        
+        # Apply Extended Window Styles (ToolWindow, etc.)
+        self.apply_window_styles()
+
+    def apply_window_styles(self):
+        if IS_WINDOWS:
+            try:
+                hwnd = windll.user32.GetParent(self.root.winfo_id())
+                if hwnd == 0:
+                    hwnd = self.root.winfo_id()
+                
+                # Constants
+                GWL_EXSTYLE = -20
+                WS_EX_TOOLWINDOW = 0x00000080
+                WS_EX_TOPMOST = 0x00000008
+                WS_EX_NOACTIVATE = 0x08000000
+                
+                # Get current style
+                style = windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                
+                # Add new styles
+                new_style = style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE
+                
+                # Set new style
+                windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_style)
+            except Exception as e:
+                print(f"Error applying styles: {e}")
 
     def setup_ui(self):
         # Main Container
