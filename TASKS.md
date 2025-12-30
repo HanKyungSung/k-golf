@@ -22,6 +22,18 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ## Personal note (Do not touch)
 
+### ✅ COMPLETED - Domain Migration (Dec 30, 2025)
+- [x] **Migrate from k-golf.ca to konegolf.ca** 
+  - [x] Added DNS A records for konegolf.ca and www.konegolf.ca
+  - [x] Obtained SSL certificate for konegolf.ca (expires 2026-03-30)
+  - [x] Created Nginx config for konegolf.ca as primary domain
+  - [x] Updated k-golf.ca to redirect to konegolf.ca
+  - [x] Verified SSL auto-renewal configuration (certbot.timer active)
+  - [x] Updated SERVER_STATUS.md with new domain configuration
+  - **Status:** Domain migration completed successfully
+  - **Primary Domain:** https://konegolf.ca
+  - **Redirects:** k-golf.ca, www.k-golf.ca → konegolf.ca
+
 ### 🚨 URGENT - Infrastructure & Security
 - [ ] **Enable DigitalOcean Droplet Backups** 🔴 HIGH PRIORITY
   - [ ] Navigate to DigitalOcean → Droplets → k-golf (147.182.215.135)
