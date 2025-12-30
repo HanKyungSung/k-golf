@@ -43,7 +43,7 @@ function AppRoutes() {
 export default function App() {
   console.log(process.env.REACT_APP_API_BASE);
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <AuthProvider>
         <BrowserRouter>
           <AppRoutes />
