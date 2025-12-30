@@ -22,7 +22,7 @@ ENV CI=true
 # Set webpack output to ./dist (default Docker behavior)
 ENV WEBPACK_OUTPUT_PATH=./dist
 # Set API base URL for production frontend
-ENV REACT_APP_API_BASE=https://k-golf.ca
+ENV REACT_APP_API_BASE=https://konegolf.ca
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ ./
