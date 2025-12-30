@@ -19,7 +19,7 @@ function computeEnd(startTime: Date, hours: number): Date {
   return new Date(startTime.getTime() + hours * 60 * 60 * 1000);
 }
 
-const HOURLY_RATE = 50; // $50 per hour per player
+const HOURLY_RATE = 35; // $35 per hour (room rate, not per player)
 const TAX_RATE = 0.1; // 10% tax
 
 export async function findConflict(roomId: string, startTime: Date, endTime: Date) {
@@ -37,10 +37,10 @@ export async function findConflict(roomId: string, startTime: Date, endTime: Dat
 export async function createBooking(data: CreateBookingInput): Promise<Booking> {
   const endTime = data.endTime || (data.hours ? computeEnd(data.startTime, data.hours) : new Date(data.startTime.getTime() + 3600000));
   
-  // Calculate price if not provided: players × hours × $50/hour
+  // Calculate price if not provided: hours × $35/hour (room rate)
   let price = data.price;
   if (!price && data.hours) {
-    price = data.players * data.hours * HOURLY_RATE;
+    price = data.hours * HOURLY_RATE;
   }
   
   // Calculate per-seat subtotal and tax

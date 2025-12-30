@@ -315,8 +315,8 @@ async function main() {
 						// Random players: 1-4
 						const players = Math.floor(Math.random() * 4) + 1;
 						
-						// Calculate price (base $50/hour)
-						const basePrice = duration * 50;
+						// Calculate price (base $35/hour)
+						const basePrice = duration * 35;
 						
 						// Status: past bookings are completed, future are booked
 						const isPast = startTime < today;

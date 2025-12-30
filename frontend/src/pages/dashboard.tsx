@@ -166,7 +166,7 @@ const CustomerDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-amber-400">
-                ${currentMonthSpent}
+                ${currentMonthSpent.toFixed(2)}
               </div>
             </CardContent>
           </Card>
@@ -195,7 +195,7 @@ const CustomerDashboard = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium text-white">${Number(booking.price)}</div>
+                    <div className="font-medium text-white">${Number(booking.price).toFixed(2)}</div>
           {booking.status === 'booked' && (
                       <Button
                         variant="outline"

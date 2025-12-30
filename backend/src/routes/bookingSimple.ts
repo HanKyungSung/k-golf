@@ -112,7 +112,7 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
     }
     
     // Calculate price (if not provided)
-    const price = data.price ?? (50 * data.duration); // $50/hour default
+    const price = data.price ?? (35 * data.duration); // $35/hour default
     
     // Get admin user ID from request
     const adminId = (req as any).user?.id;

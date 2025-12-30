@@ -26,7 +26,7 @@ function presentBooking(b: any) {
     startTime: b.startTime,
     endTime: b.endTime,
     players: b.players,
-    price: b.price,
+    price: b.price ? parseFloat(b.price.toString()) : 0,
     status: presentStatus(b.bookingStatus, new Date(b.endTime)),
     bookingStatus: b.bookingStatus, // Send raw bookingStatus for POS
     bookingSource: b.bookingSource,
@@ -35,7 +35,7 @@ function presentBooking(b: any) {
     billedAt: b.billedAt,
     paidAt: b.paidAt,
     paymentMethod: b.paymentMethod,
-    tipAmount: b.tipAmount,
+    tipAmount: b.tipAmount ? parseFloat(b.tipAmount.toString()) : 0,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
     user: b.user ? {
@@ -310,8 +310,8 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(409).json({ error: 'Time slot overlaps an existing booking' });
   }
 
-  const HOURLY_RATE = 50; // $50/hour per person
-  const price = players * hours * HOURLY_RATE; // decimal dollars
+  const HOURLY_RATE = 35; // $35/hour (room rate)
+  const price = hours * HOURLY_RATE; // decimal dollars
 
   try {
     const booking = await createBooking({
@@ -536,7 +536,7 @@ router.post('/admin/create-OLD', requireAuth, async (req, res) => {
   }
 
   // Calculate price (basic: hourlyRate * hours, if available)
-  const hourlyRate = 50; // TODO: Get from room or pricing config
+  const hourlyRate = 35; // TODO: Get from room or pricing config
   const price = hourlyRate * hours;
 
   try {
@@ -706,7 +706,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
     }
 
     // Calculate pricing
-    const defaultHourlyRate = 50; // TODO: Get from room pricing config
+    const defaultHourlyRate = 35; // TODO: Get from room pricing config
     const basePrice = customPrice || (defaultHourlyRate * hours);
     const taxRate = customTaxRate !== undefined ? customTaxRate : await getGlobalTaxRate();
     const pricing = calculatePricing(basePrice, taxRate);

@@ -22,28 +22,6 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 
 ## Personal note (Do not touch)
 
-### ✅ COMPLETED - Domain Migration & Rebranding (Dec 30, 2025)
-- [x] **Migrate from k-golf.ca to konegolf.ca** 
-  - [x] Added DNS A records for konegolf.ca and www.konegolf.ca
-  - [x] Obtained SSL certificate for konegolf.ca (expires 2026-03-30)
-  - [x] Created Nginx config for konegolf.ca as primary domain
-  - [x] Updated k-golf.ca to redirect to konegolf.ca
-  - [x] Updated server environment variables (CORS_ORIGIN, FRONTEND_ORIGIN, EMAIL_FROM)
-  - [x] Restarted Docker services with new configuration
-  - [x] Updated codebase defaults to konegolf.ca
-  - [x] Verified SSL auto-renewal configuration (certbot.timer active)
-  - **Status:** Domain migration completed successfully
-  - **Primary Domain:** https://konegolf.ca
-  - **Redirects:** k-golf.ca, www.k-golf.ca → konegolf.ca
-
-- [x] **Rebrand from K-Golf to K one Golf**
-  - [x] Updated all frontend pages (home, login, signup, verify, dashboard, admin, booking)
-  - [x] Updated POS web interface (dashboard, menu management, booking detail)
-  - [x] Updated Electron POS app (all pages, receipts, headers)
-  - [x] Updated backend services (email templates, receipt formatter, WebSocket messages)
-  - [x] Updated receipt business name in all formats (thermal, email, print)
-  - **Status:** All user-facing "K-Golf" text updated to "K one Golf"
-
 ### 🔄 Ongoing Tasks
 - [ ] **Replace Gmail Account for Email Sending**
   - Current: kgolf.general@gmail.com
@@ -58,16 +36,7 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - **Why:** No backups currently enabled - critical for production system
 
 ### 🔄 Ongoing Tasks
-- Make timeline view that always start wtih the current date then shows next 7 days.
-- [x] force the phone number input from signup page. ex, when user enter number should change to 111-1111-1111 for better visibility. ✅ COMPLETED (2025-12-12)
-- [x] the calendar input for date of birth and selecting year is not working correctly. maybe need some enhancement. ✅ COMPLETED (2025-12-12) - Added min date and dark mode styling
-- [x] Comment out the gmail login for now. ✅ COMPLETED (2025-12-12)
-- QR Code (for what? need some clarification).
-- [x] Ask for the birthday when user create the account. ✅ COMPLETED (2025-12-12)
-- booking count for the specific customer.
-- [x] guest password creation ✅ COMPLETED (2025-12-05)
-- [x] after click complete booking button, the color on timeline doesn't turn into grey ✅ COMPLETED (2025-12-06)
-- [x] after complete the booking the booking should change to grey ✅ COMPLETED (2025-12-06)
+- update the pictures on landing page
 - Check the email can be forward without buying a new google account.
 - Ask no cleaning time between bookings.
 - The coupon. like every 30 times visit, free hours etc.
