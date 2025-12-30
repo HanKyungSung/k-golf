@@ -99,7 +99,7 @@ async function main() {
 
 	// Create admin user (idempotent by email)
 	// This admin user is used for both web login and POS API authentication
-	const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@k-golf.ca';
+	const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@konegolf.ca';
 	const adminName = process.env.SEED_ADMIN_NAME || 'Admin User';
 	const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123';
 	const adminPhone = process.env.SEED_ADMIN_PHONE || '+14165551000'; // Canadian phone format (Toronto area code)
@@ -148,7 +148,7 @@ async function main() {
 
 	// Create a second admin account for testing (separate from primary admin)
 	// Prevents issues from shared account access
-	const admin2Email = 'admin2@k-golf.ca';
+	const admin2Email = 'admin2@konegolf.ca';
 	const admin2Phone = '+14165553333'; // Separate phone for admin2
 	const admin2Password = 'admin2password123';
 	
