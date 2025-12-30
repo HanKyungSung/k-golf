@@ -21,6 +21,17 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 ---
 
 ## Personal note (Do not touch)
+
+### 🚨 URGENT - Infrastructure & Security
+- [ ] **Enable DigitalOcean Droplet Backups** 🔴 HIGH PRIORITY
+  - [ ] Navigate to DigitalOcean → Droplets → k-golf (147.182.215.135)
+  - [ ] Enable Weekly Automatic Backups (~20% of droplet cost)
+  - [ ] Create manual snapshot before domain migration: `k-golf-pre-migration-20251226`
+  - [ ] Verify backup schedule and test restoration process
+  - [ ] Consider database backup script to external storage (Spaces/S3)
+  - **Why:** No backups currently enabled - critical for production system
+
+### 🔄 Ongoing Tasks
 - Make timeline view that always start wtih the current date then shows next 7 days.
 - [x] force the phone number input from signup page. ex, when user enter number should change to 111-1111-1111 for better visibility. ✅ COMPLETED (2025-12-12)
 - [x] the calendar input for date of birth and selecting year is not working correctly. maybe need some enhancement. ✅ COMPLETED (2025-12-12) - Added min date and dark mode styling
