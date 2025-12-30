@@ -28,13 +28,19 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - [x] Obtained SSL certificate for konegolf.ca (expires 2026-03-30)
   - [x] Created Nginx config for konegolf.ca as primary domain
   - [x] Updated k-golf.ca to redirect to konegolf.ca
+  - [x] Updated server environment variables (CORS_ORIGIN, FRONTEND_ORIGIN, EMAIL_FROM)
+  - [x] Restarted Docker services with new configuration
+  - [x] Updated codebase defaults to konegolf.ca
   - [x] Verified SSL auto-renewal configuration (certbot.timer active)
-  - [x] Updated SERVER_STATUS.md with new domain configuration
   - **Status:** Domain migration completed successfully
   - **Primary Domain:** https://konegolf.ca
   - **Redirects:** k-golf.ca, www.k-golf.ca → konegolf.ca
 
-### 🚨 URGENT - Infrastructure & Security
+### 🔄 Ongoing Tasks
+- [ ] **Replace Gmail Account for Email Sending**
+  - Current: kgolf.general@gmail.com
+  - Need to: Create new Gmail account and app password for konegolf.ca domain
+  - Update: GMAIL_USER and GMAIL_APP_PASSWORD in server .env.production
 - [ ] **Enable DigitalOcean Droplet Backups** 🔴 HIGH PRIORITY
   - [ ] Navigate to DigitalOcean → Droplets → k-golf (147.182.215.135)
   - [ ] Enable Weekly Automatic Backups (~20% of droplet cost)
