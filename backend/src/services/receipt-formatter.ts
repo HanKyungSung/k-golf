@@ -95,7 +95,7 @@ export class ReceiptFormatter {
     this.align('center');
     this.size(1, 1);
     this.bold(true);
-    this.text('K-GOLF');
+    this.text('K ONE GOLF');
     this.newline();
     this.bold(false);
     this.size(0, 0);
@@ -167,7 +167,7 @@ export class ReceiptFormatter {
     this.align('center');
     this.line();
     this.newline();
-    this.text('Thank you for visiting K-Golf!');
+    this.text('Thank you for visiting K one Golf!');
     this.newline();
     this.newline();
     this.size(0, 0);

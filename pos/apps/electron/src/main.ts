@@ -756,7 +756,7 @@ if (process.env.ELECTRON_DEV) {
             </style>
           </head>
           <body>
-            <div class="header">K-GOLF</div>
+            <div class="header">K ONE GOLF</div>
             
             <div class="info">
               <div class="info-line"><strong>Seat:</strong> ${printData.seatName}</div>

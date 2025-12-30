@@ -334,7 +334,7 @@ export default function POSDashboard() {
       {/* Header - Always visible */}
       <header className="border-b border-slate-700 bg-slate-800">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-amber-400">K-Golf POS</h1>
+          <h1 className="text-2xl font-bold text-amber-400">K one Golf POS</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-300">{user?.email}</span>
             <Button onClick={handleLogout} variant="outline" size="sm">Logout</Button>

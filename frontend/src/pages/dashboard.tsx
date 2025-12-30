@@ -109,7 +109,7 @@ const CustomerDashboard = () => {
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
-                K-Golf
+                K one Golf
               </h1>
               <span className="ml-2 text-sm text-slate-400">Premium Screen Golf</span>
             </Link>

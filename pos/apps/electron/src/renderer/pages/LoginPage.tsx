@@ -24,7 +24,7 @@ const LoginPage: React.FC = () => {
     <div className="w-full h-full flex items-center justify-center p-4">
       <div className="bg-white border border-slate-200 rounded-xl w-full max-w-md p-8 shadow">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">K-Golf</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">K one Golf</h1>
           <p className="text-sm text-slate-500 mt-1">Point of Sale System</p>
         </div>
         <form className="space-y-5" onSubmit={submit}>
@@ -41,7 +41,7 @@ const LoginPage: React.FC = () => {
           </button>
           <div className="h-5 text-xs font-medium text-red-600" aria-live="polite">{error}</div>
         </form>
-        <div className="mt-10 text-center text-[10px] text-slate-400">K-Golf POS • Secure Access</div>
+        <div className="mt-10 text-center text-[10px] text-slate-400">K one Golf POS • Secure Access</div>
       </div>
     </div>
   );

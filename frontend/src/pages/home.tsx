@@ -15,7 +15,7 @@ export default function HomePage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">
-                K-Golf
+                K one Golf
               </h1>
               <span className="ml-2 text-sm text-slate-400">Premium Screen Golf</span>
             </div>
@@ -189,7 +189,7 @@ export default function HomePage() {
                 <span className="block text-amber-400">Screen Golf</span>
               </h3>
               <p className="text-slate-300 text-lg mb-6 leading-relaxed">
-                K-Golf brings the authentic Korean screen golf experience to your city. Our state-of-the-art facility
+                K one Golf brings the authentic Korean screen golf experience to your city. Our state-of-the-art facility
                 features 4 identical premium rooms, each equipped with cutting-edge simulation technology and
                 professional-grade equipment for the ultimate indoor golf experience.
               </p>
@@ -471,7 +471,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent mb-4">
-                K-Golf
+                K one Golf
               </h1>
               <p className="text-slate-400 mb-4">Premium screen golf experience where technology meets tradition.</p>
               <div className="flex space-x-4">
@@ -558,7 +558,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-400">
-            <p>&copy; 2024 K-Golf. All rights reserved. Premium screen golf experience.</p>
+            <p>&copy; 2024 K one Golf. All rights reserved. Premium screen golf experience.</p>
           </div>
         </div>
       </footer>

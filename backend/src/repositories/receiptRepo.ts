@@ -179,7 +179,7 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
       email: booking.customerEmail || booking.user?.email || null,
     },
     business: {
-      name: 'K-Golf',
+      name: 'K one Golf',
       address: '5 Keltic Dr #6 Sydney, NS B1S 1P4',
       phone: '(902) 270-2259',
       taxId: 'HST: 820374569 RT0001',

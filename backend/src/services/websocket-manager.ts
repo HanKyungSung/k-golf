@@ -60,7 +60,7 @@ export class WebSocketManager {
       });
 
       // Send connection confirmation
-      ws.send(JSON.stringify({ type: 'connected', message: 'Connected to K-Golf backend' }));
+      ws.send(JSON.stringify({ type: 'connected', message: 'Connected to K one Golf backend' }));
     });
 
     logger.info('WebSocket server initialized');

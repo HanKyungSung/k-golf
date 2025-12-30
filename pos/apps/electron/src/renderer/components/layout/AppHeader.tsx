@@ -30,7 +30,7 @@ export const AppHeader: React.FC<Props> = ({ onTest, onSync }) => {
         {/* Left Cluster: Brand + User + Queue */}
         <div className="flex items-center gap-4 min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent tracking-tight select-none">K-Golf</h1>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent tracking-tight select-none">K one Golf</h1>
             <span className="text-[11px] uppercase tracking-wide text-slate-400 hidden sm:inline">Admin</span>
           </div>
           <div className="hidden sm:block w-px self-stretch bg-slate-700/80" />

@@ -70,7 +70,7 @@ export default function SignUpPage() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
-              K-Golf
+              K one Golf
             </h1>
             <p className="text-sm text-slate-400 mt-1">Premium Screen Golf</p>
           </Link>

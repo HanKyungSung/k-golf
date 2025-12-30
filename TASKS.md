@@ -1,6 +1,6 @@
-# K-Golf Project Tasks
+# K one Golf Project Tasks
 
-Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, POS).
+Consolidated task tracking for the entire K one Golf platform (Backend, Frontend, POS).
 
 **Legend:** `[ ]` pending | `[~]` in progress | `[x]` done
 
@@ -22,7 +22,7 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
 
 ## Personal note (Do not touch)
 
-### ✅ COMPLETED - Domain Migration (Dec 30, 2025)
+### ✅ COMPLETED - Domain Migration & Rebranding (Dec 30, 2025)
 - [x] **Migrate from k-golf.ca to konegolf.ca** 
   - [x] Added DNS A records for konegolf.ca and www.konegolf.ca
   - [x] Obtained SSL certificate for konegolf.ca (expires 2026-03-30)
@@ -35,6 +35,14 @@ Consolidated task tracking for the entire K-Golf platform (Backend, Frontend, PO
   - **Status:** Domain migration completed successfully
   - **Primary Domain:** https://konegolf.ca
   - **Redirects:** k-golf.ca, www.k-golf.ca → konegolf.ca
+
+- [x] **Rebrand from K-Golf to K one Golf**
+  - [x] Updated all frontend pages (home, login, signup, verify, dashboard, admin, booking)
+  - [x] Updated POS web interface (dashboard, menu management, booking detail)
+  - [x] Updated Electron POS app (all pages, receipts, headers)
+  - [x] Updated backend services (email templates, receipt formatter, WebSocket messages)
+  - [x] Updated receipt business name in all formats (thermal, email, print)
+  - **Status:** All user-facing "K-Golf" text updated to "K one Golf"
 
 ### 🔄 Ongoing Tasks
 - [ ] **Replace Gmail Account for Email Sending**

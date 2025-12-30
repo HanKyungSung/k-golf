@@ -32,15 +32,15 @@ export async function sendVerificationEmail({ to, token, expiresAt, email }: Ver
   const origin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
   // Frontend page will handle POST /api/auth/verify
   const link = `${origin.replace(/\/$/, '')}/verify?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
-  const subject = 'Your K-Golf sign-in link';
+  const subject = 'Your K one Golf sign-in link';
   const text = `Sign in: ${link}\n\nExpires: ${expiresAt.toISOString()}\nIf you did not request this, ignore.`;
-  const html = `<!doctype html><html><body style=\"font-family:system-ui,sans-serif\"><h2>K-Golf Sign-In</h2><p>Click the button below to sign in. Expires in 15 minutes.</p><p><a href=\"${link}\" style=\"display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px\">Verify & Sign In</a></p><p style=\"font-size:12px;color:#555\">If the button doesn't work, use this URL:<br>${link}</p></body></html>`;
+  const html = `<!doctype html><html><body style="font-family:system-ui,sans-serif"><h2>K one Golf Sign-In</h2><p>Click the button below to sign in. Expires in 15 minutes.</p><p><a href="${link}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px">Verify & Sign In</a></p><p style="font-size:12px;color:#555">If the button doesn't work, use this URL:<br>${link}</p></body></html>`;
   const transport = getTransport();
   if (!transport) {
     console.log(`[email:dev-log] to=${to} token=${token} link=${link}`);
     return;
   }
-  await transport.sendMail({ from: process.env.EMAIL_FROM || 'K-Golf <no-reply@konegolf.ca>', to, subject, text, html });
+  await transport.sendMail({ from: process.env.EMAIL_FROM || 'K one Golf <no-reply@konegolf.ca>', to, subject, text, html });
 }
 
 /**
@@ -76,13 +76,13 @@ function generateReceiptHTML(receipt: ReceiptData): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>K-Golf Receipt</title>
+  <title>K one Golf Receipt</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%); padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0;">
-      <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 700;">K-GOLF</h1>
+      <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 700;">K ONE GOLF</h1>
       <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Premium Screen Golf</p>
     </div>
     
@@ -175,7 +175,7 @@ function generateReceiptHTML(receipt: ReceiptData): string {
         <p style="margin: 0; color: #0f172a; font-size: 14px; font-weight: 600;">${receipt.business.name}</p>
         <p style="margin: 4px 0 0 0; color: #64748b; font-size: 12px;">${receipt.business.address}</p>
         <p style="margin: 4px 0 0 0; color: #64748b; font-size: 12px;">${receipt.business.phone}</p>
-        <p style="margin: 16px 0 0 0; color: #94a3b8; font-size: 11px;">Thank you for choosing K-Golf!</p>
+        <p style="margin: 16px 0 0 0; color: #94a3b8; font-size: 11px;">Thank you for choosing K one Golf!</p>
       </div>
     </div>
   </div>
@@ -188,10 +188,10 @@ function generateReceiptHTML(receipt: ReceiptData): string {
  * Send receipt to customer via email
  */
 export async function sendReceiptEmail({ to, receipt }: ReceiptEmailParams) {
-  const subject = `K-Golf Receipt - ${receipt.receiptNumber}`;
+  const subject = `K one Golf Receipt - ${receipt.receiptNumber}`;
   const html = generateReceiptHTML(receipt);
   const text = `
-K-Golf Receipt
+K one Golf Receipt
 ${receipt.receiptNumber}
 
 Customer: ${receipt.customer.name}
@@ -226,7 +226,7 @@ ${receipt.business.phone}
   }
 
   await transport.sendMail({
-    from: process.env.EMAIL_FROM || 'K-Golf <no-reply@konegolf.ca>',
+    from: process.env.EMAIL_FROM || 'K one Golf <no-reply@konegolf.ca>',
     to,
     subject,
     text,
