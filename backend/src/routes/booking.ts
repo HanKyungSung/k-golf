@@ -366,8 +366,8 @@ router.get('/availability', async (req, res) => {
 
   // Derive open/close from room minutes
   const minutesToHM = (mins: number) => ({ h: Math.floor(mins / 60), m: mins % 60 });
-  const { h: openH, m: openM } = minutesToHM(room.openMinutes ?? 540);
-  const { h: closeH, m: closeM } = minutesToHM(room.closeMinutes ?? 1140);
+  const { h: openH, m: openM } = minutesToHM(room.openMinutes ?? 600);
+  const { h: closeH, m: closeM } = minutesToHM(room.closeMinutes ?? 1440);
   const dayOpen = makeTime(openH, openM);
   const dayClose = makeTime(closeH, closeM);
   if (!(dayClose.getTime() > dayOpen.getTime())) return res.status(500).json({ error: 'Invalid room operating window' });
@@ -394,8 +394,8 @@ router.get('/availability', async (req, res) => {
     meta: {
       roomId,
       date: dateStr,
-  openMinutes: room.openMinutes ?? 540,
-  closeMinutes: room.closeMinutes ?? 1140,
+  openMinutes: room.openMinutes ?? 600,
+  closeMinutes: room.closeMinutes ?? 1440,
   status: room.status ?? 'ACTIVE',
       slotMinutes,
       hours,

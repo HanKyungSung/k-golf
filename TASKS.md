@@ -23,10 +23,6 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 ## Personal note (Do not touch)
 
 ### 🔄 Ongoing Tasks
-- [ ] **Replace Gmail Account for Email Sending**
-  - Current: kgolf.general@gmail.com
-  - Need to: Create new Gmail account and app password for konegolf.ca domain
-  - Update: GMAIL_USER and GMAIL_APP_PASSWORD in server .env.production
 - [ ] **Enable DigitalOcean Droplet Backups** 🔴 HIGH PRIORITY
   - [ ] Navigate to DigitalOcean → Droplets → k-golf (147.182.215.135)
   - [ ] Enable Weekly Automatic Backups (~20% of droplet cost)
@@ -36,9 +32,8 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - **Why:** No backups currently enabled - critical for production system
 
 ### 🔄 Ongoing Tasks
-- Update the pictures on landing page
+- Make booking page only available for login users.
 - Emailing service. like confirm booking etc.
-- Check the email can be forward without buying a new google account.
 - Ask no cleaning time between bookings.
 - The coupon. like every 30 times visit, free hours etc.
 - When pay button clicks
@@ -48,6 +43,7 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - phone number duplication
   - If that happens how user can find the email address associate with it?
   - when user sign up we should link up all bookings with associated phone number.
+- Sync up with the SNS to share the experiences.
 
 - **Setup Gmail "Send As" for k-golf.ca domain** 🔄 FUTURE TASK
   - Create email account on Postfix server (noreply@k-golf.ca)
@@ -56,6 +52,25 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
+## 🎉 Recently Completed (2025-12-31)
+- [x] Updated operating hours from 9AM-7PM to 10AM-12AM across system
+  - [x] Updated seed files with new openMinutes (600) and closeMinutes (1440)
+  - [x] Updated booking validation to use new hours
+  - [x] Updated frontend labels and timeline views
+  - [x] Migrated database rooms in both local and production
+- [x] Implemented smart TimePicker with duration-aware time filtering
+  - [x] Added maxDurationHours prop to prevent bookings past closing time
+  - [x] Fixed midnight display bug (now shows "12 AM" instead of "12 PM")
+  - [x] Dynamic time options based on booking duration (e.g., 1 hour max 11PM, 4 hours max 8PM)
+- [x] Updated POS admin dashboard timeline view to match customer booking (10AM-12AM)
+- [x] Removed auto-filled time in POS booking modal (now starts empty like customer booking)
+- [x] Updated all room images with compressed photos (room1-min.jpeg through room4-min.jpeg)
+- [x] Updated Contact section with correct business information (address, phone, hours)
+- [x] Removed Virtual Tour button from landing page
+- [x] Commented out newsletter section in footer (TODO: revisit styling)
+- [x] Changed footer grid from 4 to 3 columns for better layout
+- [x] Created new Gmail account (konegolf.general@gmail.com) and updated production environment
+
 ## 🎉 Recently Completed (2025-12-30)
 - [x] Fixed booking price calculation bug (removed player multiplier, changed rate from $50 to $35/hour)
 - [x] Fixed Decimal type formatting in API responses (booking prices now display correctly)
@@ -63,6 +78,7 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 - [x] Domain migration from k-golf.ca to konegolf.ca (DNS, SSL, Nginx, environment variables)
 - [x] Rebranded all "K-Golf" references to "K one Golf" across frontend, backend, and POS apps
 - [x] Fixed theme system detection (forced dark mode instead of system preference)
+- [x] Updated landing page pricing from $50 to $35 per hour
 
 ## 🎉 Recently Completed (2025-12-19)
 - [x] Fixed critical production database connection pool issue with Prisma singleton pattern

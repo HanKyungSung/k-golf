@@ -7,6 +7,7 @@ interface TimePickerProps {
   className?: string;
   id?: string;
   'data-testid'?: string;
+  maxDurationHours?: number; // Maximum booking duration to limit available start times
 }
 
 export const TimePicker: React.FC<TimePickerProps> = ({
@@ -15,9 +16,10 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   className = '',
   id,
   'data-testid': dataTestId,
+  maxDurationHours = 1,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [tempTime, setTempTime] = useState(value || '09:00');
+  const [tempTime, setTempTime] = useState(value || '10:00');
   const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   };
 
   const handleCancel = () => {
-    setTempTime(value || '09:00');
+    setTempTime(value || '10:00');
     setIsOpen(false);
   };
 
@@ -59,12 +61,18 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     return `${displayHour}:${m} ${period}`;
   };
 
-  // Generate hour options (0-23)
-  const hourOptions = Array.from({ length: 24 }, (_, i) => {
-    const hour = i.toString().padStart(2, '0');
-    const displayHour = i === 0 ? 12 : i > 12 ? i - 12 : i;
-    const period = i >= 12 ? 'PM' : 'AM';
-    return { value: hour, label: `${displayHour} ${period}` };
+  // Generate hour options (10-24 for 10AM-12AM operating hours)
+  // Filter based on maxDurationHours to ensure booking doesn't go past 12AM (hour 24)
+  const hourOptions = Array.from({ length: 15 }, (_, i) => {
+    const hour = i + 10; // Start at 10 (10AM)
+    const hourValue = hour === 24 ? '00' : hour.toString().padStart(2, '0');
+    const displayHour = hour === 24 ? 12 : hour > 12 ? hour - 12 : hour;
+    const period = hour === 24 || hour < 12 ? 'AM' : 'PM';
+    return { value: hourValue, label: `${displayHour} ${period}` };
+  }).filter((opt) => {
+    // Only show hours where startTime + duration <= 24:00 (midnight)
+    const hour = opt.value === '00' ? 24 : parseInt(opt.value, 10);
+    return hour + maxDurationHours <= 24;
   });
 
   // Generate minute options (0-59)

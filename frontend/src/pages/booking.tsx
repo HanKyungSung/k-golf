@@ -504,13 +504,14 @@ export default function BookingPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="start-time" className="text-white font-medium">
-                        Start Time (9:00 AM - 10:00 PM)
+                        Start Time (10:00 AM - 12:00 AM)
                       </Label>
                       <TimePicker
                         id="start-time"
                         value={startTime}
                         onChange={(value) => setStartTime(value)}
                         className="bg-slate-700/50 border-slate-600 text-white"
+                        maxDurationHours={parseInt(numberOfPlayers, 10)}
                       />
                     </div>
 
@@ -553,17 +554,19 @@ export default function BookingPage() {
                   <div className="relative">
                     {/* Timeline */}
                     <div className="flex items-center mb-4">
-                      <div className="text-xs text-slate-500 w-16">9 AM</div>
+                      <div className="text-xs text-slate-500 w-16">10 AM</div>
                       <div className="flex-1 h-12 bg-slate-900/50 rounded-lg relative border border-slate-700 overflow-hidden">
                         {/* Hour markers */}
-                        {Array.from({ length: 14 }).map((_, i) => (
+                        {Array.from({ length: 15 }).map((_, i) => (
                           <div
                             key={i}
                             className="absolute top-0 bottom-0 border-l border-slate-700/50"
-                            style={{ left: `${(i / 13) * 100}%` }}
+                            style={{ left: `${(i / 14) * 100}%` }}
                           >
-                            {i < 13 && (
-                              <span className="absolute -top-5 -left-3 text-[10px] text-slate-600">{9 + i}</span>
+                            {i < 14 && (
+                              <span className="absolute -top-5 -left-3 text-[10px] text-slate-600">
+                                {i === 0 ? '10' : (10 + i) > 12 ? (10 + i - 12) : (10 + i)}
+                              </span>
                             )}
                           </div>
                         ))}
@@ -572,10 +575,10 @@ export default function BookingPage() {
                         {timelineBookings.map((booking) => {
                           const [startHour, startMin] = booking.startTime.split(":").map(Number);
                           const [endHour, endMin] = booking.endTime.split(":").map(Number);
-                          const startMinutes = (startHour - 9) * 60 + startMin;
-                          const endMinutes = (endHour - 9) * 60 + endMin;
+                          const startMinutes = (startHour - 10) * 60 + startMin;
+                          const endMinutes = endHour === 0 ? (24 - 10) * 60 + endMin : (endHour - 10) * 60 + endMin;
                           const duration = endMinutes - startMinutes;
-                          const totalMinutes = 13 * 60;
+                          const totalMinutes = 14 * 60;
                           const left = (startMinutes / totalMinutes) * 100;
                           const width = (duration / totalMinutes) * 100;
 
@@ -599,11 +602,11 @@ export default function BookingPage() {
                           (() => {
                             const [startHour, startMin] = startTime.split(":").map(Number);
                             const [endHour, endMin] = endTime.split(":").map(Number);
-                            if (startHour < 9 || endHour > 22) return null;
-                            const startMinutes = (startHour - 9) * 60 + startMin;
-                            const endMinutes = (endHour - 9) * 60 + endMin;
+                            if (startHour < 10 || (endHour > 0 && endHour < 10)) return null;
+                            const startMinutes = (startHour - 10) * 60 + startMin;
+                            const endMinutes = endHour === 0 ? (24 - 10) * 60 + endMin : (endHour - 10) * 60 + endMin;
                             const duration = endMinutes - startMinutes;
-                            const totalMinutes = 13 * 60;
+                            const totalMinutes = 14 * 60;
                             const left = (startMinutes / totalMinutes) * 100;
                             const width = (duration / totalMinutes) * 100;
                             const available = canBook;
@@ -631,7 +634,7 @@ export default function BookingPage() {
                             );
                           })()}
                       </div>
-                      <div className="text-xs text-slate-500 w-16 text-right">10 PM</div>
+                      <div className="text-xs text-slate-500 w-16 text-right">12 AM</div>
                     </div>
 
                     {/* Legend */}

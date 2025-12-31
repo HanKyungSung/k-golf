@@ -692,8 +692,8 @@ interface TimelineViewProps {
 
 function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCurrentWeekStart }: TimelineViewProps) {
   const navigate = useNavigate();
-  const dayStart = 0 * 60; // Midnight (0:00)
-  const dayEnd = 24 * 60;  // Next midnight (24:00)
+  const dayStart = 10 * 60; // 10:00 AM
+  const dayEnd = 24 * 60;   // Midnight (12:00 AM next day)
   const totalMinutes = dayEnd - dayStart;
 
   // Track current time for real-time bar
@@ -758,8 +758,11 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
     const currentHour = currentTime.getHours();
     const currentMinutes = currentTime.getMinutes();
     
+    // Only show if within operating hours (10AM - 12AM)
+    if (currentHour < 10) return null;
+    
     const currentTotalMinutes = currentHour * 60 + currentMinutes;
-    const leftPct = (currentTotalMinutes / totalMinutes) * 100;
+    const leftPct = ((currentTotalMinutes - dayStart) / totalMinutes) * 100;
     
     return leftPct;
   };
@@ -818,10 +821,10 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
                 <div className="flex items-start gap-3">
                   <div className="min-w-[90px]"></div>
                   <div className="flex-1 flex">
-                    {Array.from({ length: 24 }, (_, i) => {
-                      const hour = i;
-                      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-                      const period = hour < 12 ? 'A' : 'P';
+                    {Array.from({ length: 15 }, (_, i) => {
+                      const hour = i + 10; // Start at 10 AM
+                      const displayHour = hour === 24 ? 12 : hour > 12 ? hour - 12 : hour;
+                      const period = hour < 12 || hour === 24 ? 'A' : 'P';
                       return (
                         <div key={i} className="flex-1 text-left">
                           <span className="text-[9px] text-slate-500 pl-1">{displayHour}{period}</span>
@@ -851,7 +854,7 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
                       <div className="flex-1 relative h-14 bg-slate-700/30 rounded-lg border border-slate-700 overflow-hidden">
                         {/* Hour Grid Lines */}
                         <div className="absolute inset-0 flex">
-                          {Array.from({ length: 24 }, (_, i) => (
+                          {Array.from({ length: 15 }, (_, i) => (
                             <div key={i} className="flex-1 border-r border-slate-700/40 last:border-r-0"></div>
                           ))}
                         </div>

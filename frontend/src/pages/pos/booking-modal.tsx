@@ -56,7 +56,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
     }
   }, [isOpen, preselectedRoomId]);
 
-  // Initialize date to today and time to current hour
+  // Initialize date to today
   useEffect(() => {
     if (isOpen && !date) {
       const now = new Date();
@@ -64,9 +64,6 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const day = String(now.getDate()).padStart(2, '0');
       setDate(`${year}-${month}-${day}`);
-      
-      const hour = String(now.getHours()).padStart(2, '0');
-      setTime(`${hour}:00`);
     }
   }, [isOpen, date]);
 
@@ -434,6 +431,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
                       data-testid="booking-time"
                       value={time}
                       onChange={(value) => setTime(value)}
+                      maxDurationHours={duration}
                     />
                   </div>
                 </div>
