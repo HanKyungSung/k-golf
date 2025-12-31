@@ -32,7 +32,7 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - **Why:** No backups currently enabled - critical for production system
 
 ### 🔄 Ongoing Tasks
-- Emailing service. like confirm booking etc.
+### 🔄 Ongoing Tasks
 - Ask no cleaning time between bookings.
 - The coupon. like every 30 times visit, free hours etc.
 - When pay button clicks
@@ -44,6 +44,9 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - when user sign up we should link up all bookings with associated phone number.
 - Sync up with the SNS to share the experiences.
 - Display remaining time on Room status
+- Send us a message from landing page.
+- User search functionality.
+  - baed on email/phone/name (phone is probably the most reliable)
 
 - **Setup Gmail "Send As" for k-golf.ca domain** 🔄 FUTURE TASK
   - Create email account on Postfix server (noreply@k-golf.ca)
@@ -53,6 +56,12 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
 ## 🎉 Recently Completed (2025-12-31)
+- [x] Implemented booking confirmation emails with ICS calendar attachments
+  - [x] Send professional confirmation emails after booking creation
+  - [x] Include ICS calendar file for easy calendar import
+  - [x] Created dedicated booking confirmation page with clean UX
+  - [x] Shows all booking details, location, and next steps
+  - [x] Replaced alert popup with redirect to confirmation page
 - [x] Implemented login requirement for online bookings with seamless UX
   - [x] Users can browse booking page without login
   - [x] Login/signup required only when clicking "Confirm Booking"

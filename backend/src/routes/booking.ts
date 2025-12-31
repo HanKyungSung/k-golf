@@ -7,6 +7,7 @@ import * as invoiceRepo from '../repositories/invoiceRepo';
 import { requireAuth } from '../middleware/requireAuth';
 import { UserRole } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { sendBookingConfirmation } from '../services/emailService';
 
 const router = Router();
 
@@ -325,6 +326,31 @@ router.post('/', requireAuth, async (req, res) => {
       price,
       bookingSource: 'ONLINE', // Web frontend bookings are always ONLINE
     });
+    
+    // Send confirmation email with calendar attachment
+    const userEmail = (req.user as any).email;
+    if (userEmail) {
+      try {
+        const dateStr = start.toISOString().split('T')[0]; // YYYY-MM-DD
+        await sendBookingConfirmation({
+          to: userEmail,
+          customerName: (req.user as any).name || 'Guest',
+          bookingId: booking.id,
+          roomName: room.name,
+          date: dateStr,
+          startTime: start,
+          endTime: end,
+          players,
+          hours,
+          price: price.toFixed(2),
+        });
+        console.log(`[Booking] Confirmation email sent to ${userEmail}`);
+      } catch (emailError) {
+        // Log but don't fail the booking if email fails
+        console.error('[Booking] Failed to send confirmation email:', emailError);
+      }
+    }
+    
     res.status(201).json({ booking: presentBooking(booking) });
   } catch (e: any) {
     if (e.code === 'P2002') { // unique constraint

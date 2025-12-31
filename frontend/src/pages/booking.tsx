@@ -282,10 +282,9 @@ export default function BookingPage() {
         alert(err?.message || err?.error || "Failed to create booking");
         return;
       }
-      alert(
-        `Booking confirmed!\nRoom: ${selectedRoomData?.name}\nDate: ${selectedDate?.toDateString()}\nTime: ${startTime} - ${endTime}\nPlayers: ${numberOfPlayers}`
-      );
-      navigate("/dashboard");
+      const result = await res.json();
+      // Redirect to confirmation page instead of showing alert
+      navigate(`/booking/confirmation/${result.booking.id}`);
     } catch (error) {
       console.error('Booking error:', error);
       alert("Network error while creating booking");
