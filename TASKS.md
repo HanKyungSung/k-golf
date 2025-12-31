@@ -36,7 +36,8 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - **Why:** No backups currently enabled - critical for production system
 
 ### 🔄 Ongoing Tasks
-- update the pictures on landing page
+- Update the pictures on landing page
+- Emailing service. like confirm booking etc.
 - Check the email can be forward without buying a new google account.
 - Ask no cleaning time between bookings.
 - The coupon. like every 30 times visit, free hours etc.
@@ -54,6 +55,14 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Set up Gmail "Send As" with k-golf.ca SMTP credentials
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
+
+## 🎉 Recently Completed (2025-12-30)
+- [x] Fixed booking price calculation bug (removed player multiplier, changed rate from $50 to $35/hour)
+- [x] Fixed Decimal type formatting in API responses (booking prices now display correctly)
+- [x] Migrated all existing bookings to correct pricing (168 bookings in production, 146 in local)
+- [x] Domain migration from k-golf.ca to konegolf.ca (DNS, SSL, Nginx, environment variables)
+- [x] Rebranded all "K-Golf" references to "K one Golf" across frontend, backend, and POS apps
+- [x] Fixed theme system detection (forced dark mode instead of system preference)
 
 ## 🎉 Recently Completed (2025-12-19)
 - [x] Fixed critical production database connection pool issue with Prisma singleton pattern

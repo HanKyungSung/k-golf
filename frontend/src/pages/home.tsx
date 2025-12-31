@@ -204,8 +204,8 @@ export default function HomePage() {
                   <div className="text-slate-400">Premium Rooms</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-amber-400 mb-2">$50</div>
-                  <div className="text-slate-400">Per Person/Hour</div>
+                  <div className="text-3xl font-bold text-amber-400 mb-2">$35</div>
+                  <div className="text-slate-400">Per Hour</div>
                 </div>
               </div>
             </div>
@@ -239,8 +239,8 @@ export default function HomePage() {
               <CardContent className="p-8 text-center">
                 <div className="mb-8">
                   <h4 className="text-2xl font-semibold text-white mb-4">Premium Screen Golf Experience</h4>
-                  <div className="text-4xl font-bold text-amber-400 mb-2">$50</div>
-                  <div className="text-slate-400 text-lg">per person/hour</div>
+                  <div className="text-4xl font-bold text-amber-400 mb-2">$35</div>
+                  <div className="text-slate-400 text-lg">per hour</div>
                   <div className="text-sm text-slate-500 mt-2">Max 4 players per room</div>
                 </div>
 
@@ -324,21 +324,21 @@ export default function HomePage() {
             <div className="bg-slate-800/30 border border-slate-700 rounded-xl p-6 max-w-3xl mx-auto">
               <h4 className="text-lg font-semibold text-white mb-3">How Pricing Works</h4>
               <p className="text-slate-300 mb-4">
-                Simple and transparent - each person gets 1 full hour of screen golf time. All 4 rooms offer the same
+                Simple and transparent - pay by the hour, not by the person. All 4 rooms offer the same
                 premium experience.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div className="bg-slate-900/50 rounded-lg p-4">
-                  <div className="text-amber-400 font-semibold">1 Player</div>
-                  <div className="text-slate-400">1 hour x $50 = $50</div>
+                  <div className="text-amber-400 font-semibold">1 Hour</div>
+                  <div className="text-slate-400">1 hour x $35 = $35</div>
                 </div>
                 <div className="bg-slate-900/50 rounded-lg p-4">
-                  <div className="text-amber-400 font-semibold">3 Players</div>
-                  <div className="text-slate-400">3 hours x $50 = $150</div>
+                  <div className="text-amber-400 font-semibold">3 Hours</div>
+                  <div className="text-slate-400">3 hours x $35 = $105</div>
                 </div>
                 <div className="bg-slate-900/50 rounded-lg p-4">
-                  <div className="text-amber-400 font-semibold">4 Players</div>
-                  <div className="text-slate-400">4 hours x $50 = $200</div>
+                  <div className="text-amber-400 font-semibold">4 Hours</div>
+                  <div className="text-slate-400">4 hours x $35 = $140</div>
                 </div>
               </div>
             </div>
