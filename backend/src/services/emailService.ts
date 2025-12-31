@@ -339,9 +339,13 @@ function generateBookingConfirmationHTML(params: BookingConfirmationParams): str
     <div style="background: white; padding: 32px 24px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
       <!-- Success Message -->
       <div style="text-align: center; padding-bottom: 24px; border-bottom: 2px solid #f1f5f9;">
-        <div style="width: 64px; height: 64px; margin: 0 auto 16px; background: #dcfce7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-          <span style="font-size: 32px;">✓</span>
-        </div>
+        <table style="width: 64px; height: 64px; margin: 0 auto 16px; background: #dcfce7; border-radius: 50%;">
+          <tr>
+            <td style="text-align: center; vertical-align: middle;">
+              <span style="font-size: 32px; line-height: 1; color: #15803d;">✓</span>
+            </td>
+          </tr>
+        </table>
         <h2 style="margin: 0; color: #0f172a; font-size: 24px; font-weight: 700;">Booking Confirmed!</h2>
         <p style="margin: 8px 0 0 0; color: #64748b; font-size: 14px;">We're excited to see you, ${customerName}!</p>
       </div>
