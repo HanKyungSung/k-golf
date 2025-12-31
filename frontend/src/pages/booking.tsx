@@ -52,10 +52,10 @@ type ApiSlot = { startIso: string; endIso: string; available: boolean };
 
 // Static room templates to preserve UI names/images
 const DISPLAY_ROOM_TEMPLATES: Array<{ name: string; image: string }> = [
-  { name: "Room 1", image: "/golf-simulator-room.png" },
-  { name: "Room 2", image: "/luxury-golf-simulator-room.png" },
-  { name: "Room 3", image: "/large-golf-simulator-suite.png" },
-  { name: "Room 4", image: "/golf-simulator-room.png" },
+  { name: "Room 1", image: "/room1-min.jpeg" },
+  { name: "Room 2", image: "/room2-min.jpeg" },
+  { name: "Room 3", image: "/room3-min.jpeg" },
+  { name: "Room 4", image: "/room4-min.jpeg" },
 ];
 
 export default function BookingPage() {

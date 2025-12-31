@@ -99,13 +99,6 @@ export default function HomePage() {
                   Reserve Your Suite
                 </Button>
               </Link>
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-slate-600 text-slate-300 hover:bg-slate-800 hover:border-amber-500/50 text-lg px-10 py-4 bg-slate-900/50 backdrop-blur-sm"
-              >
-                Virtual Tour
-              </Button>
             </div>
           </div>
         </div>
@@ -212,7 +205,7 @@ export default function HomePage() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-2xl blur-3xl"></div>
               <img
-                src="/placeholder-oamv5.png"
+                src="/room1-min.jpeg"
                 alt="Luxury Golf Simulator"
                 className="relative rounded-2xl shadow-2xl"
               />
@@ -377,7 +370,7 @@ export default function HomePage() {
                   </div>
                   <div>
                     <div className="text-white font-semibold">Location</div>
-                    <div className="text-slate-400">123 Golf Plaza, Premium District</div>
+                    <div className="text-slate-400">5 Keltic Dr #6, Sydney, NS B1S 1P4</div>
                   </div>
                 </div>
 
@@ -394,7 +387,7 @@ export default function HomePage() {
                   </div>
                   <div>
                     <div className="text-white font-semibold">Phone</div>
-                    <div className="text-slate-400">+1 (555) 123-GOLF</div>
+                    <div className="text-slate-400">(902) 270-2259</div>
                   </div>
                 </div>
 
@@ -411,7 +404,7 @@ export default function HomePage() {
                   </div>
                   <div>
                     <div className="text-white font-semibold">Hours</div>
-                    <div className="text-slate-400">Mon-Sun: 6AM - 12AM</div>
+                    <div className="text-slate-400">Mon-Sun: 10:00 AM - 12:00 AM</div>
                   </div>
                 </div>
               </div>
