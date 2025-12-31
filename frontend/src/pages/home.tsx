@@ -461,7 +461,8 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-slate-900 border-t border-slate-800 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* TODO: Fix column widths for better layout balance */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent mb-4">
                 K one Golf
@@ -535,6 +536,7 @@ export default function HomePage() {
                 </li>
               </ul>
             </div>
+            {/* TODO: Newsletter section - revisit styling and layout
             <div>
               <h5 className="text-white font-semibold mb-4">Newsletter</h5>
               <p className="text-slate-400 mb-4">Stay updated with our latest offers and events.</p>
@@ -549,9 +551,10 @@ export default function HomePage() {
                 </Button>
               </div>
             </div>
+            */}
           </div>
           <div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-400">
-            <p>&copy; 2024 K one Golf. All rights reserved. Premium screen golf experience.</p>
+            <p>&copy; 2026 K one Golf. All rights reserved. Premium screen golf experience.</p>
           </div>
         </div>
       </footer>
