@@ -32,7 +32,6 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - **Why:** No backups currently enabled - critical for production system
 
 ### 🔄 Ongoing Tasks
-- Make booking page only available for login users.
 - Emailing service. like confirm booking etc.
 - Ask no cleaning time between bookings.
 - The coupon. like every 30 times visit, free hours etc.
@@ -44,6 +43,7 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - If that happens how user can find the email address associate with it?
   - when user sign up we should link up all bookings with associated phone number.
 - Sync up with the SNS to share the experiences.
+- Display remaining time on Room status
 
 - **Setup Gmail "Send As" for k-golf.ca domain** 🔄 FUTURE TASK
   - Create email account on Postfix server (noreply@k-golf.ca)
@@ -53,6 +53,12 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
 ## 🎉 Recently Completed (2025-12-31)
+- [x] Implemented login requirement for online bookings with seamless UX
+  - [x] Users can browse booking page without login
+  - [x] Login/signup required only when clicking "Confirm Booking"
+  - [x] Booking selections saved to sessionStorage before redirect
+  - [x] Selections automatically restored after login or email verification
+  - [x] Works for both login and signup → verification flows
 - [x] Updated operating hours from 9AM-7PM to 10AM-12AM across system
   - [x] Updated seed files with new openMinutes (600) and closeMinutes (1440)
   - [x] Updated booking validation to use new hours

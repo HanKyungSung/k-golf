@@ -87,6 +87,13 @@ export default function SignUpPage() {
             {sent ? (
               <div className="space-y-4 text-slate-300">
                 <p className="text-sm">We sent a verification link to <span className="font-medium text-white">{sent.email}</span>. Check your inbox (and spam) and click the link within 15 minutes to activate your account.</p>
+                {sessionStorage.getItem('pendingBooking') && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                    <p className="text-sm text-amber-400">
+                      ✓ Your booking selections have been saved. After verifying your email, log in to complete your booking.
+                    </p>
+                  </div>
+                )}
                 <div className="flex flex-col gap-3">
                   <Button type="button" onClick={() => navigate('/')} variant="outline" className="w-full border-slate-600 text-slate-200">Go to Home</Button>
                   <Button

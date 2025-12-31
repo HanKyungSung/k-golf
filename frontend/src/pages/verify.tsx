@@ -38,7 +38,13 @@ export default function VerifyPage() {
       setState('success')
       setMessage('Email verified. Signing you in...')
       setTimeout(() => {
-        window.location.href = '/'
+        // Check if user has pending booking, redirect to booking page instead of home
+        const hasPendingBooking = sessionStorage.getItem('pendingBooking');
+        if (hasPendingBooking) {
+          window.location.href = '/booking';
+        } else {
+          window.location.href = '/';
+        }
       }, 1200)
     } catch (e: any) {
       setState('error')
@@ -83,13 +89,24 @@ export default function VerifyPage() {
               <div className="flex flex-col items-center gap-4 py-6 text-slate-200">
                 <CheckCircle2 className="h-10 w-10 text-emerald-400" />
                 <p className="text-sm text-center">{message}</p>
-                <p className="text-xs text-slate-500">Redirecting to home...</p>
+                {sessionStorage.getItem('pendingBooking') ? (
+                  <p className="text-xs text-slate-500">Redirecting to complete your booking...</p>
+                ) : (
+                  <p className="text-xs text-slate-500">Redirecting to home...</p>
+                )}
                 <Button
                   type="button"
                   className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"
-                  onClick={() => (window.location.href = '/')}
+                  onClick={() => {
+                    const hasPendingBooking = sessionStorage.getItem('pendingBooking');
+                    if (hasPendingBooking) {
+                      window.location.href = '/booking';
+                    } else {
+                      window.location.href = '/';
+                    }
+                  }}
                 >
-                  Go to Home
+                  {sessionStorage.getItem('pendingBooking') ? 'Go to Booking' : 'Go to Home'}
                 </Button>
               </div>
             )}

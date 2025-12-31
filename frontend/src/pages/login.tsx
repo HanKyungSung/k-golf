@@ -24,8 +24,14 @@ export default function LoginPage() {
 
     try {
       await login(email, password)
-      // Always redirect to /dashboard - it will show different content based on role
-      navigate('/dashboard')
+      // Check if user has pending booking, redirect back to booking page
+      const hasPendingBooking = sessionStorage.getItem('pendingBooking');
+      if (hasPendingBooking) {
+        navigate('/booking');
+      } else {
+        // Always redirect to /dashboard - it will show different content based on role
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error("Login failed:", error)
       const msg = error instanceof Error ? error.message : 'Login failed'
@@ -47,7 +53,13 @@ export default function LoginPage() {
     setErrorText(null)
     try {
       await loginWithGoogle()
-      navigate('/dashboard')
+      // Check if user has pending booking, redirect back to booking page
+      const hasPendingBooking = sessionStorage.getItem('pendingBooking');
+      if (hasPendingBooking) {
+        navigate('/booking');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Google login failed:', error)
       const msg = error instanceof Error ? error.message : 'Google login failed'

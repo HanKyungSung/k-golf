@@ -76,6 +76,24 @@ export default function BookingPage() {
   const [loadingRooms, setLoadingRooms] = useState(false);
   const selectedBackendId = rooms.find((r) => r.id === selectedRoom)?.backendId;
 
+  // Restore saved booking selections from sessionStorage on mount
+  useEffect(() => {
+    const saved = sessionStorage.getItem('pendingBooking');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.selectedDate) setSelectedDate(new Date(data.selectedDate));
+        if (data.selectedRoom) setSelectedRoom(data.selectedRoom);
+        if (data.startTime) setStartTime(data.startTime);
+        if (data.numberOfPlayers) setNumberOfPlayers(data.numberOfPlayers);
+        // Clear after restoring
+        sessionStorage.removeItem('pendingBooking');
+      } catch (e) {
+        console.error('Failed to restore booking selections:', e);
+      }
+    }
+  }, []);
+
   // Load rooms and build 4 display rooms with backend IDs
   useEffect(() => {
     const loadRooms = async () => {
@@ -224,6 +242,13 @@ export default function BookingPage() {
 
   const handleBooking = async () => {
     if (!user) {
+      // Save current selections to sessionStorage before redirecting to login
+      sessionStorage.setItem('pendingBooking', JSON.stringify({
+        selectedDate: selectedDate?.toISOString(),
+        selectedRoom,
+        startTime,
+        numberOfPlayers
+      }));
       navigate("/login");
       return;
     }
