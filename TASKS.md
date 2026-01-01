@@ -55,6 +55,12 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
+## 🎉 Recently Completed (2026-01-01)
+- [x] Sorted customer dashboard bookings by newest first (descending order by start time)
+- [x] Updated all room images to use high-quality versions (room1.jpeg, room2.jpeg, etc.)
+  - [x] Replaced minified versions (-min.jpeg) with full-quality images
+  - [x] Applied to both booking page and home page
+
 ## 🎉 Recently Completed (2025-12-31)
 - [x] Implemented booking confirmation emails with ICS calendar attachments
   - [x] Send professional confirmation emails after booking creation
@@ -79,7 +85,6 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - [x] Dynamic time options based on booking duration (e.g., 1 hour max 11PM, 4 hours max 8PM)
 - [x] Updated POS admin dashboard timeline view to match customer booking (10AM-12AM)
 - [x] Removed auto-filled time in POS booking modal (now starts empty like customer booking)
-- [x] Updated all room images with compressed photos (room1-min.jpeg through room4-min.jpeg)
 - [x] Updated Contact section with correct business information (address, phone, hours)
 - [x] Removed Virtual Tour button from landing page
 - [x] Commented out newsletter section in footer (TODO: revisit styling)
