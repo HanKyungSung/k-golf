@@ -53,7 +53,10 @@ const CustomerDashboard = () => {
         ])
         if (mineRes.ok) {
           const data = await mineRes.json()
-          setBookings(Array.isArray(data.bookings) ? data.bookings : [])
+          const bookingsArray = Array.isArray(data.bookings) ? data.bookings : []
+          // Sort by startTime descending (newest first)
+          bookingsArray.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+          setBookings(bookingsArray)
         } else {
           setBookings([])
         }
