@@ -205,7 +205,7 @@ export default function HomePage() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-2xl blur-3xl"></div>
               <img
-                src="/room1-min.jpeg"
+                src="/room1.jpeg"
                 alt="Luxury Golf Simulator"
                 className="relative rounded-2xl shadow-2xl"
               />
