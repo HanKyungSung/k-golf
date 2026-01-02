@@ -54,7 +54,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         working-directory: print-server
         run: |
-          npx pkg dist/server.js --targets node20-macos-arm64 --output kgolf-print-server-macos
+          npx pkg dist/server.js --targets node18-macos-arm64 --output kgolf-print-server-macos
           chmod +x kgolf-print-server-macos
           mkdir -p release
           mv kgolf-print-server-macos release/
@@ -64,7 +64,7 @@ jobs:
         working-directory: print-server
         shell: pwsh
         run: |
-          npx pkg dist/server.js --targets node20-win-x64 --output kgolf-print-server-win.exe
+          npx pkg dist/server.js --targets node18-win-x64 --output kgolf-print-server-win.exe
           New-Item -ItemType Directory -Force -Path release
           Move-Item kgolf-print-server-win.exe release/
 
@@ -72,7 +72,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         working-directory: print-server
         run: |
-          npx pkg dist/server.js --targets node20-linux-x64 --output kgolf-print-server-linux
+          npx pkg dist/server.js --targets node18-linux-x64 --output kgolf-print-server-linux
           chmod +x kgolf-print-server-linux
           mkdir -p release
           mv kgolf-print-server-linux release/

@@ -68,7 +68,7 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - [x] Receipt number uses invoice ID for seat receipts, booking ID for full receipts
 - [x] Created print-server release workflow with GitHub Actions
   - [x] Builds executables for Windows (x64), macOS (ARM64), and Linux (x64) on print-v* tags
-  - [x] Uses pkg to bundle with node20 runtime
+  - [x] Uses pkg to bundle with node18 runtime (node20 not yet supported by pkg)
   - [x] Creates GitHub releases with zip/tar.gz distributions
 - [x] Deprecated POS Electron app release workflow
   - [x] Disabled automatic builds on push (now manual only)
