@@ -1,0 +1,210 @@
+name: Print Server Release Build
+
+on:
+  push:
+    tags:
+      - 'print-v*' # Trigger on tags like print-v1.0.0
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    name: Build Print Server
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: macos
+            node: '20'
+          - os: windows-latest
+            target: win
+            node: '20'
+          - os: ubuntu-latest
+            target: linux
+            node: '20'
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install dependencies
+        working-directory: print-server
+        run: npm install
+
+      - name: Build TypeScript
+        working-directory: print-server
+        run: npm run build
+
+      - name: Create executable (macOS)
+        if: matrix.os == 'macos-latest'
+        working-directory: print-server
+        run: |
+          npx pkg dist/server.js --targets node20-macos-arm64 --output kgolf-print-server-macos
+          chmod +x kgolf-print-server-macos
+          mkdir -p release
+          mv kgolf-print-server-macos release/
+
+      - name: Create executable (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: print-server
+        shell: pwsh
+        run: |
+          npx pkg dist/server.js --targets node20-win-x64 --output kgolf-print-server-win.exe
+          New-Item -ItemType Directory -Force -Path release
+          Move-Item kgolf-print-server-win.exe release/
+
+      - name: Create executable (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: print-server
+        run: |
+          npx pkg dist/server.js --targets node20-linux-x64 --output kgolf-print-server-linux
+          chmod +x kgolf-print-server-linux
+          mkdir -p release
+          mv kgolf-print-server-linux release/
+
+      - name: Copy config and docs
+        working-directory: print-server
+        shell: bash
+        run: |
+          cp .env.example release/
+          cp config.json release/config.example.json
+          cp README.md release/
+          cp QUICKSTART_MACOS.md release/ || true
+          cp AUTO_DISCOVERY.md release/ || true
+
+      - name: Create distribution package
+        working-directory: print-server/release
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            7z a -tzip kgolf-print-server-${{ matrix.target }}.zip *
+          else
+            tar -czf kgolf-print-server-${{ matrix.target }}.tar.gz *
+          fi
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: print-server-${{ matrix.target }}
+          path: print-server/release/kgolf-print-server-${{ matrix.target }}.*
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/print-v') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "tag=print-v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/print-v}" >> $GITHUB_OUTPUT
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: print-server-macos
+          path: release-macos
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: print-server-win
+          path: release-windows
+
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: print-server-linux
+          path: release-linux
+
+      - name: Create Release Notes
+        id: release_notes
+        run: |
+          cat > release-notes.md << 'EOF'
+          # K-Golf Print Server v${{ steps.version.outputs.version }}
+          
+          ## Installation
+          
+          ### Windows
+          1. Download `kgolf-print-server-win.zip`
+          2. Extract to a folder (e.g., `C:\kgolf-print-server`)
+          3. Copy `.env.example` to `.env` and configure your settings
+          4. Run `kgolf-print-server-win.exe`
+          
+          ### macOS
+          1. Download `kgolf-print-server-macos.tar.gz`
+          2. Extract: `tar -xzf kgolf-print-server-macos.tar.gz`
+          3. Copy `.env.example` to `.env` and configure your settings
+          4. Run: `./kgolf-print-server-macos`
+          
+          ### Linux
+          1. Download `kgolf-print-server-linux.tar.gz`
+          2. Extract: `tar -xzf kgolf-print-server-linux.tar.gz`
+          3. Copy `.env.example` to `.env` and configure your settings
+          4. Run: `./kgolf-print-server-linux`
+          
+          ## Configuration
+          
+          Required environment variables in `.env`:
+          ```
+          BACKEND_WS_URL=wss://konegolf.ca
+          PRINTER_TYPE=network
+          PRINTER_IP=192.168.1.100
+          ```
+          
+          See README.md for full documentation.
+          
+          ## What's New
+          
+          - Thermal printer support (Epson, Star, etc.)
+          - WebSocket connection to backend
+          - Auto-reconnection on disconnect
+          - Printer auto-discovery
+          - Simulation mode for testing
+          EOF
+          
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          cat release-notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: K-Golf Print Server v${{ steps.version.outputs.version }}
+          body: ${{ steps.release_notes.outputs.body }}
+          files: |
+            release-macos/*.tar.gz
+            release-windows/*.zip
+            release-linux/*.tar.gz
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease || false }}
+          make_latest: true
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

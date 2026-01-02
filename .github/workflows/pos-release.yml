@@ -1,9 +1,8 @@
-name: POS Release Build
+name: POS Release Build (DEPRECATED)
 
+# DEPRECATED: POS Electron app is being phased out
+# This workflow is disabled but kept for reference
 on:
-  push:
-    tags:
-      - 'pos-v*' # Trigger on tags like pos-v0.1.0
   workflow_dispatch:
     inputs:
       version:
@@ -15,6 +14,9 @@ on:
         required: false
         type: boolean
         default: false
+  # push:
+  #   tags:
+  #     - 'pos-v*' # Trigger on tags like pos-v0.1.0
 
 jobs:
   build:
