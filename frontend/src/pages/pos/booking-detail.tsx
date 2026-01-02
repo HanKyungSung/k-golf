@@ -641,7 +641,8 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
           },
           credentials: 'include',
           body: JSON.stringify({
-            bookingId: bookingId
+            bookingId: bookingId,
+            seatIndex: receiptSeatIndex // Include seat index for seat-specific prints
           })
         });
         

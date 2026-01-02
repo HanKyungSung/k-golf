@@ -111,16 +111,6 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
     orderBy: { createdAt: 'asc' },
   });
 
-  // Calculate booking duration in hours
-  const startTime = new Date(booking.startTime);
-  const endTime = new Date(booking.endTime);
-  const durationMs = endTime.getTime() - startTime.getTime();
-  const durationHours = Math.round(durationMs / (1000 * 60 * 60));
-
-  // Get room rate (assuming $35/person/hour as standard)
-  const roomRatePerPersonPerHour = 35;
-  const roomChargeTotal = booking.players * roomRatePerPersonPerHour * durationHours;
-
   // Group orders by seat
   const seatOrders = new Map<number, typeof allOrders>();
   for (const order of allOrders) {
@@ -130,7 +120,7 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
     }
   }
 
-  // Build seat data
+  // Build seat data from orders
   const seats = Array.from(seatOrders.entries()).map(([seatIndex, orders]) => {
     const orderItems = orders.map((order) => ({
       name: order.menuItem?.name || 'Unknown Item',
@@ -148,27 +138,29 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
     };
   });
 
-  // Calculate totals
-  const foodBeverageSubtotal = seats.reduce((sum, seat) => sum + seat.subtotal, 0);
-  const totalSubtotal = roomChargeTotal + foodBeverageSubtotal;
+  // Calculate totals from invoices (which are already calculated and stored)
+  const totalSubtotal = invoices.reduce((sum, inv) => sum + Number(inv.subtotal), 0);
+  const totalTax = invoices.reduce((sum, inv) => sum + Number(inv.tax), 0);
+  const totalTip = invoices.reduce((sum, inv) => sum + Number(inv.tip || 0), 0);
+  const grandTotal = totalSubtotal + totalTax + totalTip;
 
-  // Get tax rate from global settings
+  // Get tax rate from first invoice (they should all have same rate)
   const taxRateSetting = await prisma.setting.findUnique({
     where: { key: 'global_tax_rate' }
   });
   const taxRate = taxRateSetting ? parseFloat(taxRateSetting.value) : 13;
-  const tax = (totalSubtotal * taxRate) / 100;
-
-  // Get tip from invoices (sum all tips)
-  const totalTip = invoices.reduce((sum, inv) => sum + Number(inv.tip || 0), 0);
-
-  const grandTotal = totalSubtotal + tax + totalTip;
 
   // Determine payment status and method
   const paidInvoices = invoices.filter((inv) => inv.status === 'PAID');
   const allPaid = invoices.length > 0 && paidInvoices.length === invoices.length;
   const paymentMethod = paidInvoices.length > 0 ? paidInvoices[0].paymentMethod : null;
   const paidAt = paidInvoices.length > 0 ? paidInvoices[0].paidAt : null;
+
+  // Calculate booking duration in hours
+  const startTime = new Date(booking.startTime);
+  const endTime = new Date(booking.endTime);
+  const durationMs = endTime.getTime() - startTime.getTime();
+  const durationHours = Math.round(durationMs / (1000 * 60 * 60));
 
   const receiptData: ReceiptData = {
     receiptNumber: generateReceiptNumber(undefined, booking.id),
@@ -191,22 +183,22 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
       duration: durationHours,
       room: {
         name: booking.room?.name || 'Unknown Room',
-        rate: roomRatePerPersonPerHour,
+        rate: 35, // Keep for display but not used in calculation
       },
       players: booking.players,
     },
     items: {
       roomCharge: {
-        description: `Room ${booking.room?.name || ''} - ${booking.players} player(s) × ${durationHours} hour(s)`,
-        quantity: booking.players * durationHours,
-        unitPrice: roomRatePerPersonPerHour,
-        total: roomChargeTotal,
+        description: '',
+        quantity: 0,
+        unitPrice: 0,
+        total: 0,
       },
       seats,
     },
     totals: {
       subtotal: totalSubtotal.toFixed(2),
-      tax: tax.toFixed(2),
+      tax: totalTax.toFixed(2),
       tip: totalTip.toFixed(2),
       grandTotal: grandTotal.toFixed(2),
       taxRate,
@@ -253,8 +245,9 @@ export async function getSeatReceiptData(bookingId: string, seatIndex: number): 
     receiptNumber: invoice ? invoice.id : generateReceiptNumber(undefined, bookingId),
     items: {
       roomCharge: {
-        ...fullReceipt.items.roomCharge,
-        // Don't include room charge in seat-specific receipt
+        description: '',
+        quantity: 0,
+        unitPrice: 0,
         total: 0,
       },
       seats: [seatData],

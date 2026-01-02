@@ -55,6 +55,30 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
+## 🎉 Recently Completed (2026-01-02)
+- [x] Fixed critical receipt calculation bug - receipts now use invoice totals from database
+  - [x] Removed incorrect room charge calculation (was multiplying by players incorrectly)
+  - [x] Verified hours are menu items in database (1hr=$35, 2hr=$70, 3hr=$105, 4hr=$140, 5hr=$175)
+  - [x] Changed receipt to sum invoice subtotals instead of calculating on-the-fly
+  - [x] Set roomCharge to empty object for backwards compatibility
+  - [x] System design confirmed: hours are ordered as menu items, invoices store calculated totals
+- [x] Implemented seat-specific thermal printing support
+  - [x] Added optional seatIndex parameter to print API endpoint
+  - [x] Updated frontend to send seatIndex when printing individual seat receipts
+  - [x] Receipt number uses invoice ID for seat receipts, booking ID for full receipts
+- [x] Created print-server release workflow with GitHub Actions
+  - [x] Builds executables for Windows (x64), macOS (ARM64), and Linux (x64) on print-v* tags
+  - [x] Uses pkg to bundle with node20 runtime
+  - [x] Creates GitHub releases with zip/tar.gz distributions
+- [x] Deprecated POS Electron app release workflow
+  - [x] Disabled automatic builds on push (now manual only)
+  - [x] Added deprecation notice to workflow file
+- [x] Implemented smart printer health checks
+  - [x] Health check runs every 60 seconds
+  - [x] Only logs when connection status changes (connected ↔ disconnected)
+  - [x] Automatic simulation mode when printer unavailable
+  - [x] Clean logs without noise
+
 ## 🎉 Recently Completed (2026-01-01)
 - [x] Sorted customer dashboard bookings by newest first (descending order by start time)
 - [x] Updated all room images to use high-quality versions (room1.jpeg, room2.jpeg, etc.)

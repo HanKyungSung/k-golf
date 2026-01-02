@@ -9,7 +9,8 @@ import { ReceiptFormatter } from '../services/receipt-formatter';
 const router = Router();
 
 const printReceiptSchema = z.object({
-  bookingId: z.string().uuid()
+  bookingId: z.string().uuid(),
+  seatIndex: z.number().int().min(1).optional() // Optional seat index for seat-specific receipts
 });
 
 /**
@@ -18,7 +19,7 @@ const printReceiptSchema = z.object({
  */
 router.post('/receipt', requireAuth, async (req, res) => {
   try {
-    const { bookingId } = printReceiptSchema.parse(req.body);
+    const { bookingId, seatIndex } = printReceiptSchema.parse(req.body);
 
     // Get booking details
     const booking = await getBooking(bookingId);
@@ -26,8 +27,10 @@ router.post('/receipt', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
-    // Get receipt data
-    const receiptData = await receiptRepo.getReceiptData(bookingId);
+    // Get receipt data (seat-specific or full)
+    const receiptData = seatIndex !== undefined
+      ? await receiptRepo.getSeatReceiptData(bookingId, seatIndex)
+      : await receiptRepo.getReceiptData(bookingId);
 
     // Format receipt for thermal printer
     const formatter = new ReceiptFormatter(48);
