@@ -633,20 +633,25 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       // Send to thermal printer via backend API
       try {
         const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
-        const endpoint = receiptSeatIndex 
-          ? `/api/print/seat-receipt?bookingId=${bookingId}&seatIndex=${receiptSeatIndex}`
-          : `/api/print/receipt?bookingId=${bookingId}`;
         
-        const res = await fetch(`${apiBase}${endpoint}`, {
+        const res = await fetch(`${apiBase}/api/print/receipt`, {
           method: 'POST',
-          credentials: 'include'
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            bookingId: bookingId
+          })
         });
         
         if (!res.ok) {
-          throw new Error('Failed to send to thermal printer');
+          const error = await res.json().catch(() => ({ error: 'Failed to send to thermal printer' }));
+          throw new Error(error.error || 'Failed to send to thermal printer');
         }
         
-        alert('Sent to thermal printer!');
+        const result = await res.json();
+        alert(`Sent to thermal printer! (${result.connectedPrinters} printer(s) connected)`);
         setShowReceiptModal(false);
       } catch (error) {
         console.error('Thermal print error:', error);

@@ -14,6 +14,8 @@ export interface PrinterConfig {
 export class PrinterService {
   private printer: ThermalPrinter | null = null;
   private logger: Logger;
+  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private lastConnectionStatus: boolean = false;
 
   constructor(private config: PrinterConfig) {
     this.logger = new Logger('Printer');
@@ -40,11 +42,13 @@ export class PrinterService {
       const isConnected = await this.printer.isPrinterConnected();
       if (!isConnected) {
         this.logger.warn('Printer not connected - running in SIMULATION mode');
+        this.lastConnectionStatus = false;
         // Keep printer object for formatting, but don't fail
         return;
       }
 
       this.logger.info('Printer initialized', { interface: this.config.interface });
+      this.lastConnectionStatus = true;
     } catch (error) {
       this.logger.error('Failed to initialize printer', error);
       
@@ -79,6 +83,7 @@ export class PrinterService {
             const isConnectedRetry = await this.printer.isPrinterConnected();
             if (!isConnectedRetry) {
               this.logger.warn('Auto-discovered printer not connected - running in SIMULATION mode');
+              this.lastConnectionStatus = false;
               return;
             }
             
@@ -90,6 +95,7 @@ export class PrinterService {
               }
             });
             this.logger.info(`Updated config with new printer: ${discoveredInterface}`);
+            this.lastConnectionStatus = true;
             return;
           }
         } catch (discoveryError) {
@@ -100,6 +106,9 @@ export class PrinterService {
       // Don't throw - allow running in simulation mode
       this.logger.warn('No printer available - running in SIMULATION mode (will log output only)');
     }
+    
+    // Start periodic health checks
+    this.startHealthCheck();
   }
 
   private getPrinterType(type: string): PrinterTypes {
@@ -153,14 +162,19 @@ export class PrinterService {
         }
       }
 
-      // DEBUG MODE: Log output instead of sending to printer
-      const output = await this.printer.getText();
-      this.logger.info('Print job formatted (DEBUG MODE - not sent to printer)', { jobId: job.id });
-      this.logger.info('\n=== RECEIPT OUTPUT ===\n' + output + '\n=== END RECEIPT ===\n');
-
-      // Uncomment to actually print:
-      // await this.printer.execute();
-      // this.logger.info('Print executed successfully', { jobId: job.id });
+      // Check if printer is actually connected
+      const isConnected = await this.printer.isPrinterConnected();
+      
+      if (!isConnected) {
+        // SIMULATION MODE: Only log output when printer is not connected
+        const output = await this.printer.getText();
+        this.logger.warn('Printer not connected - SIMULATION MODE (logging output only)', { jobId: job.id });
+        this.logger.info('\n=== RECEIPT OUTPUT ===\n' + output + '\n=== END RECEIPT ===\n');
+      } else {
+        // Execute actual print to thermal printer
+        await this.printer.execute();
+        this.logger.info('Print executed successfully', { jobId: job.id });
+      }
 
     } catch (error) {
       this.logger.error('Print failed', { jobId: job.id, error });
@@ -306,7 +320,45 @@ export class PrinterService {
   }
 
   async close(): Promise<void> {
+    // Stop health checks
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+    }
+    
     this.printer = null;
     this.logger.info('Printer service closed');
+  }
+
+  /**
+   * Start periodic health checks for printer connection
+   * Only logs when connection status changes
+   */
+  private startHealthCheck(): void {
+    // Check every 60 seconds
+    this.healthCheckInterval = setInterval(async () => {
+      if (!this.printer) return;
+
+      try {
+        const isConnected = await this.printer.isPrinterConnected();
+        
+        // Only log if status changed
+        if (isConnected !== this.lastConnectionStatus) {
+          if (isConnected) {
+            this.logger.info(`✅ Printer reconnected (${this.config.interface})`);
+          } else {
+            this.logger.warn(`⚠️  Printer disconnected (${this.config.interface}) - switching to simulation mode`);
+          }
+          this.lastConnectionStatus = isConnected;
+        }
+      } catch (error) {
+        if (this.lastConnectionStatus) {
+          this.logger.error('Printer health check failed', error);
+          this.lastConnectionStatus = false;
+        }
+      }
+    }, 60000); // 60 seconds
+
+    this.logger.info('Printer health check started (60s interval)');
   }
 }
