@@ -143,9 +143,8 @@ exit
 
         // Execute update script and exit
         execSync(`start /min cmd /c "${updateScript}"`, {
-          detached: true,
           stdio: 'ignore'
-        });
+        } as any);
       } else {
         // macOS/Linux update script
         const updateScript = path.join(process.cwd(), 'update.sh');
@@ -165,9 +164,8 @@ echo "Update complete!"
 
         // Execute update script and exit
         execSync(`"${updateScript}" &`, {
-          detached: true,
           stdio: 'ignore'
-        });
+        } as any);
       }
 
       // Exit current process to allow update

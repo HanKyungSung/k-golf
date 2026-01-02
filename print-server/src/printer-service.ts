@@ -29,7 +29,7 @@ export class PrinterService {
       this.printer = new ThermalPrinter({
         type: printerType,
         interface: this.config.interface,
-        characterSet: this.config.characterSet || 'PC437_USA',
+        characterSet: (this.config.characterSet || 'PC437_USA') as any,
         removeSpecialCharacters: this.config.removeSpecialCharacters ?? false,
         lineCharacter: this.config.lineCharacter || '-',
         width: this.config.width || 48,
@@ -71,7 +71,7 @@ export class PrinterService {
             this.printer = new ThermalPrinter({
               type: this.getPrinterType(this.config.type),
               interface: discoveredInterface,
-              characterSet: this.config.characterSet || 'PC437_USA',
+              characterSet: (this.config.characterSet || 'PC437_USA') as any,
               removeSpecialCharacters: this.config.removeSpecialCharacters ?? false,
               lineCharacter: this.config.lineCharacter || '-',
               width: this.config.width || 48,
@@ -180,143 +180,6 @@ export class PrinterService {
       this.logger.error('Print failed', { jobId: job.id, error });
       throw error;
     }
-  }
-
-  private async printReceipt(job: PrintJob): Promise<void> {
-    const { data } = job;
-    const printer = this.printer!;
-
-    // Header
-    printer.alignCenter();
-    printer.setTextSize(1, 1);
-    printer.bold(true);
-    printer.println('K-GOLF');
-    printer.bold(false);
-    printer.setTextNormal();
-    printer.println('Golf Simulator');
-    printer.drawLine();
-    printer.newLine();
-
-    // Receipt number
-    printer.alignLeft();
-    printer.println(`Receipt: ${data.receiptNumber || 'N/A'}`);
-    printer.println(`Date: ${data.date}`);
-    if (data.customerName) {
-      printer.println(`Customer: ${data.customerName}`);
-    }
-    if (data.roomName) {
-      printer.println(`Room: ${data.roomName}`);
-    }
-    printer.drawLine();
-    printer.newLine();
-
-    // Items
-    printer.bold(true);
-    printer.tableCustom([
-      { text: 'Item', align: 'LEFT', width: 0.5 },
-      { text: 'Qty', align: 'CENTER', width: 0.2 },
-      { text: 'Price', align: 'RIGHT', width: 0.3 }
-    ]);
-    printer.bold(false);
-    printer.drawLine();
-
-    for (const item of data.items) {
-      printer.tableCustom([
-        { text: item.name, align: 'LEFT', width: 0.5 },
-        { text: item.quantity.toString(), align: 'CENTER', width: 0.2 },
-        { text: `$${item.price.toFixed(2)}`, align: 'RIGHT', width: 0.3 }
-      ]);
-    }
-
-    printer.drawLine();
-    printer.newLine();
-
-    // Totals
-    printer.alignRight();
-    printer.println(`Subtotal: $${data.subtotal.toFixed(2)}`);
-    printer.println(`Tax: $${data.tax.toFixed(2)}`);
-    printer.bold(true);
-    printer.setTextSize(1, 1);
-    printer.println(`TOTAL: $${data.total.toFixed(2)}`);
-    printer.bold(false);
-    printer.setTextNormal();
-    printer.newLine();
-
-    // Footer
-    printer.alignCenter();
-    printer.drawLine();
-    printer.println('Thank you for visiting K-Golf!');
-    printer.newLine();
-    printer.setTextSize(0, 0);
-    printer.println('Printed: ' + new Date().toLocaleString());
-    printer.newLine();
-
-    // Cut paper
-    printer.cut();
-  }
-
-  private async printSeatBill(job: PrintJob): Promise<void> {
-    const { data } = job;
-    const printer = this.printer!;
-
-    // Header
-    printer.alignCenter();
-    printer.setTextSize(1, 1);
-    printer.bold(true);
-    printer.println(data.seatName || 'Seat Bill');
-    printer.bold(false);
-    printer.setTextNormal();
-    printer.drawLine();
-    printer.newLine();
-
-    // Info
-    printer.alignLeft();
-    if (data.customerName) {
-      printer.println(`Customer: ${data.customerName}`);
-    }
-    if (data.roomName) {
-      printer.println(`Room: ${data.roomName}`);
-    }
-    printer.println(`Date: ${data.date}`);
-    printer.drawLine();
-    printer.newLine();
-
-    // Items
-    printer.bold(true);
-    printer.tableCustom([
-      { text: 'Item', align: 'LEFT', width: 0.6 },
-      { text: 'Qty', align: 'CENTER', width: 0.2 },
-      { text: 'Price', align: 'RIGHT', width: 0.2 }
-    ]);
-    printer.bold(false);
-
-    for (const item of data.items) {
-      printer.tableCustom([
-        { text: item.name, align: 'LEFT', width: 0.6 },
-        { text: item.quantity.toString(), align: 'CENTER', width: 0.2 },
-        { text: `$${item.price.toFixed(2)}`, align: 'RIGHT', width: 0.2 }
-      ]);
-    }
-
-    printer.newLine();
-    printer.drawLine();
-
-    // Total
-    printer.alignRight();
-    printer.bold(true);
-    printer.setTextSize(1, 1);
-    printer.println(`TOTAL: $${data.total.toFixed(2)}`);
-    printer.bold(false);
-    printer.setTextNormal();
-    printer.newLine();
-
-    // Footer
-    printer.alignCenter();
-    printer.println('K-Golf');
-    printer.newLine();
-
-    // Cut paper
-    printer.cut();
   }
 
   async close(): Promise<void> {
