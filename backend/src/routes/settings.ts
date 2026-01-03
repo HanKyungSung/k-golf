@@ -91,7 +91,7 @@ router.put('/global_tax_rate', requireAuth, async (req: Request, res: Response) 
       update: {
         value: taxRate.toString(),
         valueType: 'number',
-        updatedBy: user.id,
+        updatedBy: user?.id || null,
         updatedAt: new Date(),
       },
       create: {
@@ -101,7 +101,7 @@ router.put('/global_tax_rate', requireAuth, async (req: Request, res: Response) 
         description: 'Global tax rate percentage applied to all bookings',
         category: 'billing',
         isPublic: false,
-        updatedBy: user.id,
+        updatedBy: user?.id || null,
       },
     });
 

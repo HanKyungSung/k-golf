@@ -104,21 +104,28 @@ Backend                Print Server              Thermal Printer
 1. **Extract Files**
    - Unzip `k-golf-print-server-macos.zip` to `~/K-Golf/`
 
-2. **Configure Printer**
+2. **Allow Unsigned Application**
+   - macOS will block the app because it's not signed by Apple
+   - Right-click `kgolf-print-server-macos` → **Open**
+   - Click **Open** in the security dialog
+   - Alternative: Run `xattr -cr kgolf-print-server-macos` to remove quarantine attribute
+   - Or: System Settings → Privacy & Security → Scroll down → Click **Open Anyway**
+
+3. **Configure Printer**
    - Edit `config.json`
    - Set printer interface:
      - Network: `"interface": "tcp://192.168.1.100"`
      - USB: `"interface": "usb://vendorId/productId"`
      - Serial: `"interface": "/dev/tty.usbserial"`
 
-3. **Install Service**
+4. **Install Service**
    - Open Terminal
    - `cd ~/K-Golf`
    - `chmod +x install.sh`
    - `./install.sh`
    - Print server will start automatically on login
 
-4. **Verify**
+5. **Verify**
    - Check status: `launchctl list | grep kgolf`
    - View logs: `tail -f ~/K-Golf/print-server.log`
 
