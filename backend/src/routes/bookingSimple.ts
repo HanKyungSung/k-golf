@@ -100,9 +100,22 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
     });
     
     if (conflictingBooking) {
+      // Format conflict times in Atlantic Time for error message
+      const conflictStart = new Date(conflictingBooking.startTime).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'America/Halifax'
+      });
+      const conflictEnd = new Date(conflictingBooking.endTime).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'America/Halifax'
+      });
       return res.status(409).json({
         error: 'Time slot conflict',
-        details: 'This room is already booked for the selected time',
+        details: `This room is already booked from ${conflictStart} to ${conflictEnd} AST`,
         conflictingBooking: {
           id: conflictingBooking.id,
           startTime: conflictingBooking.startTime,

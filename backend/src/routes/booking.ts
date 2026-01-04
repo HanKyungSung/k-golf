@@ -53,7 +53,7 @@ function presentBooking(b: any) {
 
 const createBookingSchema = z.object({
   roomId: z.string().uuid().or(z.string()),
-  startTimeIso: z.string().datetime(), // ISO string from client (UTC)
+  startTimeMs: z.number().int().positive('Invalid start time'), // milliseconds timestamp
   players: z.number().int().min(1).max(4),
   hours: z.number().int().min(1).max(4),
 });
@@ -121,21 +121,13 @@ router.get('/by-room-date', async (req, res) => {
     // Fetch bookings for the room on this date
     const bookings = await listRoomBookingsBetween(roomId, dayStart, dayEnd);
 
-    // Format bookings for frontend timeline
+    // Return ISO strings - let frontend format in user's timezone
     const formattedBookings = bookings.map((b) => ({
       id: b.id,
       roomId: b.roomId,
       date: date,
-      startTime: new Date(b.startTime).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false 
-      }),
-      endTime: new Date(b.endTime).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false 
-      }),
+      startTime: b.startTime.toISOString(),
+      endTime: b.endTime.toISOString(),
       customerName: b.customerName || 'Guest',
     }));
 
@@ -298,7 +290,7 @@ router.post('/', requireAuth, async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
-  const { roomId, startTimeIso, players, hours } = parsed.data;
+  const { roomId, startTimeMs, players, hours } = parsed.data;
 
   // Fetch room for status/hours validation
   const room: any = await prisma.room.findUnique({ where: { id: roomId } });
@@ -309,10 +301,10 @@ router.post('/', requireAuth, async (req, res) => {
 
   let start: Date;
   try {
-    start = new Date(startTimeIso);
+    start = new Date(startTimeMs); // Convert milliseconds to Date
     if (isNaN(start.getTime())) throw new Error('Invalid date');
   } catch {
-    return res.status(400).json({ error: 'Invalid startTimeIso' });
+    return res.status(400).json({ error: 'Invalid startTimeMs' });
   }
 
   // Compute endTime for conflict detection
