@@ -32,8 +32,8 @@ export interface Booking {
   duration: number; // hours
   players: number;
   price: number;
-  status: string; // 'confirmed' | 'completed' | 'cancelled'
-  bookingStatus?: string; // CONFIRMED | COMPLETED | CANCELLED
+  status: string; // BOOKED | COMPLETED | CANCELLED (uppercase)
+  bookingStatus?: string; // BOOKED | COMPLETED | CANCELLED
   paymentStatus?: string; // UNPAID | BILLED | PAID
   source: string;
   createdAt: string;

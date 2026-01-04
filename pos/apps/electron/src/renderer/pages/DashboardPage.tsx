@@ -142,8 +142,10 @@ const DashboardPage: React.FC = () => {
     endTime.setHours(startTime.getHours() + Math.floor(booking.duration));
     endTime.setMinutes(startTime.getMinutes() + (booking.duration % 1) * 60);
     
-    // Check if current time is between start and end, and booking is not cancelled
-    return now >= startTime && now < endTime && booking.status !== 'cancelled';
+    // Check if current time is between start and end, and booking is not cancelled or completed
+    // Use bookingStatus (CANCELLED/COMPLETED) for more reliable filtering (case-insensitive)
+    const status = (booking.bookingStatus || booking.status || '').toUpperCase();
+    return now >= startTime && now < endTime && status !== 'CANCELLED' && status !== 'COMPLETED';
   }, []);
   
   // Update current time every second and filter currently active bookings

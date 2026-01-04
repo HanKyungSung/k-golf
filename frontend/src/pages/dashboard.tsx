@@ -7,14 +7,14 @@ import { useAuth } from "@/hooks/use-auth"
 import { toast } from "@/hooks/use-toast"
 import POSDashboard from "./pos/dashboard"
 
-const getStatusBadge = (status: 'booked'|'completed'|'canceled') => {
+const getStatusBadge = (status: 'BOOKED'|'COMPLETED'|'CANCELLED') => {
   switch (status) {
-    case 'canceled':
-      return { label: 'canceled', classes: 'bg-red-500 text-white' }
-    case 'completed':
-      return { label: 'completed', classes: 'bg-slate-600 text-white' }
+    case 'CANCELLED':
+      return { label: 'Cancelled', classes: 'bg-red-500 text-white' }
+    case 'COMPLETED':
+      return { label: 'Completed', classes: 'bg-slate-600 text-white' }
     default:
-      return { label: 'booked', classes: 'bg-green-500 text-white' }
+      return { label: 'Booked', classes: 'bg-green-500 text-white' }
   }
 }
 
@@ -25,7 +25,7 @@ type ApiBooking = {
   endTime: string;   // ISO
   players: number;
   price: string | number;
-  status: 'booked' | 'completed' | 'canceled';
+  status: 'BOOKED' | 'COMPLETED' | 'CANCELLED';
   paymentStatus?: 'UNPAID' | 'BILLED' | 'PAID';
   billedAt?: string;
   paidAt?: string;
@@ -199,7 +199,7 @@ const CustomerDashboard = () => {
                   </div>
                   <div className="text-right">
                     <div className="font-medium text-white">${Number(booking.price).toFixed(2)}</div>
-          {booking.status === 'booked' && (
+          {booking.status === 'BOOKED' && (
                       <Button
                         variant="outline"
                         size="sm"

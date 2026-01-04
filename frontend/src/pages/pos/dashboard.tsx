@@ -276,7 +276,12 @@ export default function POSDashboard() {
     return bookings.filter(b => {
       const start = new Date(b.startTime);
       const end = new Date(b.endTime);
-      return now >= start && now <= end && b.status !== 'cancelled';
+      // Only show bookings that are:
+      // 1. Currently active (time-wise)
+      // 2. Not cancelled
+      // 3. Not completed
+      const status = (b.bookingStatus || b.status || '').toUpperCase();
+      return now >= start && now <= end && status !== 'CANCELLED' && status !== 'COMPLETED';
     });
   }, [bookings]);
 
@@ -291,15 +296,15 @@ export default function POSDashboard() {
   }, [bookings]);
 
   const getStatusColor = (status: string) => {
-    const s = status?.toLowerCase();
-    if (s === 'booked') return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-    if (s === 'confirmed') return 'bg-blue-500/20 text-blue-300 border-blue-500/30'; // Legacy support
-    if (s === 'completed') return 'bg-green-500/20 text-green-300 border-green-500/30';
-    if (s === 'cancelled') return 'bg-red-500/20 text-red-300 border-red-500/30';
-    if (s === 'expired') return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
-    if (s === 'active') return 'bg-green-500/20 text-green-300 border-green-500/30';
-    if (s === 'maintenance') return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
-    if (s === 'closed') return 'bg-red-500/20 text-red-300 border-red-500/30';
+    const s = status?.toUpperCase();
+    if (s === 'BOOKED') return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+    if (s === 'CONFIRMED') return 'bg-blue-500/20 text-blue-300 border-blue-500/30'; // Legacy support
+    if (s === 'COMPLETED') return 'bg-green-500/20 text-green-300 border-green-500/30';
+    if (s === 'CANCELLED') return 'bg-red-500/20 text-red-300 border-red-500/30';
+    if (s === 'EXPIRED') return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+    if (s === 'ACTIVE') return 'bg-green-500/20 text-green-300 border-green-500/30';
+    if (s === 'MAINTENANCE') return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
+    if (s === 'CLOSED') return 'bg-red-500/20 text-red-300 border-red-500/30';
     return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
   };
 

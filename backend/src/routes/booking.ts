@@ -11,11 +11,6 @@ import { sendBookingConfirmation } from '../services/emailService';
 
 const router = Router();
 
-function presentStatus(rawStatus: string, endTime: Date): 'booked' | 'completed' | 'canceled' {
-  if (rawStatus === 'CANCELLED') return 'canceled';
-  return endTime.getTime() < Date.now() ? 'completed' : 'booked';
-}
-
 function presentBooking(b: any) {
   return {
     id: b.id,
@@ -28,8 +23,8 @@ function presentBooking(b: any) {
     endTime: b.endTime,
     players: b.players,
     price: b.price ? parseFloat(b.price.toString()) : 0,
-    status: presentStatus(b.bookingStatus, new Date(b.endTime)),
-    bookingStatus: b.bookingStatus, // Send raw bookingStatus for POS
+    status: b.bookingStatus, // Keep uppercase: BOOKED, CANCELLED, COMPLETED
+    bookingStatus: b.bookingStatus,
     bookingSource: b.bookingSource,
     internalNotes: b.internalNotes,
     paymentStatus: b.paymentStatus,
