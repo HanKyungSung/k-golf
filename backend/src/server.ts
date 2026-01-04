@@ -12,6 +12,7 @@ import usersRouter from './routes/users';
 import menuRouter from './routes/menu';
 import receiptRouter from './routes/receipt';
 import { printRouter } from './routes/print';
+import contactRouter from './routes/contact';
 import cookieParser from 'cookie-parser';
 import { WebSocketManager } from './services/websocket-manager';
 
@@ -35,6 +36,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/receipts', receiptRouter);
 app.use('/api/print', printRouter);
+app.use('/api/contact', contactRouter);
 
 // Serve frontend static files (after API routes to avoid conflicts)
 // With rootDir='.', structure is: dist/src/server.js and dist/public/

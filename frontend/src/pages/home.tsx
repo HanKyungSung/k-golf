@@ -3,10 +3,73 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
+import { useState } from 'react'
+
+const API_BASE = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
 
 export default function HomePage() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  
+  // Contact form state
+  const [contactForm, setContactForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    message: '',
+  })
+  const [contactStatus, setContactStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [contactError, setContactError] = useState<string>('')
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setContactStatus('loading')
+    setContactError('')
+
+    try {
+      // Validate form
+      if (!contactForm.firstName || !contactForm.lastName || !contactForm.email || !contactForm.message) {
+        setContactError('All fields are required')
+        setContactStatus('error')
+        return
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactForm.email)) {
+        setContactError('Please enter a valid email address')
+        setContactStatus('error')
+        return
+      }
+
+      if (contactForm.message.length < 10) {
+        setContactError('Message must be at least 10 characters')
+        setContactStatus('error')
+        return
+      }
+
+      // Send contact form
+      const response = await fetch(`${API_BASE}/api/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactForm),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send message')
+      }
+      
+      setContactStatus('success')
+      setContactForm({ firstName: '', lastName: '', email: '', message: '' })
+      
+      // Reset success message after 5 seconds
+      setTimeout(() => setContactStatus('idle'), 5000)
+    } catch (error: any) {
+      console.error('Contact form error:', error)
+      setContactError(error.message || 'Failed to send message. Please try again.')
+      setContactStatus('error')
+    }
+  }
+  
   return (
     <div className="min-h-screen bg-slate-950">
       {/* Header */}
@@ -413,43 +476,73 @@ export default function HomePage() {
             <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
               <CardContent className="p-8">
                 <h4 className="text-2xl font-semibold text-white mb-6">Send us a message</h4>
-                <form className="space-y-6">
+                <form onSubmit={handleContactSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">First Name</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">First Name *</label>
                       <input
                         type="text"
+                        value={contactForm.firstName}
+                        onChange={(e) => setContactForm({ ...contactForm, firstName: e.target.value })}
                         className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                         placeholder="John"
+                        required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Last Name</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Last Name *</label>
                       <input
                         type="text"
+                        value={contactForm.lastName}
+                        onChange={(e) => setContactForm({ ...contactForm, lastName: e.target.value })}
                         className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                         placeholder="Doe"
+                        required
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Email *</label>
                     <input
                       type="email"
+                      value={contactForm.email}
+                      onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                       placeholder="john@example.com"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Message</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Message *</label>
                     <textarea
                       rows={4}
+                      value={contactForm.message}
+                      onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                       placeholder="Tell us about your golf experience needs..."
+                      required
+                      minLength={10}
                     ></textarea>
                   </div>
-                  <Button className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold">
-                    Send Message
+                  
+                  {contactStatus === 'error' && (
+                    <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                      {contactError}
+                    </div>
+                  )}
+                  
+                  {contactStatus === 'success' && (
+                    <div className="p-4 bg-green-900/20 border border-green-500/50 rounded-lg text-green-400 text-sm">
+                      Thank you for your message! We'll get back to you soon.
+                    </div>
+                  )}
+                  
+                  <Button 
+                    type="submit"
+                    disabled={contactStatus === 'loading'}
+                    className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {contactStatus === 'loading' ? 'Sending...' : 'Send Message'}
                   </Button>
                 </form>
               </CardContent>
@@ -462,7 +555,7 @@ export default function HomePage() {
       <footer className="bg-slate-900 border-t border-slate-800 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* TODO: Fix column widths for better layout balance */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent mb-4">
                 K one Golf
@@ -486,6 +579,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+            {/* Services section - commented out until these features are implemented
             <div>
               <h5 className="text-white font-semibold mb-4">Services</h5>
               <ul className="space-y-2 text-slate-400">
@@ -511,14 +605,17 @@ export default function HomePage() {
                 </li>
               </ul>
             </div>
+            */}
             <div>
               <h5 className="text-white font-semibold mb-4">Support</h5>
               <ul className="space-y-2 text-slate-400">
+                {/* Help Center - commented out until implemented
                 <li>
                   <a href="#" className="hover:text-amber-400 transition-colors">
                     Help Center
                   </a>
                 </li>
+                */}
                 <li>
                   <a href="#" className="hover:text-amber-400 transition-colors">
                     Booking Policy
@@ -530,7 +627,7 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-amber-400 transition-colors">
+                  <a href="#contact" className="hover:text-amber-400 transition-colors">
                     Contact Us
                   </a>
                 </li>

@@ -26,6 +26,13 @@ export interface BookingConfirmationParams {
   price: string;
 }
 
+export interface ContactEmailParams {
+  firstName: string;
+  lastName: string;
+  email: string;
+  message: string;
+}
+
 let cachedTransport: nodemailer.Transporter | null = null;
 
 function getTransport() {
@@ -504,3 +511,78 @@ Hours: 10:00 AM - 12:00 AM Daily
   });
 }
 
+/**
+ * Send contact form email to konegolf.general@gmail.com
+ */
+export async function sendContactEmail({ firstName, lastName, email, message }: ContactEmailParams) {
+  const to = 'konegolf.general@gmail.com';
+  const subject = `Contact Form: ${firstName} ${lastName}`;
+  
+  const text = `
+New Contact Form Submission
+
+Name: ${firstName} ${lastName}
+Email: ${email}
+
+Message:
+${message}
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Form Submission</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%); padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0;">
+      <h1 style="margin: 0; color: white; font-size: 24px; font-weight: 700;">New Contact Form</h1>
+    </div>
+    
+    <!-- Content -->
+    <div style="background: white; padding: 32px 24px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+      <div style="margin-bottom: 20px;">
+        <p style="margin: 0 0 8px 0; font-weight: 600; color: #334155;">Name:</p>
+        <p style="margin: 0; color: #475569;">${firstName} ${lastName}</p>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <p style="margin: 0 0 8px 0; font-weight: 600; color: #334155;">Email:</p>
+        <p style="margin: 0; color: #475569;"><a href="mailto:${email}" style="color: #2563eb;">${email}</a></p>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <p style="margin: 0 0 8px 0; font-weight: 600; color: #334155;">Message:</p>
+        <p style="margin: 0; color: #475569; white-space: pre-wrap;">${message}</p>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div style="margin-top: 20px; text-align: center; color: #64748b; font-size: 12px;">
+      <p>This message was sent from the K one Golf contact form.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  const transport = getTransport();
+  if (!transport) {
+    console.log(`[email:dev-log] Contact form from=${email}`);
+    console.log(text);
+    return;
+  }
+
+  await transport.sendMail({
+    from: process.env.EMAIL_FROM || 'K one Golf <no-reply@konegolf.ca>',
+    to,
+    subject,
+    text,
+    html,
+    replyTo: email,
+  });
+}
