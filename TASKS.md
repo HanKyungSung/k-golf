@@ -87,6 +87,29 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
+## 🎉 Recently Completed (2026-01-04)
+- [x] **Fixed timezone handling across entire platform** - Proper UTC storage with timezone-aware display
+  - [x] Backend: Return ISO strings (UTC) for timezone-agnostic data transfer
+  - [x] Customer frontend: Format times in user's browser timezone (PST user books 7pm, sees 7pm)
+  - [x] Admin dashboard: Force Atlantic Time display for business operations
+  - [x] Booking creation: Use millisecond timestamps instead of ISO strings (eliminates timezone ambiguity)
+  - [x] Updated /api/bookings endpoint to accept startTimeMs instead of startTimeIso
+  - [x] Updated /api/bookings/simple/create to use millisecond timestamps
+  - [x] Customer booking page interprets input as Atlantic Time (business location)
+  - [x] Conflict detection shows times in Atlantic Time with human-readable error messages
+  - [x] Database stores all times in UTC (timezone-agnostic)
+  - [x] Architecture: DB (UTC) → API (ISO strings) → Frontend (user timezone or business timezone)
+- [x] **Improved booking timeline UI** - Better visibility and usability
+  - [x] Added visible hour labels to customer booking timeline (10AM, 12PM, 2PM, etc.)
+  - [x] Increased timeline height from 12px to 14px for better visibility
+  - [x] Matched admin dashboard timeline style with clear time indicators
+  - [x] Improved spacing and typography for easier reading
+- [x] **Production deployment infrastructure improvements**
+  - [x] Added automatic Docker cleanup before deployments in GitHub Actions
+  - [x] Freed 9.28GB disk space on production server (from 99% to 54% usage)
+  - [x] Added docker system prune step to prevent future "no space left on device" errors
+  - [x] Deployment workflow now prunes unused images/containers/volumes before pull
+
 ## 🎉 Recently Completed (2026-01-02)
 - [x] Fixed critical receipt calculation bug - receipts now use invoice totals from database
   - [x] Removed incorrect room charge calculation (was multiplying by players incorrectly)
