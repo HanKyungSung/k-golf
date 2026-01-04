@@ -49,18 +49,34 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
     - **Reason to defer:** Current behavior is transparent and simpler for accounting
     - **When to implement:** If staff frequently adjust splits after creation
     - **Details:** See analysis in git commit message for smart split tracking options
+- [x] **Landing page contact form** - Functional contact form with email integration
+  - [x] Created /api/contact endpoint with Zod validation
+  - [x] Added sendContactEmail function to email service
+  - [x] Form validation (all fields required, email format, 10+ char message)
+  - [x] Success/error feedback UI with auto-dismiss
+  - [x] Emails sent to konegolf.general@gmail.com with reply-to sender
+- [x] **Landing page footer cleanup** - Show only implemented features
+  - [x] Commented out Services section (Screen Golf, Lessons, Events, Tournaments)
+  - [x] Commented out Help Center link
+  - [x] Kept Booking Policy, Cancellations, Contact Us
+  - [x] Updated grid from 3 to 2 columns
+- [x] **Booking and Cancellation Policies** - Modal dialogs with comprehensive policies
+  - [x] Created PolicyModal component with booking/cancellation types
+  - [x] Booking policy: reservations, advance booking (30 days), groups (4 max), payment, facility rules, no-show
+  - [x] Cancellation policy: 24h free cancellation, late fees ($25 <24h, $50 <2h), refund process (5-7 days)
+  - [x] Modal triggers from footer links
+  - [x] Includes business phone (902) 270-2259 and email
+  - [x] Professional styling with Tailwind/shadcn
 - Ask no cleaning time between bookings.
 - The coupon. like every 30 times visit, free hours etc.
 - When pay button clicks
   - per seat payment closure 
-- Cancellation policy
 - User signup
   - phone number duplication
   - If that happens how user can find the email address associate with it?
   - when user sign up we should link up all bookings with associated phone number.
 - Sync up with the SNS to share the experiences.
 - Display remaining time on Room status
-- Send us a message from landing page.
 - User search functionality.
   - baed on email/phone/name (phone is probably the most reliable)
 
