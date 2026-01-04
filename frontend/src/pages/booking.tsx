@@ -270,20 +270,22 @@ export default function BookingPage() {
 
     try {
       const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
-      // Convert to milliseconds timestamp in Atlantic Time (UTC-4)
-      // User selects time in Atlantic Time, we need to convert to UTC timestamp
+      // Convert to milliseconds timestamp using user's local timezone
+      // User selects time in their local timezone (e.g., 2pm PST), system stores as UTC
       const [hh, mm] = startTime.split(":").map(Number);
       
-      // Create date string in Atlantic Time format: YYYY-MM-DDTHH:MM:SS-04:00
-      const year = selectedDate!.getFullYear();
-      const month = String(selectedDate!.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate!.getDate()).padStart(2, '0');
-      const hour = String(hh).padStart(2, '0');
-      const minute = String(mm).padStart(2, '0');
-      const atlanticTimeString = `${year}-${month}-${day}T${hour}:${minute}:00-04:00`;
+      // Create Date object in user's local timezone
+      const localDateTime = new Date(
+        selectedDate!.getFullYear(),
+        selectedDate!.getMonth(),
+        selectedDate!.getDate(),
+        hh,
+        mm,
+        0,
+        0
+      );
       
-      // Parse as UTC timestamp
-      const startTimeMs = new Date(atlanticTimeString).getTime();
+      const startTimeMs = localDateTime.getTime(); // Milliseconds since epoch (UTC)
       
       const backendId = rooms.find((r) => r.id === selectedRoom)?.backendId;
       if (!backendId) {
