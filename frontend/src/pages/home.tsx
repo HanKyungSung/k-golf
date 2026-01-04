@@ -438,7 +438,7 @@ export default function HomePage() {
                   </div>
                   <div>
                     <div className="text-white font-semibold">Location</div>
-                    <div className="text-slate-400">5 Keltic Dr #6, Sydney, NS B1S 1P4</div>
+                    <div className="text-slate-400">45 Keltic Dr, Unit 6, Sydney, NS B1S 1P4</div>
                   </div>
                 </div>
 

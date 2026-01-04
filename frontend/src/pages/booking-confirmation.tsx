@@ -206,12 +206,12 @@ export default function BookingConfirmationPage() {
                 <div className="flex-1">
                   <h3 className="text-white font-semibold mb-2">K one Golf</h3>
                   <p className="text-slate-300 text-sm leading-relaxed">
-                    5 Keltic Dr #6<br />
-                    Sydney, NS<br />
+                    45 Keltic Dr, Unit 6<br />
+                    Sydney, NS B1S 1P4<br />
                     Phone: (902) 270-2259
                   </p>
                   <a
-                    href="https://maps.google.com/?q=5+Keltic+Dr+6+Sydney+NS"
+                    href="https://maps.google.com/?q=45+Keltic+Dr+Unit+6+Sydney+NS"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-block mt-3 text-amber-500 hover:text-amber-400 text-sm font-medium"

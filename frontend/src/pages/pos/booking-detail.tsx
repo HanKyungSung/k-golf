@@ -1093,7 +1093,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       <div className="print-only mb-8 text-center">
         <h1 className="text-4xl font-bold mb-2">K one Golf</h1>
         <p className="text-lg">Premium Screen Golf Experience</p>
-        <p className="text-sm mt-2">5 Keltic Dr #6 Sydney, NS B1S 1P4 | (902) 270-2259</p>
+        <p className="text-sm mt-2">45 Keltic Dr, Unit 6, Sydney, NS B1S 1P4 | (902) 270-2259</p>
         <div className="print-separator" />
       </div>
 
