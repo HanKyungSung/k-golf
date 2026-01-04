@@ -194,7 +194,7 @@ const CustomerDashboard = () => {
                       {(() => { const b = getStatusBadge(booking.status); return <Badge className={b.classes}>{b.label}</Badge> })()}
                     </div>
                     <div className="text-sm text-slate-400">
-                      {new Date(booking.startTime).toLocaleDateString()} at {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {Math.round((new Date(booking.endTime).getTime() - new Date(booking.startTime).getTime()) / (60*60*1000))} hour(s)
+                      {new Date(booking.startTime).toLocaleDateString('en-US', { timeZone: 'America/Halifax' })} at {new Date(booking.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Halifax' })} AST • {Math.round((new Date(booking.endTime).getTime() - new Date(booking.startTime).getTime()) / (60*60*1000))} hour(s)
                     </div>
                   </div>
                   <div className="text-right">

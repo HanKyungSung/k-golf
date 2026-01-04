@@ -112,7 +112,7 @@ export async function createBooking(data: {
   customerPhone: string;
   customerEmail?: string;
   roomId: string;
-  startTime: string; // ISO datetime string
+  startTimeMs: number; // milliseconds timestamp (timezone-agnostic)
   players: number;
   duration: number;
   bookingSource: 'WALK_IN' | 'PHONE' | 'ONLINE';

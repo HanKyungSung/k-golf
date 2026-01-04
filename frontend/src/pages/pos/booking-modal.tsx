@@ -201,17 +201,18 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
     try {
       const normalizedPhone = phone.startsWith('+') ? phone : `+1${phone.replace(/\D/g, '')}`;
       
-      // Convert local date/time to UTC ISO string
-      // The date picker gives YYYY-MM-DD, time picker gives HH:MM in local time
+      // Convert local date/time to milliseconds timestamp (timezone-agnostic)
+      // The date picker gives YYYY-MM-DD, time picker gives HH:MM in local browser time
+      // Browser should be set to Atlantic Time (UTC-4) for Sydney, Nova Scotia location
       const localDateTime = new Date(`${date}T${time}:00`);
-      const startTimeUTC = localDateTime.toISOString();
+      const startTimeMs = localDateTime.getTime(); // milliseconds since epoch
       
       const payload = {
         customerName: customerName.trim(),
         customerPhone: normalizedPhone,
         customerEmail: bookingSource === 'ONLINE' && customerEmail ? customerEmail : undefined,
         roomId,
-        startTime: startTimeUTC,
+        startTimeMs, // Send as milliseconds instead of ISO string
         duration,
         players,
         bookingSource,
@@ -219,7 +220,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
 
       await createBooking(payload);
 
-      console.log('[BOOKING] Created successfully');
+      console.log('[BOOKING] Created successfully', { localTime: `${date}T${time}`, timestampMs: startTimeMs });
       onSuccess();
       handleClose();
     } catch (err) {

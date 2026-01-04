@@ -26,7 +26,7 @@ const createBookingSchema = z.object({
   customerPhone: z.string().min(10, 'Phone number is required'),
   customerEmail: z.string().email().optional().or(z.literal('')),
   roomId: z.string().uuid('Invalid room ID'),
-  startTime: z.string().datetime('Invalid start time'),
+  startTimeMs: z.number().int().positive('Invalid start time'), // milliseconds timestamp
   duration: z.number().int().min(1).max(4, 'Duration must be 1-4 hours'),
   players: z.number().int().min(1).max(4, 'Players must be 1-4'),
   bookingSource: z.enum(['ONLINE', 'WALK_IN', 'PHONE']),
@@ -63,8 +63,8 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
       });
     }
     
-    // Calculate end time
-    const startTime = new Date(data.startTime);
+    // Calculate end time from milliseconds timestamp
+    const startTime = new Date(data.startTimeMs); // Convert milliseconds to Date
     const endTime = new Date(startTime);
     endTime.setHours(endTime.getHours() + data.duration);
     
