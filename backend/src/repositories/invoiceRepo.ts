@@ -78,15 +78,24 @@ export async function recalculateInvoice(bookingId: string, seatIndex: number): 
   const tip = currentInvoice?.tip || 0;
   const totalAmount = subtotal + tax + Number(tip || 0);
 
-  // Update invoice with recalculated totals
-  return prisma.invoice.update({
+  // Upsert invoice (create if doesn't exist, update if it does)
+  return prisma.invoice.upsert({
     where: {
       bookingId_seatIndex: {
         bookingId,
         seatIndex,
       },
     },
-    data: {
+    create: {
+      bookingId,
+      seatIndex,
+      subtotal: subtotal,
+      tax: tax,
+      tip: 0,
+      totalAmount: totalAmount,
+      status: 'UNPAID',
+    },
+    update: {
       subtotal: subtotal,
       tax: tax,
       totalAmount: totalAmount,

@@ -150,6 +150,26 @@ export async function updateBookingStatus(id: string, status: string): Promise<v
   if (!res.ok) throw new Error('Failed to update booking status');
 }
 
+export async function updateBookingPlayers(id: string, players: number): Promise<Booking> {
+  const res = await fetch(`${API_BASE}/api/bookings/${id}/players`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-pos-admin-key': 'pos-dev-key-change-in-production'
+    },
+    body: JSON.stringify({ players })
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to update players' }));
+    throw new Error(error.error || 'Failed to update players');
+  }
+
+  const json = await res.json();
+  return json.booking;
+}
+
 export async function cancelBooking(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/bookings/${id}/cancel`, {
     method: 'PATCH',
@@ -319,7 +339,9 @@ export async function updateGlobalTaxRate(rate: number): Promise<void> {
 export interface Order {
   id: string;
   bookingId: string;
-  menuItemId: string;
+  menuItemId: string | null;
+  customItemName?: string | null;
+  customItemPrice?: number | null;
   seatIndex: number | null;
   quantity: number;
   unitPrice: number;
@@ -378,10 +400,25 @@ export async function getInvoices(bookingId: string): Promise<Invoice[]> {
  */
 export async function createOrder(data: {
   bookingId: string;
-  menuItemId: string;
+  menuItemId?: string;
+  customItemName?: string;
+  customItemPrice?: number;
   seatIndex: number;
   quantity: number;
 }): Promise<{ order: Order; updatedInvoice?: Invoice }> {
+  const body: any = {
+    seatIndex: data.seatIndex,
+    quantity: data.quantity,
+  };
+  
+  // Add either menuItemId or custom item fields
+  if (data.menuItemId) {
+    body.menuItemId = data.menuItemId;
+  } else {
+    body.customItemName = data.customItemName;
+    body.customItemPrice = data.customItemPrice;
+  }
+  
   const res = await fetch(`${API_BASE}/api/bookings/${data.bookingId}/orders`, {
     method: 'POST',
     credentials: 'include',
@@ -389,11 +426,7 @@ export async function createOrder(data: {
       'Content-Type': 'application/json',
       'x-pos-admin-key': 'pos-dev-key-change-in-production'
     },
-    body: JSON.stringify({
-      menuItemId: data.menuItemId,
-      seatIndex: data.seatIndex,
-      quantity: data.quantity,
-    })
+    body: JSON.stringify(body)
   });
 
   if (!res.ok) {

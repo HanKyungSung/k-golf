@@ -14,7 +14,8 @@ import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, C
 import Receipt from '../../components/Receipt';
 import { 
   getBooking, 
-  updateBookingStatus as apiUpdateBookingStatus, 
+  updateBookingStatus as apiUpdateBookingStatus,
+  updateBookingPlayers as apiUpdateBookingPlayers,
   listRooms,
   listMenuItems,
   getGlobalTaxRate,
@@ -106,6 +107,9 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   // Dialog state
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
+  const [showCustomItemDialog, setShowCustomItemDialog] = useState(false);
+  const [customItemName, setCustomItemName] = useState('');
+  const [customItemPrice, setCustomItemPrice] = useState('');
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [showSplitDialog, setShowSplitDialog] = useState(false);
   const [selectedOrderItem, setSelectedOrderItem] = useState<OrderItem | null>(null);
@@ -157,6 +161,9 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     try {
       setLoading(true);
       
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      
       console.log('[BookingDetail] Loading data for booking ID:', bookingId);
       
       const [bookingData, roomsData, menuData, taxRate, invoicesData] = await Promise.all([
@@ -185,13 +192,23 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       // Set number of seats from booking
       if (bookingData.players) {
         setNumberOfSeats(bookingData.players);
-        setExpandedSeats(Array.from({ length: bookingData.players }, (_, i) => `seat-${i + 1}`));
+        
+        // Only auto-expand seats on initial load
+        if (!seatsInitialized.current) {
+          setExpandedSeats(Array.from({ length: bookingData.players }, (_, i) => `seat-${i + 1}`));
+          seatsInitialized.current = true;
+        }
       }
       
       // Load payment status from invoices
       loadPaymentStatusFromInvoices(invoicesData);
       
       console.log('[BookingDetail] Successfully loaded all data');
+      
+      // Restore scroll position after render completes
+      requestAnimationFrame(() => {
+        window.scrollTo(0, scrollY);
+      });
     } catch (err) {
       console.error('[BookingDetail] Failed to load data:', err);
       alert(`Failed to load booking: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -208,11 +225,34 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     invoicesData.forEach((invoice) => {
       if (invoice.orders && invoice.orders.length > 0) {
         invoice.orders.forEach((order) => {
-          const menuItem = menuData.find((m) => m.id === order.menuItemId);
-          if (menuItem) {
+          // Handle regular menu items
+          if (order.menuItemId) {
+            const menuItem = menuData.find((m) => m.id === order.menuItemId);
+            if (menuItem) {
+              items.push({
+                id: order.id,
+                menuItem: menuItem,
+                quantity: order.quantity,
+                seat: invoice.seatIndex,
+              });
+            }
+          } else {
+            // Handle custom items (no menuItemId)
+            const customMenuItem: MenuItem = {
+              id: `custom-${order.id}`,
+              name: order.customItemName || 'Custom Item',
+              description: 'Custom Item',
+              price: Number(order.customItemPrice || order.unitPrice),
+              category: 'FOOD' as any,
+              hours: null,
+              available: true,
+              sortOrder: 999,
+              createdAt: order.createdAt,
+              updatedAt: order.createdAt,
+            };
             items.push({
               id: order.id,
-              menuItem: menuItem,
+              menuItem: customMenuItem,
               quantity: order.quantity,
               seat: invoice.seatIndex,
             });
@@ -336,14 +376,10 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       
       await apiDeleteOrder(orderItemId);
       
-      console.log('[BookingDetail] Order deleted');
+      console.log('[BookingDetail] Order deleted, reloading data');
       
-      // Remove from local state
-      setOrderItems(orderItems.filter((item) => item.id !== orderItemId));
-      
-      // Refetch invoices to get updated totals
-      const updatedInvoices = await getInvoices(booking.id);
-      setInvoices(updatedInvoices);
+      // Reload all data to ensure proper sync
+      await loadData();
       
     } catch (err) {
       console.error('[BookingDetail] Failed to remove item:', err);
@@ -353,26 +389,74 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     }
   };
 
-  const moveItemToSeat = (orderItemId: string, newSeat: number | undefined) => {
-    setOrderItems(orderItems.map((item) => (item.id === orderItemId ? { ...item, seat: newSeat } : item)));
+  const moveItemToSeat = async (orderItemId: string, newSeat: number | undefined) => {
+    if (!booking || !newSeat) return;
+    
+    setOrderLoading(true);
+    try {
+      // Delete old order and create new one at different seat
+      const oldItem = orderItems.find(item => item.id === orderItemId);
+      if (!oldItem) return;
+      
+      const isCustomItem = oldItem.menuItem.id.startsWith('custom-');
+      
+      // Delete the old order
+      await apiDeleteOrder(orderItemId);
+      
+      // Create new order at the new seat
+      await apiCreateOrder({
+        bookingId: booking.id,
+        menuItemId: isCustomItem ? undefined : oldItem.menuItem.id,
+        customItemName: isCustomItem ? oldItem.menuItem.name : undefined,
+        customItemPrice: isCustomItem ? oldItem.menuItem.price : undefined,
+        seatIndex: newSeat,
+        quantity: oldItem.quantity,
+      });
+      
+      // Reload all data
+      await loadData();
+    } catch (err) {
+      console.error('[BookingDetail] Failed to move item:', err);
+      alert(`Failed to move item: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setOrderLoading(false);
+    }
+    
     setShowMoveDialog(false);
     setSelectedOrderItem(null);
   };
 
-  const splitItemAcrossSeats = () => {
-    if (!selectedOrderItem || selectedSeatsForSplit.length === 0) return;
+  const splitItemAcrossSeats = async () => {
+    if (!selectedOrderItem || selectedSeatsForSplit.length === 0 || !booking) return;
 
-    const splitPrice = selectedOrderItem.menuItem.price / selectedSeatsForSplit.length;
+    setOrderLoading(true);
+    try {
+      const splitPrice = selectedOrderItem.menuItem.price / selectedSeatsForSplit.length;
+      const itemName = selectedOrderItem.menuItem.name;
 
-    const newItems: OrderItem[] = selectedSeatsForSplit.map((seat) => ({
-      id: `${selectedOrderItem.menuItem.id}-${Date.now()}-${Math.random()}`,
-      menuItem: selectedOrderItem.menuItem,
-      quantity: selectedOrderItem.quantity,
-      seat,
-      splitPrice,
-    }));
+      // Delete the original order
+      await apiDeleteOrder(selectedOrderItem.id);
 
-    setOrderItems([...orderItems.filter((item) => item.id !== selectedOrderItem.id), ...newItems]);
+      // Create new orders for each selected seat as custom items with split price
+      for (const seat of selectedSeatsForSplit) {
+        await apiCreateOrder({
+          bookingId: booking.id,
+          customItemName: `${itemName} (Split ${selectedSeatsForSplit.length} ways)`,
+          customItemPrice: splitPrice,
+          seatIndex: seat,
+          quantity: selectedOrderItem.quantity,
+        });
+      }
+
+      // Reload all data
+      await loadData();
+    } catch (err) {
+      console.error('[BookingDetail] Failed to split item:', err);
+      alert(`Failed to split item: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setOrderLoading(false);
+    }
+
     setShowSplitDialog(false);
     setSelectedOrderItem(null);
     setSelectedSeatsForSplit([]);
@@ -404,6 +488,38 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const handleMenuItemClick = (menuItem: MenuItem) => {
     setSelectedMenuItem(menuItem);
     setShowAddItemDialog(true);
+  };
+
+  const handleAddCustomItem = async (seat: number) => {
+    if (!booking || !customItemName.trim() || !customItemPrice || parseFloat(customItemPrice) <= 0) {
+      alert('Please enter valid item name and price');
+      return;
+    }
+
+    setOrderLoading(true);
+    try {
+      const price = parseFloat(customItemPrice);
+      await apiCreateOrder({
+        bookingId: booking.id,
+        customItemName: customItemName.trim(),
+        customItemPrice: price,
+        seatIndex: seat,
+        quantity: 1,
+      });
+
+      // Reload data
+      await loadData();
+      
+      // Reset form and close dialog
+      setCustomItemName('');
+      setCustomItemPrice('');
+      setShowCustomItemDialog(false);
+    } catch (err) {
+      console.error('Failed to add custom item:', err);
+      alert(`Failed to add custom item: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setOrderLoading(false);
+    }
   };
 
   const addItemFromDialog = (seat: number) => {
@@ -762,7 +878,9 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     return !itemsInRemovedSeat;
   };
 
-  const handleReduceSeats = () => {
+  const handleReduceSeats = async () => {
+    if (!booking) return;
+    
     const newSeatCount = numberOfSeats - 1;
     const itemsInRemovedSeats = orderItems.filter(item => item.seat && item.seat > newSeatCount);
     
@@ -772,7 +890,12 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       return;
     }
     
-    setNumberOfSeats(Math.max(1, newSeatCount));
+    try {
+      await apiUpdateBookingPlayers(booking.id, newSeatCount);
+      setNumberOfSeats(Math.max(1, newSeatCount));
+    } catch (err) {
+      alert(`Failed to update seats: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
 
   // Calculation functions
@@ -1070,7 +1193,17 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                     <span className="text-2xl font-bold text-amber-400 w-12 text-center">{numberOfSeats}</span>
                     <Button
                       size="sm"
-                      onClick={() => setNumberOfSeats(Math.min(MAX_SEATS, numberOfSeats + 1))}
+                      onClick={async () => {
+                        const newCount = Math.min(MAX_SEATS, numberOfSeats + 1);
+                        if (booking) {
+                          try {
+                            await apiUpdateBookingPlayers(booking.id, newCount);
+                            setNumberOfSeats(newCount);
+                          } catch (err) {
+                            alert(`Failed to update seats: ${err instanceof Error ? err.message : 'Unknown error'}`);
+                          }
+                        }
+                      }}
                       disabled={numberOfSeats >= MAX_SEATS}
                       className="h-10 w-10 p-0 bg-slate-700 hover:bg-slate-600 text-white"
                     >
@@ -1159,7 +1292,16 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                 className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-700"
                               >
                                 <div className="flex-1">
-                                  <p className="text-white font-medium">{item.menuItem.name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-white font-medium">
+                                      {item.menuItem ? item.menuItem.name : (item as any).customItemName || 'Custom Item'}
+                                    </p>
+                                    {!item.menuItem && (
+                                      <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/50 text-xs">
+                                        Custom
+                                      </Badge>
+                                    )}
+                                  </div>
                                   <p className="text-sm text-slate-400">
                                     {item.splitPrice ? (
                                       <>
@@ -1510,6 +1652,17 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                       <TabsTrigger value="appetizers">Appetizers</TabsTrigger>
                       <TabsTrigger value="desserts">Desserts</TabsTrigger>
                     </TabsList>
+                    
+                    {/* Custom Item Button */}
+                    <div className="mt-4">
+                      <Button
+                        onClick={() => setShowCustomItemDialog(true)}
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-6 text-lg shadow-lg"
+                      >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Custom Item
+                      </Button>
+                    </div>
 
                     {(['hours', 'food', 'drinks', 'appetizers', 'desserts'] as const).map((category) => (
                       <TabsContent key={category} value={category}>
@@ -1708,6 +1861,95 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
             </Button>
             <Button onClick={splitItemAcrossSeats} disabled={selectedSeatsForSplit.length === 0}>
               Split to {selectedSeatsForSplit.length} Seat(s)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Item Dialog */}
+      <Dialog open={showCustomItemDialog} onOpenChange={setShowCustomItemDialog}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Add Custom Item</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Enter item name and price, then select which seat to add it to
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Item Name Input */}
+            <div className="space-y-2">
+              <Label htmlFor="customItemName" className="text-white">Item Name</Label>
+              <Input
+                id="customItemName"
+                placeholder="e.g., Special Event Package"
+                value={customItemName}
+                onChange={(e) => setCustomItemName(e.target.value)}
+                className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500"
+                autoFocus
+              />
+            </div>
+
+            {/* Price Input */}
+            <div className="space-y-2">
+              <Label htmlFor="customItemPrice" className="text-white">Price ($)</Label>
+              <Input
+                id="customItemPrice"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={customItemPrice}
+                onChange={(e) => setCustomItemPrice(e.target.value)}
+                className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500"
+              />
+            </div>
+
+            {/* Preview */}
+            {customItemName && customItemPrice && parseFloat(customItemPrice) > 0 && (
+              <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="font-semibold text-white">{customItemName}</div>
+                    <div className="text-xs text-slate-400">Custom Item</div>
+                  </div>
+                  <div className="text-purple-400 font-bold text-lg">
+                    ${parseFloat(customItemPrice).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Seat Selection */}
+            <div className="space-y-2">
+              <Label className="text-white">Select Seat</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => (
+                  <Button
+                    key={seat}
+                    onClick={() => handleAddCustomItem(seat)}
+                    disabled={orderLoading || !customItemName.trim() || !customItemPrice || parseFloat(customItemPrice) <= 0}
+                    className={`h-16 ${seatColors[seat - 1]} hover:opacity-90 text-white text-lg font-semibold disabled:opacity-50`}
+                  >
+                    {orderLoading ? 'Adding...' : `Seat ${seat}`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCustomItemDialog(false);
+                setCustomItemName('');
+                setCustomItemPrice('');
+              }}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              disabled={orderLoading}
+            >
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>

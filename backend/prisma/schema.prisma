@@ -127,8 +127,12 @@ model Order {
   id              String    @id @default(uuid())
   booking         Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   bookingId       String
-  menuItem        MenuItem  @relation(fields: [menuItemId], references: [id])
-  menuItemId      String
+  menuItem        MenuItem? @relation(fields: [menuItemId], references: [id])
+  menuItemId      String?   // Nullable for custom items
+  
+  // Custom item support (when menuItemId is null)
+  customItemName  String?
+  customItemPrice Decimal?  @db.Decimal(10, 2)
   
   seatIndex       Int?      // 1-4 = specific seat, null = shared order
   quantity        Int

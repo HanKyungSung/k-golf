@@ -32,7 +32,23 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - **Why:** No backups currently enabled - critical for production system
 
 ### 🔄 Ongoing Tasks
-### 🔄 Ongoing Tasks
+- Dashboard for the users
+- [x] **Custom/Wild card menu item** - Can enter item name and price on-the-fly in POS
+  - [x] Database schema updated (Order.customItemName, Order.customItemPrice)
+  - [x] Backend API supports custom items (menuItemId nullable with XOR validation)
+  - [x] Frontend "Custom Item" button with purple gradient
+  - [x] Custom item dialog with name/price inputs and seat selection
+  - [x] Custom items display with "Custom" badge
+  - [x] Split functionality creates custom items with split prices
+  - [x] Move/delete operations work with custom items
+  - [x] Receipt generation includes custom items
+  - [x] Scroll position preserved on data reload
+  - [ ] **Future Enhancement:** Smart split recalculation on delete
+    - **Analysis Done:** 3 implementation options identified
+    - **Recommendation:** Option 2 (Parse Names) - ~3 hours effort
+    - **Reason to defer:** Current behavior is transparent and simpler for accounting
+    - **When to implement:** If staff frequently adjust splits after creation
+    - **Details:** See analysis in git commit message for smart split tracking options
 - Ask no cleaning time between bookings.
 - The coupon. like every 30 times visit, free hours etc.
 - When pay button clicks

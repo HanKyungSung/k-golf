@@ -3,7 +3,9 @@ import { prisma } from '../lib/prisma';
 
 export interface CreateOrderInput {
   bookingId: string;
-  menuItemId: string;
+  menuItemId?: string; // Optional: null for custom items
+  customItemName?: string; // Required when menuItemId is null
+  customItemPrice?: number | string; // Required when menuItemId is null
   seatIndex?: number; // Optional: null means shared order
   quantity: number;
   unitPrice: number | string;
@@ -16,7 +18,9 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
   return prisma.order.create({
     data: {
       bookingId: data.bookingId,
-      menuItemId: data.menuItemId,
+      menuItemId: data.menuItemId ?? null,
+      customItemName: data.customItemName ?? null,
+      customItemPrice: data.customItemPrice ? Number(data.customItemPrice) : null,
       seatIndex: data.seatIndex,
       quantity: data.quantity,
       unitPrice: unitPrice,

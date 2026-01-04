@@ -122,8 +122,8 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
 
   // Build seat data from orders
   const seats = Array.from(seatOrders.entries()).map(([seatIndex, orders]) => {
-    const orderItems = orders.map((order) => ({
-      name: order.menuItem?.name || 'Unknown Item',
+    const orderItems = orders.map((order: any) => ({
+      name: order.menuItem?.name || order.customItemName || 'Unknown Item',
       quantity: order.quantity,
       unitPrice: Number(order.unitPrice),
       total: Number(order.totalPrice),

@@ -240,6 +240,40 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// PATCH /api/bookings/:id/players - Update number of players
+router.patch('/:id/players', requireAuth, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { players } = req.body;
+
+  try {
+    if (!players || players < 1 || players > 10) {
+      return res.status(400).json({ error: 'Players must be between 1 and 10' });
+    }
+
+    const booking = await getBooking(id);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Update booking players
+    const updated = await prisma.booking.update({
+      where: { id },
+      data: { 
+        players,
+        updatedAt: new Date(),
+      },
+    });
+
+    return res.json({ 
+      booking: presentBooking(updated),
+      message: `Booking players updated to ${players}` 
+    });
+  } catch (error) {
+    console.error('[UPDATE BOOKING PLAYERS] Error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Cancel a booking (own bookings only for now)
 router.patch('/:id/cancel', requireAuth, async (req, res) => {
   const { id } = req.params as { id: string };
@@ -1031,10 +1065,22 @@ router.patch('/:id/payment-status', requireAuth, requireAdmin, async (req, res) 
 
 // POST /api/bookings/:bookingId/orders - Add order to booking
 const createOrderSchema = z.object({
-  menuItemId: z.string().min(1),
+  menuItemId: z.string().min(1).optional(), // Optional for custom items
+  customItemName: z.string().min(1).optional(), // Required when menuItemId is null
+  customItemPrice: z.number().positive().optional(), // Required when menuItemId is null
   seatIndex: z.number().int().min(1).max(4).optional(), // null for shared orders
   quantity: z.number().int().min(1),
-});
+}).refine(
+  (data) => {
+    // Either menuItemId OR (customItemName + customItemPrice) must be provided
+    const hasMenuItem = !!data.menuItemId;
+    const hasCustomItem = !!data.customItemName && data.customItemPrice !== undefined;
+    return hasMenuItem !== hasCustomItem; // XOR: exactly one must be true
+  },
+  {
+    message: 'Either menuItemId OR (customItemName + customItemPrice) must be provided',
+  }
+);
 
 router.post('/:bookingId/orders', requireAuth, async (req, res) => {
   const { bookingId } = req.params;
@@ -1048,7 +1094,7 @@ router.post('/:bookingId/orders', requireAuth, async (req, res) => {
       });
     }
 
-    const { menuItemId, seatIndex, quantity } = parsed.data;
+    const { menuItemId, customItemName, customItemPrice, seatIndex, quantity } = parsed.data;
 
     // Verify booking exists
     const booking = await getBooking(bookingId);
@@ -1063,22 +1109,34 @@ router.post('/:bookingId/orders', requireAuth, async (req, res) => {
       });
     }
 
-    // Get menu item to get unit price
-    const menuItem = await prisma.menuItem.findUnique({
-      where: { id: menuItemId },
-    });
+    let unitPrice: number;
+    
+    // Handle custom item or regular menu item
+    if (menuItemId) {
+      // Regular menu item
+      const menuItem = await prisma.menuItem.findUnique({
+        where: { id: menuItemId },
+      });
 
-    if (!menuItem) {
-      return res.status(404).json({ error: 'Menu item not found' });
+      if (!menuItem) {
+        return res.status(404).json({ error: 'Menu item not found' });
+      }
+      
+      unitPrice = Number(menuItem.price);
+    } else {
+      // Custom item
+      unitPrice = customItemPrice!;
     }
 
     // Create order
     const order = await orderRepo.createOrder({
       bookingId,
       menuItemId,
+      customItemName,
+      customItemPrice,
       seatIndex: seatIndex || undefined,
       quantity,
-      unitPrice: Number(menuItem.price),
+      unitPrice,
     });
 
     // Recalculate invoice if seat-specific
