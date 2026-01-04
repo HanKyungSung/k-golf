@@ -96,6 +96,11 @@ jobs:
         run: |
           ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} 'mkdir -p ~/k-golf'
 
+      - name: Free up disk space (prune unused Docker images)
+        run: |
+          ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} \
+            'docker system prune -a -f --volumes || true'
+
       - name: Copy compose file
         run: scp docker-compose.release.yml ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:~/k-golf/docker-compose.release.yml
 
@@ -107,5 +112,5 @@ jobs:
              IMAGE_TAG=${GITHUB_SHA} docker compose -f docker-compose.release.yml pull && \
              IMAGE_TAG=${GITHUB_SHA} docker compose -f docker-compose.release.yml up -d"
 
-      - name: Prune old images (optional)
+      - name: Cleanup dangling images
         run: ssh ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} 'docker image prune -f'
