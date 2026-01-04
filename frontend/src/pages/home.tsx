@@ -4,12 +4,17 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
 import { useState } from 'react'
+import { PolicyModal } from '@/components/policy-modal'
 
 const API_BASE = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
 
 export default function HomePage() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  
+  // Policy modal state
+  const [policyModalOpen, setPolicyModalOpen] = useState(false)
+  const [policyType, setPolicyType] = useState<'booking' | 'cancellation'>('booking')
   
   // Contact form state
   const [contactForm, setContactForm] = useState({
@@ -617,14 +622,26 @@ export default function HomePage() {
                 </li>
                 */}
                 <li>
-                  <a href="#" className="hover:text-amber-400 transition-colors">
+                  <button
+                    onClick={() => {
+                      setPolicyType('booking')
+                      setPolicyModalOpen(true)
+                    }}
+                    className="hover:text-amber-400 transition-colors text-left"
+                  >
                     Booking Policy
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-amber-400 transition-colors">
+                  <button
+                    onClick={() => {
+                      setPolicyType('cancellation')
+                      setPolicyModalOpen(true)
+                    }}
+                    className="hover:text-amber-400 transition-colors text-left"
+                  >
                     Cancellations
-                  </a>
+                  </button>
                 </li>
                 <li>
                   <a href="#contact" className="hover:text-amber-400 transition-colors">
@@ -655,6 +672,13 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+      
+      {/* Policy Modal */}
+      <PolicyModal
+        open={policyModalOpen}
+        onOpenChange={setPolicyModalOpen}
+        type={policyType}
+      />
     </div>
   )
 }
