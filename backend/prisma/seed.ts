@@ -40,17 +40,19 @@ async function main() {
 	];
 
 	for (const setting of defaultSettings) {
-		await prisma.setting.upsert({
+		// Only create if doesn't exist - never overwrite existing values
+		const existing = await prisma.setting.findUnique({
 			where: { key: setting.key },
-			update: {
-				value: setting.value,
-				valueType: setting.valueType,
-				description: setting.description,
-				category: setting.category,
-				isPublic: setting.isPublic,
-			},
-			create: setting,
 		});
+		
+		if (!existing) {
+			await prisma.setting.create({
+				data: setting,
+			});
+			console.log(`Created default setting: ${setting.key} = ${setting.value}`);
+		} else {
+			console.log(`Setting ${setting.key} already exists (value: ${existing.value}), skipping`);
+		}
 	}
 	console.log('Seeded default settings: global_tax_rate');
 
