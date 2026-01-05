@@ -43,12 +43,8 @@ export async function createBooking(data: CreateBookingInput): Promise<Booking> 
     price = data.hours * HOURLY_RATE;
   }
   
-  // Calculate per-seat subtotal and tax
-  const seatSubtotal = Number(price) / data.players;
-  const seatTax = seatSubtotal * TAX_RATE;
-  const seatTotal = seatSubtotal + seatTax;
-  
-  // Create booking with auto-generated invoices (one per seat)
+  // Create booking with empty invoices (one per seat)
+  // Room booking cost will be added as an Order item to seat 1 separately
   return prisma.booking.create({
     data: {
       roomId: data.roomId,
@@ -62,18 +58,71 @@ export async function createBooking(data: CreateBookingInput): Promise<Booking> 
       bookingStatus: 'BOOKED',
       paymentStatus: 'UNPAID',
       bookingSource: data.bookingSource || 'ONLINE',
-      // Auto-create invoices for each seat
+      // Auto-create empty invoices for each seat (orders will be added later)
       invoices: {
         create: Array.from({ length: data.players }, (_, i) => ({
           seatIndex: i + 1,
-          subtotal: seatSubtotal,
-          tax: seatTax,
-          totalAmount: seatTotal,
+          subtotal: 0,
+          tax: 0,
+          totalAmount: 0,
           status: 'UNPAID',
         })),
       },
     },
     include: { invoices: true },
+  });
+}
+
+/**
+ * Add booking duration as an order item to seat 1
+ * This is called after creating a booking to add the room rental cost as a menu item order
+ */
+export async function addBookingOrderToSeat1(bookingId: string, hours: number): Promise<void> {
+  // Find the menu item for this duration
+  const menuItemId = `hour-${hours}`;
+  
+  const menuItem = await prisma.menuItem.findUnique({
+    where: { id: menuItemId },
+  });
+  
+  if (!menuItem) {
+    throw new Error(`Menu item not found for ${hours} hour(s): ${menuItemId}`);
+  }
+  
+  // Create order for seat 1
+  const order = await prisma.order.create({
+    data: {
+      bookingId,
+      menuItemId: menuItem.id,
+      seatIndex: 1,
+      quantity: 1,
+      unitPrice: menuItem.price,
+      totalPrice: menuItem.price,
+    },
+  });
+  
+  // Recalculate invoice for seat 1
+  const orders = await prisma.order.findMany({
+    where: { bookingId, seatIndex: 1 },
+  });
+  
+  const subtotal = orders.reduce((sum, o) => sum + Number(o.totalPrice), 0);
+  const taxRate = TAX_RATE; // Use the same tax rate
+  const tax = subtotal * taxRate;
+  const totalAmount = subtotal + tax;
+  
+  await prisma.invoice.update({
+    where: {
+      bookingId_seatIndex: {
+        bookingId,
+        seatIndex: 1,
+      },
+    },
+    data: {
+      subtotal,
+      tax,
+      totalAmount,
+    },
   });
 }
 

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createBooking, findConflict, listBookings, listUserBookings, listRoomBookingsBetween } from '../repositories/bookingRepo';
+import { createBooking, addBookingOrderToSeat1, findConflict, listBookings, listUserBookings, listRoomBookingsBetween } from '../repositories/bookingRepo';
 import { getBooking, cancelBooking, updatePaymentStatus, completeBooking, updateBookingStatus } from '../repositories/bookingRepo';
 import * as orderRepo from '../repositories/orderRepo';
 import * as invoiceRepo from '../repositories/invoiceRepo';
@@ -347,6 +347,9 @@ router.post('/', requireAuth, async (req, res) => {
       price,
       bookingSource: 'ONLINE', // Web frontend bookings are always ONLINE
     });
+    
+    // Auto-add booking duration as order to seat 1
+    await addBookingOrderToSeat1(booking.id, hours);
     
     // Send confirmation email with calendar attachment
     const userEmail = (req.user as any).email;

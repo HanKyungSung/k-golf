@@ -87,7 +87,37 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
+## 🎉 Recently Completed (2026-01-05)
+- [x] **Fixed invoice logic to track room booking cost as order items** - Consistent invoice handling
+  - [x] Modified createBooking() to create invoices with $0 subtotal instead of pre-calculating room price
+  - [x] Added addBookingOrderToSeat1() helper function to auto-create booking duration order
+  - [x] Room booking cost now tracked as Order item (hour-1 through hour-5 menu items)
+  - [x] All bookings start with clean invoices, seat 1 gets booking duration item
+  - [x] Example: 3-hour booking for 2 players creates booking ($105), seat 1 invoice ($105 + $10.50 tax), seat 2 invoice ($0 for food/drinks)
+  - [x] Updated both POST /api/bookings and POST /api/bookings/simple/create routes
+  - [x] Consistent with POS manual booking flow where items are added separately
+  - [x] Menu items for booking durations already exist in production (hour-1 to hour-5)
+- [x] **SEO: Diagnosed Google search visibility issues**
+  - [x] Site showing in Google search with old "K-Golf" branding (cached data)
+  - [x] Google successfully crawled site on Jan 5, 2026 with new "K one Golf" branding
+  - [x] Verified indexing allowed and page fetch successful via Search Console
+  - [x] Title and metadata correct in production HTML
+  - [x] Cache will refresh automatically within 24-72 hours after successful crawl
+- [x] **Database maintenance: Reset test booking invoice for manual testing**
+  - [x] Reset invoices for booking 8e989b92-fd09-4a28-b2d7-5a1e5c1cd8a8 to $0 subtotal
+  - [x] Allowed manual testing of new order-based invoice system
+
 ## 🎉 Recently Completed (2026-01-04)
+- [x] **Unified booking status to uppercase across entire system** - Consistent status handling
+  - [x] Database stores uppercase: BOOKED, CANCELLED, COMPLETED
+  - [x] Backend API returns uppercase status (removed presentStatus() conversion)
+  - [x] Frontend dashboard updated to use uppercase comparisons
+  - [x] POS dashboard getStatusColor() changed from toLowerCase() to toUpperCase()
+  - [x] Room status cards now correctly exclude CANCELLED/COMPLETED bookings
+  - [x] All status comparisons are case-insensitive and use uppercase
+  - [x] Fixed bug: cancelled booking (eaf69568...) was showing in room status cards
+  - [x] Timeline filters use uppercase for consistency
+  - [x] Electron POS uses case-insensitive comparison for both bookingStatus and status fields
 - [x] **Fixed timezone handling across entire platform** - Proper UTC storage with timezone-aware display
   - [x] Backend: Return ISO strings (UTC) for timezone-agnostic data transfer
   - [x] Customer frontend: Format times in user's browser timezone (PST user books 7pm, sees 7pm)
@@ -109,6 +139,20 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - [x] Freed 9.28GB disk space on production server (from 99% to 54% usage)
   - [x] Added docker system prune step to prevent future "no space left on device" errors
   - [x] Deployment workflow now prunes unused images/containers/volumes before pull
+- [x] **SEO metadata for Google search visibility**
+  - [x] Added comprehensive meta tags (title, description, keywords)
+  - [x] Geo tags for local search (Sydney, NS, Cape Breton)
+  - [x] Open Graph and Twitter card metadata
+  - [x] Schema.org structured data for SportsActivityLocation
+  - [x] Business name: "K one Golf"
+  - [x] Complete address: 45 Keltic Dr, Unit 6, Sydney, NS B1S 1P4
+  - [x] Phone: (902) 270-2259
+- [x] **Updated business address consistently across all pages**
+  - [x] Changed from "5 Keltic Dr #6" to "45 Keltic Dr, Unit 6, Sydney, NS B1S 1P4"
+  - [x] Updated in receipt footer (booking-detail.tsx)
+  - [x] Updated in booking confirmation page with Google Maps link
+  - [x] Updated in home page contact section
+  - [x] Updated in SEO structured data
 
 ## 🎉 Recently Completed (2026-01-02)
 - [x] Fixed critical receipt calculation bug - receipts now use invoice totals from database

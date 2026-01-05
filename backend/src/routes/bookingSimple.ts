@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { z } from 'zod';
 import { normalizePhone } from '../utils/phoneUtils';
 import { requireAuth } from '../middleware/requireAuth';
+import { addBookingOrderToSeat1 } from '../repositories/bookingRepo';
 
 const router = Router();
 
@@ -183,6 +184,9 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
     }
     
     await Promise.all(invoicePromises);
+    
+    // Auto-add booking duration as order to seat 1
+    await addBookingOrderToSeat1(booking.id, data.duration);
     
     return res.status(201).json({
       success: true,
