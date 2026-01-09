@@ -51,6 +51,7 @@ const createBookingSchema = z.object({
   startTimeMs: z.number().int().positive('Invalid start time'), // milliseconds timestamp
   players: z.number().int().min(1).max(4),
   hours: z.number().int().min(1).max(4),
+  timezone: z.string().optional(), // IANA timezone (e.g., "America/Halifax")
 });
 
 router.get('/', async (req, res) => {
@@ -285,7 +286,7 @@ router.post('/', requireAuth, async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
-  const { roomId, startTimeMs, players, hours } = parsed.data;
+  const { roomId, startTimeMs, players, hours, timezone } = parsed.data;
 
   // Fetch room for status/hours validation
   const room: any = await prisma.room.findUnique({ where: { id: roomId } });
@@ -305,18 +306,44 @@ router.post('/', requireAuth, async (req, res) => {
   // Compute endTime for conflict detection
   const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
 
-  // Enforce within room operating window (local wall clock). Using server local time for now.
-  const localY = start.getFullYear();
-  const localM = start.getMonth();
-  const localD = start.getDate();
-  const minutesFromMidnight = (dt: Date) => dt.getHours() * 60 + dt.getMinutes();
-  const startMinutes = minutesFromMidnight(start);
-  const endMinutes = minutesFromMidnight(end);
-  if (start.getFullYear() !== localY || start.getMonth() !== localM || start.getDate() !== localD) {
-    // cross-day bookings not supported
+  // Use timezone from FE or default to Atlantic Time
+  const bookingTimezone = timezone || 'America/Halifax';
+
+  // Convert timestamps to the specified timezone and extract hour components
+  const getHourInTimezone = (date: Date, tz: string): number => {
+    const timeStr = date.toLocaleString('en-US', { 
+      timeZone: tz, 
+      hour: 'numeric',
+      hour12: false 
+    });
+    return parseInt(timeStr, 10);
+  };
+
+  const getDateComponents = (date: Date, tz: string) => {
+    const parts = date.toLocaleString('en-US', {
+      timeZone: tz,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    }).split('/');
+    return { month: parseInt(parts[0]), day: parseInt(parts[1]), year: parseInt(parts[2]) };
+  };
+
+  const startHour = getHourInTimezone(start, bookingTimezone);
+  const endHour = getHourInTimezone(end, bookingTimezone);
+  
+  const startDate = getDateComponents(start, bookingTimezone);
+  const endDate = getDateComponents(end, bookingTimezone);
+
+  // Check cross-day booking (compare end date with start date)
+  if (endDate.year !== startDate.year || endDate.month !== startDate.month || endDate.day !== startDate.day) {
     return res.status(400).json({ error: 'Cross-day bookings not supported' });
   }
-  if (room.openMinutes !== undefined && room.closeMinutes !== undefined && !(startMinutes >= room.openMinutes && endMinutes <= room.closeMinutes)) {
+
+  // Simple hour comparison using room's operating hours
+  const openHour = room.openMinutes / 60;
+  const closeHour = room.closeMinutes / 60;
+  if (startHour < openHour || endHour > closeHour) {
     return res.status(400).json({ error: 'Booking outside room operating hours' });
   }
 

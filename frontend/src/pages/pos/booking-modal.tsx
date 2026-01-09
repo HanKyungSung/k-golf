@@ -216,6 +216,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
         duration,
         players,
         bookingSource,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Send user's timezone
       };
 
       await createBooking(payload);

@@ -301,6 +301,7 @@ export default function BookingPage() {
           startTimeMs,
           players: parseInt(numberOfPlayers, 10),
           hours: parseInt(numberOfPlayers, 10), // 1 hour per player
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Send user's timezone
         }),
       });
       if (!res.ok) {
