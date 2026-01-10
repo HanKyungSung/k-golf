@@ -80,6 +80,35 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 - User search functionality.
   - baed on email/phone/name (phone is probably the most reliable)
 
+- **Mobile Responsive Design Improvements** - Make frontend mobile-friendly
+  - [ ] **Phase 1: Fix Auth Buttons for Mobile**
+    - [ ] Make auth buttons responsive (shrink/stack on small screens)
+    - [ ] Use size="sm" and responsive text sizing (text-xs md:text-sm)
+    - [ ] Consider icon-only buttons on mobile with text on desktop
+    - [ ] Test button layouts on 320px-375px screens
+  - [ ] **Phase 2: Responsive Typography**
+    - [ ] Fix heading sizes: text-2xl md:text-3xl lg:text-4xl pattern
+    - [ ] Update all section headings (Premium Experience, Simple Pricing, etc.)
+    - [ ] Scale hero heading properly across breakpoints
+    - [ ] Adjust body text sizing for mobile readability
+  - [ ] **Phase 3: Layout & Spacing Optimization**
+    - [ ] Review grid layouts for mobile (ensure single column base)
+    - [ ] Add responsive padding/margin scaling
+    - [ ] Test timeline visualization on mobile (consider horizontal scroll)
+    - [ ] Optimize form layouts for touch interaction
+    - [ ] Add flex-wrap to button groups
+  - [ ] **Phase 4: Testing & Validation**
+    - [ ] Test on 375px width (iPhone SE)
+    - [ ] Test on 390px width (iPhone 12/13)
+    - [ ] Test on 768px width (iPad)
+    - [ ] Verify no horizontal scrolling on any device
+    - [ ] Ensure touch targets are ≥44px
+  - [ ] **Optional: Hamburger Menu** (Add if users request navigation)
+    - [ ] Create mobile hamburger menu component
+    - [ ] Use Sheet component from shadcn/ui
+    - [ ] Include navigation links and auth buttons
+    - [ ] Show on mobile (<768px), hide on desktop
+
 - **Setup Gmail "Send As" for k-golf.ca domain** 🔄 FUTURE TASK
   - Create email account on Postfix server (noreply@k-golf.ca)
   - Configure Postfix SMTP authentication
