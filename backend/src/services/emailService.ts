@@ -285,8 +285,8 @@ function generateICS(params: BookingConfirmationParams): string {
     `DTSTART:${dtstart}`,
     `DTEND:${dtend}`,
     `SUMMARY:K one Golf - ${roomName}`,
-    `DESCRIPTION:Your screen golf booking at K one Golf\\n\\nRoom: ${roomName}\\nPlayers: ${players}\\nDuration: ${hours} hour${hours > 1 ? 's' : ''}\\nPrice: $${price}\\n\\nBooking ID: ${bookingId}\\n\\nAddress: 5 Keltic Dr #6\\, Sydney\\, NS\\nPhone: (902) 270-2259`,
-    'LOCATION:K one Golf\\, 5 Keltic Dr #6\\, Sydney\\, NS',
+    `DESCRIPTION:Your screen golf booking at K one Golf\\n\\nRoom: ${roomName}\\nPlayers: ${players}\\nDuration: ${hours} hour${hours > 1 ? 's' : ''}\\nPrice: $${price}\\n\\nBooking ID: ${bookingId}\\n\\nAddress: 45 Keltic Dr\\, Unit 6\\, Sydney\\, NS\\nPhone: (902) 270-2259`,
+    'LOCATION:K one Golf\\, 45 Keltic Dr\\, Unit 6\\, Sydney\\, NS',
     `ORGANIZER;CN=K one Golf:mailto:${process.env.EMAIL_FROM || 'no-reply@konegolf.ca'}`,
     `ATTENDEE;CN=${customerName};RSVP=TRUE:mailto:${params.to}`,
     'STATUS:CONFIRMED',
@@ -403,12 +403,12 @@ function generateBookingConfirmationHTML(params: BookingConfirmationParams): str
         <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 16px; font-weight: 600;">📍 Location</h3>
         <p style="margin: 0; color: #475569; font-size: 14px; line-height: 1.6;">
           <strong>K one Golf</strong><br>
-          5 Keltic Dr #6<br>
-          Sydney, NS<br>
+          45 Keltic Dr, Unit 6<br>
+          Sydney, NS B1S 1P4<br>
           Phone: (902) 270-2259
         </p>
         <p style="margin: 12px 0 0 0;">
-          <a href="https://maps.google.com/?q=5+Keltic+Dr+6+Sydney+NS" style="color: #f59e0b; text-decoration: none; font-weight: 600; font-size: 14px;">Get Directions →</a>
+          <a href="https://maps.google.com/?q=45+Keltic+Dr+Unit+6+Sydney+NS" style="color: #f59e0b; text-decoration: none; font-weight: 600; font-size: 14px;">Get Directions →</a>
         </p>
       </div>
       
@@ -474,8 +474,8 @@ Booking Details:
 
 Location:
 K one Golf
-5 Keltic Dr #6
-Sydney, NS
+45 Keltic Dr, Unit 6
+Sydney, NS B1S 1P4
 Phone: (902) 270-2259
 
 A calendar file is attached to help you add this booking to your calendar.

@@ -53,3 +53,14 @@
   - What it's checking or modifying
   - Expected outcome
 - Example format: "Check Docker container status to verify K-Golf is running"
+
+## Git Operations
+
+- **ALWAYS use standard git commands via run_in_terminal** (e.g., `git status`, `git add`, `git commit`, `git push`)
+- **DO NOT use MCP git tools** (mcp_gitkraken_*) unless explicitly requested by the user
+- Standard git workflow:
+  1. `git status` - Check changed files
+  2. `git add .` or `git add <specific files>` - Stage changes
+  3. `git commit -m "descriptive message"` - Commit with clear message
+  4. `git push` or `git push origin <branch>` - Push to remote
+- Use conventional commit messages: `feat:`, `fix:`, `docs:`, `chore:`, etc.

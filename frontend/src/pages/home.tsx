@@ -255,9 +255,8 @@ export default function HomePage() {
                 professional-grade equipment for the ultimate indoor golf experience.
               </p>
               <p className="text-slate-400 mb-8 leading-relaxed">
-                With our simple "1 hour per person" booking model, you can enjoy hassle-free reservations for groups of
-                1-4 players. Each room offers the same premium experience with 4K displays, climate control, and access
-                to hundreds of world-class golf courses.
+                Enjoy hassle-free hourly bookings for groups of 1-4 players. Each room offers the same premium 
+                experience with 4K displays, climate control, and access to hundreds of world-class golf courses.
               </p>
               <div className="grid grid-cols-2 gap-8">
                 <div>

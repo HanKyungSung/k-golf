@@ -202,7 +202,7 @@ export default function BookingPage() {
     return `${y}-${m}-${d}`;
   };
 
-  // Calculate end time based on start time and number of players (1 hour per player)
+  // Calculate end time based on start time and hours booked
   const calculateEndTime = (start: string, players: number) => {
     if (!start) return "";
     const [hours, minutes] = start.split(":").map(Number);
@@ -300,7 +300,7 @@ export default function BookingPage() {
           roomId: backendId,
           startTimeMs,
           players: parseInt(numberOfPlayers, 10),
-          hours: parseInt(numberOfPlayers, 10), // 1 hour per player
+          hours: parseInt(numberOfPlayers, 10),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Send user's timezone
         }),
       });
@@ -323,12 +323,12 @@ export default function BookingPage() {
   const calculatePrice = () => {
     if (!selectedRoomData) return 0;
     const players = Number.parseInt(numberOfPlayers);
-    const ratePerPersonPerHour = 35; // Fixed rate for all rooms
-    return ratePerPersonPerHour * players;
+    const hourlyRate = 35; // Fixed hourly rate for all rooms
+    return hourlyRate * players;
   };
 
   const totalPrice = calculatePrice();
-  const totalHours = Number.parseInt(numberOfPlayers); // 1 hour per player
+  const totalHours = Number.parseInt(numberOfPlayers);
 
   const getBookingsForTimeline = () => {
     if (!selectedRoom || !selectedDate) return [];
@@ -388,7 +388,7 @@ export default function BookingPage() {
             Book Your Premium Experience
           </h2>
           <p className="text-slate-400 text-lg">
-            Choose your preferred time flexibly. Each player gets 1 hour of screen golf time at $35 per person (tax not included).
+            Choose your preferred time flexibly. Enjoy premium screen golf at $35/hour (tax not included).
           </p>
         </div>
 
@@ -434,7 +434,7 @@ export default function BookingPage() {
                         <div className="space-y-2">
                           <div className="text-center mb-3">
                             <div className="text-lg font-bold text-amber-400">$35</div>
-                            <div className="text-xs text-slate-400">per person/hour (+ tax)</div>
+                            <div className="text-xs text-slate-400">per hour (+ tax)</div>
                           </div>
 
                           {/* Hand Preference Badge */}
