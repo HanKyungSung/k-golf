@@ -538,16 +538,16 @@ export default function BookingPage() {
                         </SelectTrigger>
                         <SelectContent className="bg-slate-800 border-slate-700">
                           <SelectItem value="1" className="text-white hover:bg-slate-700">
-                            1 Player (1 hour)
+                            1 hour
                           </SelectItem>
                           <SelectItem value="2" className="text-white hover:bg-slate-700">
-                            2 Players (2 hours)
+                            2 hours
                           </SelectItem>
                           <SelectItem value="3" className="text-white hover:bg-slate-700">
-                            3 Players (3 hours)
+                            3 hours
                           </SelectItem>
                           <SelectItem value="4" className="text-white hover:bg-slate-700">
-                            4 Players (4 hours)
+                            4 hours
                           </SelectItem>
                         </SelectContent>
                       </Select>
