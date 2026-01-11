@@ -8,6 +8,7 @@ interface TimePickerProps {
   id?: string;
   'data-testid'?: string;
   maxDurationHours?: number; // Maximum booking duration to limit available start times
+  operatingHours?: { openMinutes: number; closeMinutes: number } | null; // Operating hours from backend
 }
 
 export const TimePicker: React.FC<TimePickerProps> = ({
@@ -17,9 +18,16 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   id,
   'data-testid': dataTestId,
   maxDurationHours = 1,
+  operatingHours = null,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [tempTime, setTempTime] = useState(value || '10:00');
+  
+  // Use operating hours from props, fallback to hardcoded 10:00 if not provided
+  const defaultStartTime = operatingHours 
+    ? `${Math.floor(operatingHours.openMinutes / 60).toString().padStart(2, '0')}:${(operatingHours.openMinutes % 60).toString().padStart(2, '0')}`
+    : '10:00';
+  
+  const [tempTime, setTempTime] = useState(value || defaultStartTime);
   const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,7 +56,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   };
 
   const handleCancel = () => {
-    setTempTime(value || '10:00');
+    setTempTime(value || defaultStartTime);
     setIsOpen(false);
   };
 
@@ -61,18 +69,24 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     return `${displayHour}:${m} ${period}`;
   };
 
-  // Generate hour options (10-24 for 10AM-12AM operating hours)
-  // Filter based on maxDurationHours to ensure booking doesn't go past 12AM (hour 24)
-  const hourOptions = Array.from({ length: 15 }, (_, i) => {
-    const hour = i + 10; // Start at 10 (10AM)
+  // Generate hour options dynamically based on operating hours
+  // Default to 10-24 (10AM-12AM) if operating hours not provided
+  const startHour = operatingHours ? Math.floor(operatingHours.openMinutes / 60) : 10;
+  const endHour = operatingHours ? Math.floor(operatingHours.closeMinutes / 60) : 24;
+  
+  const hourOptions = Array.from({ length: endHour - startHour + 1 }, (_, i) => {
+    const hour = i + startHour;
     const hourValue = hour === 24 ? '00' : hour.toString().padStart(2, '0');
     const displayHour = hour === 24 ? 12 : hour > 12 ? hour - 12 : hour;
     const period = hour === 24 || hour < 12 ? 'AM' : 'PM';
     return { value: hourValue, label: `${displayHour} ${period}` };
   }).filter((opt) => {
-    // Only show hours where startTime + duration <= 24:00 (midnight)
+    // Only show hours where startTime + duration <= closing time
     const hour = opt.value === '00' ? 24 : parseInt(opt.value, 10);
-    return hour + maxDurationHours <= 24;
+    const hourInMinutes = hour * 60;
+    const endMinutes = hourInMinutes + maxDurationHours * 60;
+    const closeMinutes = operatingHours ? operatingHours.closeMinutes : 24 * 60;
+    return endMinutes <= closeMinutes;
   });
 
   // Generate minute options (0-59)
@@ -82,7 +96,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   });
 
   return (
-    <div className="relative" ref={pickerRef}>
+    <div className="relative" ref={pickerRef} style={{ width: '100%' }}>
       {/* Input Display */}
       <button
         type="button"
@@ -90,6 +104,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         data-testid={dataTestId}
         onClick={() => setIsOpen(!isOpen)}
         className={`flex h-9 w-full rounded-md border border-slate-600 bg-slate-900/50 px-3 py-1 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 cursor-pointer items-center justify-between ${className}`}
+        style={{ width: '100%' }}
       >
         <span>{formatDisplayTime(value)}</span>
         <svg

@@ -30,6 +30,7 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - [ ] Verify backup schedule and test restoration process
   - [ ] Consider database backup script to external storage (Spaces/S3)
   - **Why:** No backups currently enabled - critical for production system
+  - The timeline view in booking should be responsive. Which means we need to either replace the graph or adjust it
 
 ### 🔄 Ongoing Tasks
 - Dashboard for the users
@@ -115,6 +116,19 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Set up Gmail "Send As" with k-golf.ca SMTP credentials
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
+
+## 🎉 Recently Completed (2026-01-11)
+- [x] **Migrated operating hours from Room table to Settings table** - Centralized business hours management
+  - [x] Created new Settings entries: `operating_hours_open` (600 = 10:00 AM) and `operating_hours_close` (1440 = 12:00 AM)
+  - [x] Added helper function getOperatingHours() to fetch from Settings with fallback defaults
+  - [x] Updated all booking validation logic to use Settings instead of Room.hours
+  - [x] Updated availability endpoint to use Settings-based operating hours
+  - [x] Seed script now creates operating hours settings (idempotent, won't overwrite existing)
+  - [x] Removed openHours/closeHours fields from Room table (deprecated)
+  - [x] Architecture: Single source of truth for business hours, easier to manage via admin UI
+  - [x] Backward compatible: Fallback to 10AM-12AM if settings not found
+  - [x] All booking creation endpoints now validate against Settings-based operating hours
+  - [x] Production deployment: Seed script runs automatically on deploy to create settings
 
 ## 🎉 Recently Completed (2026-01-05)
 - [x] **Fixed invoice logic to track room booking cost as order items** - Consistent invoice handling

@@ -14,8 +14,8 @@ async function main() {
 	for (const r of desiredRooms) {
 		await prisma.room.upsert({
 			where: { name: r.name },
-			update: ({ capacity: r.capacity, active: true, openMinutes: 600, closeMinutes: 1440, status: 'ACTIVE' } as any),
-			create: ({ name: r.name, capacity: r.capacity, active: true, openMinutes: 600, closeMinutes: 1440, status: 'ACTIVE' } as any),
+			update: ({ capacity: r.capacity, active: true, status: 'ACTIVE' } as any),
+			create: ({ name: r.name, capacity: r.capacity, active: true, status: 'ACTIVE' } as any),
 		});
 	}
 
@@ -37,6 +37,22 @@ async function main() {
 			category: 'tax',
 			isPublic: true,
 		},
+		{
+			key: 'operating_hours_open',
+			value: '600',
+			valueType: 'number',
+			description: 'Business opening time in minutes from midnight (600 = 10:00 AM)',
+			category: 'hours',
+			isPublic: true,
+		},
+		{
+			key: 'operating_hours_close',
+			value: '1440',
+			valueType: 'number',
+			description: 'Business closing time in minutes from midnight (1440 = 12:00 AM)',
+			category: 'hours',
+			isPublic: true,
+		},
 	];
 
 	for (const setting of defaultSettings) {
@@ -54,7 +70,7 @@ async function main() {
 			console.log(`Setting ${setting.key} already exists (value: ${existing.value}), skipping`);
 		}
 	}
-	console.log('Seeded default settings: global_tax_rate');
+	console.log('Seeded default settings: global_tax_rate, operating_hours_open, operating_hours_close');
 
 	// Seed menu items (idempotent by ID)
 	const defaultMenuItems = [

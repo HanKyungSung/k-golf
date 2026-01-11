@@ -11,6 +11,20 @@ import { sendBookingConfirmation } from '../services/emailService';
 
 const router = Router();
 
+// Helper function to fetch operating hours from Settings table
+async function getOperatingHours(): Promise<{ openMinutes: number; closeMinutes: number }> {
+  const [openSetting, closeSetting] = await Promise.all([
+    prisma.setting.findUnique({ where: { key: 'operating_hours_open' } }),
+    prisma.setting.findUnique({ where: { key: 'operating_hours_close' } }),
+  ]);
+
+  // Default to 10:00 AM - 12:00 AM if settings not found
+  const openMinutes = openSetting ? parseInt(openSetting.value, 10) : 600;
+  const closeMinutes = closeSetting ? parseInt(closeSetting.value, 10) : 1440;
+
+  return { openMinutes, closeMinutes };
+}
+
 function presentBooking(b: any) {
   return {
     id: b.id,
@@ -84,6 +98,28 @@ router.get('/rooms', async (_req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to load rooms' });
+  }
+});
+
+// Get operating hours (from business settings)
+router.get('/operating-hours', async (_req, res) => {
+  try {
+    const [openSetting, closeSetting] = await Promise.all([
+      prisma.setting.findUnique({ where: { key: 'operating_hours_open' } }),
+      prisma.setting.findUnique({ where: { key: 'operating_hours_close' } }),
+    ]);
+
+    if (!openSetting || !closeSetting) {
+      return res.status(404).json({ error: 'Operating hours not configured' });
+    }
+
+    res.json({
+      openMinutes: parseInt(openSetting.value, 10),
+      closeMinutes: parseInt(closeSetting.value, 10),
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load operating hours' });
   }
 });
 
@@ -335,16 +371,19 @@ router.post('/', requireAuth, async (req, res) => {
   const startDate = getDateComponents(start, bookingTimezone);
   const endDate = getDateComponents(end, bookingTimezone);
 
-  // Check cross-day booking (compare end date with start date)
-  if (endDate.year !== startDate.year || endDate.month !== startDate.month || endDate.day !== startDate.day) {
-    return res.status(400).json({ error: 'Cross-day bookings not supported' });
+  // Fetch operating hours from Settings
+  const operatingHours = await getOperatingHours();
+  const openHour = operatingHours.openMinutes / 60;
+  const closeHour = operatingHours.closeMinutes / 60;
+  
+  // Check operating hours first (more fundamental constraint)
+  if (startHour < openHour || endHour > closeHour) {
+    return res.status(400).json({ error: 'Booking outside operating hours' });
   }
 
-  // Simple hour comparison using room's operating hours
-  const openHour = room.openMinutes / 60;
-  const closeHour = room.closeMinutes / 60;
-  if (startHour < openHour || endHour > closeHour) {
-    return res.status(400).json({ error: 'Booking outside room operating hours' });
+  // Check cross-day booking (compare end date with start date)
+  if (endDate.year !== startDate.year || endDate.month !== startDate.month || endDate.day !== startDate.day) {
+    return res.status(400).json({ error: 'Booking outside operating hours' });
   }
 
   // Rule: cannot book a past time slot
@@ -441,13 +480,14 @@ router.get('/availability', async (req, res) => {
     return new Date(y, m - 1, d, hours24, minutes, 0, 0);
   }
 
-  // Derive open/close from room minutes
+  // Fetch operating hours from Settings instead of room
+  const operatingHours = await getOperatingHours();
   const minutesToHM = (mins: number) => ({ h: Math.floor(mins / 60), m: mins % 60 });
-  const { h: openH, m: openM } = minutesToHM(room.openMinutes ?? 600);
-  const { h: closeH, m: closeM } = minutesToHM(room.closeMinutes ?? 1440);
+  const { h: openH, m: openM } = minutesToHM(operatingHours.openMinutes);
+  const { h: closeH, m: closeM } = minutesToHM(operatingHours.closeMinutes);
   const dayOpen = makeTime(openH, openM);
   const dayClose = makeTime(closeH, closeM);
-  if (!(dayClose.getTime() > dayOpen.getTime())) return res.status(500).json({ error: 'Invalid room operating window' });
+  if (!(dayClose.getTime() > dayOpen.getTime())) return res.status(500).json({ error: 'Invalid operating window' });
 
   // Fetch existing bookings that intersect the day window
   const existing = await listRoomBookingsBetween(roomId, dayOpen, dayClose);
@@ -470,10 +510,9 @@ router.get('/availability', async (req, res) => {
   res.json({
     meta: {
       roomId,
-      date: dateStr,
-  openMinutes: room.openMinutes ?? 600,
-  closeMinutes: room.closeMinutes ?? 1440,
-  status: room.status ?? 'ACTIVE',
+      openMinutes: operatingHours.openMinutes,
+      closeMinutes: operatingHours.closeMinutes,
+      status: room.status ?? 'ACTIVE',
       slotMinutes,
       hours,
     },
@@ -481,10 +520,8 @@ router.get('/availability', async (req, res) => {
   });
 });
 
-// Admin-only endpoint to update room schedule / status
+// Admin-only endpoint to update room status (operating hours moved to Settings)
 const updateRoomSchema = z.object({
-  openMinutes: z.number().int().min(0).max(1439).optional(),
-  closeMinutes: z.number().int().min(1).max(1440).optional(),
   status: z.enum(['ACTIVE', 'MAINTENANCE', 'CLOSED']).optional(),
 });
 
@@ -495,36 +532,8 @@ router.patch('/rooms/:id', requireAuth, async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { id } = req.params as { id: string };
   const data = parsed.data;
-  if (data.openMinutes !== undefined && data.closeMinutes !== undefined) {
-    if (!(data.closeMinutes > data.openMinutes)) {
-      return res.status(400).json({ error: 'closeMinutes must be greater than openMinutes' });
-    }
-  }
+  
   try {
-    // Prevent shrinking hours that would orphan existing future bookings
-    if (data.openMinutes !== undefined || data.closeMinutes !== undefined) {
-  const room: any = await prisma.room.findUnique({ where: { id } });
-      if (!room) return res.status(404).json({ error: 'Room not found' });
-  const newOpen = data.openMinutes ?? room.openMinutes ?? 540;
-  const newClose = data.closeMinutes ?? room.closeMinutes ?? 1140;
-      if (!(newClose > newOpen)) return res.status(400).json({ error: 'Invalid window' });
-      // Look for future bookings outside new window
-      const now = new Date();
-      const future = await prisma.booking.findFirst({
-        where: {
-          roomId: id,
-          startTime: { gt: now },
-          bookingStatus: { not: 'CANCELLED' },
-          OR: [
-            { startTime: { lt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(newOpen/60), newOpen%60) } },
-            { endTime: { gt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(newClose/60), newClose%60) } },
-          ],
-        },
-      });
-      if (future) {
-        return res.status(409).json({ error: 'Future bookings exist outside new window' });
-      }
-    }
     const updated = await prisma.room.update({ where: { id }, data });
     res.json({ room: updated });
   } catch (e) {
@@ -577,16 +586,15 @@ router.post('/admin/create-OLD', requireAuth, async (req, res) => {
 
   const end = new Date(start.getTime() + hours * 3600 * 1000);
 
-  // Check room hours
+  // Check room hours against business operating hours
+  const operatingHours = await getOperatingHours();
   const startMinutes = start.getHours() * 60 + start.getMinutes();
   const endMinutes = end.getHours() * 60 + end.getMinutes();
-  const openMinutes = room.openMinutes ?? 540;
-  const closeMinutes = room.closeMinutes ?? 1140;
 
-  if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+  if (startMinutes < operatingHours.openMinutes || endMinutes > operatingHours.closeMinutes) {
     return res.status(400).json({
-      error: 'Booking outside room operating hours',
-      roomHours: { open: openMinutes, close: closeMinutes },
+      error: 'Booking outside operating hours',
+      operatingHours: { open: operatingHours.openMinutes, close: operatingHours.closeMinutes },
       bookingHours: { start: startMinutes, end: endMinutes },
     });
   }

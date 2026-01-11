@@ -76,6 +76,10 @@ export default function BookingPage() {
   const [loadingRooms, setLoadingRooms] = useState(false);
   const selectedBackendId = rooms.find((r) => r.id === selectedRoom)?.backendId;
 
+  // Operating hours from backend
+  const [operatingHours, setOperatingHours] = useState<{ openMinutes: number; closeMinutes: number } | null>(null);
+  const [timeValidationError, setTimeValidationError] = useState<string>("");
+
   // Restore saved booking selections from sessionStorage on mount
   useEffect(() => {
     const saved = sessionStorage.getItem('pendingBooking');
@@ -92,6 +96,27 @@ export default function BookingPage() {
         console.error('Failed to restore booking selections:', e);
       }
     }
+  }, []);
+
+  // Load operating hours
+  useEffect(() => {
+    const loadOperatingHours = async () => {
+      try {
+        const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
+        const res = await fetch(`${apiBase}/api/bookings/operating-hours`, {
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setOperatingHours({
+          openMinutes: data.openMinutes,
+          closeMinutes: data.closeMinutes,
+        });
+      } catch (error) {
+        console.error('Failed to fetch operating hours:', error);
+      }
+    };
+    loadOperatingHours();
   }, []);
 
   // Load rooms and build 4 display rooms with backend IDs
@@ -248,7 +273,30 @@ export default function BookingPage() {
     selectedDate &&
     startTime &&
     endTime &&
+    !timeValidationError &&
     isTimeSlotAvailable(selectedRoom, selectedDate, startTime, endTime);
+
+  // Validate time when hours or start time changes
+  useEffect(() => {
+    if (!startTime || !operatingHours) {
+      setTimeValidationError("");
+      return;
+    }
+
+    const [startHour, startMin] = startTime.split(":").map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const hours = Number.parseInt(numberOfPlayers);
+    const endMinutes = startMinutes + hours * 60;
+    const closeMinutes = operatingHours.closeMinutes;
+
+    if (endMinutes > closeMinutes) {
+      setTimeValidationError(
+        `This booking would extend past closing time. Please select an earlier time or fewer hours.`
+      );
+    } else {
+      setTimeValidationError("");
+    }
+  }, [startTime, numberOfPlayers, operatingHours]);
 
   const handleBooking = async () => {
     if (!user) {
@@ -528,12 +576,19 @@ export default function BookingPage() {
                     Choose Start Time
                   </h4>
                   <div className="space-y-4 bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+                    {operatingHours && (
+                      <div className="pb-2 border-b border-slate-700">
+                        <Label className="text-slate-400 text-sm">
+                          Operating Hours: {Math.floor(operatingHours.openMinutes / 60)}:{(operatingHours.openMinutes % 60).toString().padStart(2, '0')} {Math.floor(operatingHours.openMinutes / 60) >= 12 ? 'PM' : 'AM'} - {Math.floor(operatingHours.closeMinutes / 60) === 24 ? '12' : Math.floor(operatingHours.closeMinutes / 60) > 12 ? Math.floor(operatingHours.closeMinutes / 60) - 12 : Math.floor(operatingHours.closeMinutes / 60)}:{(operatingHours.closeMinutes % 60).toString().padStart(2, '0')} {Math.floor(operatingHours.closeMinutes / 60) >= 12 ? 'AM' : 'AM'}
+                        </Label>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="players" className="text-white font-medium">
-                        Number of Players
+                        Number of Hours
                       </Label>
                       <Select value={numberOfPlayers} onValueChange={setNumberOfPlayers}>
-                        <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                        <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white" style={{ width: '100%' }}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-slate-800 border-slate-700">
@@ -555,7 +610,7 @@ export default function BookingPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="start-time" className="text-white font-medium">
-                        Start Time (10:00 AM - 12:00 AM)
+                        Start Time
                       </Label>
                       <TimePicker
                         id="start-time"
@@ -563,7 +618,11 @@ export default function BookingPage() {
                         onChange={(value) => setStartTime(value)}
                         className="bg-slate-700/50 border-slate-600 text-white"
                         maxDurationHours={parseInt(numberOfPlayers, 10)}
+                        operatingHours={operatingHours}
                       />
+                      {timeValidationError && (
+                        <p className="text-sm text-red-400 mt-1">{timeValidationError}</p>
+                      )}
                     </div>
 
                     {startTime && endTime && (
