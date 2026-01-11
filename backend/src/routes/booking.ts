@@ -146,15 +146,28 @@ router.get('/by-room-date', async (req, res) => {
       return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
     }
 
-    // Create start and end of day in local time
-    const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
-    const dayEnd = new Date(y, m - 1, d, 23, 59, 59, 999);
+    // Create UTC date boundaries for the requested calendar date
+    // This ensures consistent behavior regardless of server timezone
+    const dayStartUTC = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+    const dayEndUTC = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
 
-    // Fetch bookings for the room on this date
-    const bookings = await listRoomBookingsBetween(roomId, dayStart, dayEnd);
+    // Fetch all bookings for this room (not cancelled)
+    const allBookings = await prisma.booking.findMany({
+      where: {
+        roomId,
+        bookingStatus: { not: 'CANCELLED' },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+
+    // Filter bookings where startTime falls within the requested UTC date
+    // This matches the admin dashboard logic: bookings appear only on the day they start
+    const bookingsOnDate = allBookings.filter((b) => {
+      return b.startTime >= dayStartUTC && b.startTime <= dayEndUTC;
+    });
 
     // Return ISO strings - let frontend format in user's timezone
-    const formattedBookings = bookings.map((b) => ({
+    const formattedBookings = bookingsOnDate.map((b) => ({
       id: b.id,
       roomId: b.roomId,
       date: date,
@@ -486,7 +499,11 @@ router.get('/availability', async (req, res) => {
   const { h: openH, m: openM } = minutesToHM(operatingHours.openMinutes);
   const { h: closeH, m: closeM } = minutesToHM(operatingHours.closeMinutes);
   const dayOpen = makeTime(openH, openM);
-  const dayClose = makeTime(closeH, closeM);
+  
+  // Handle close time: if closeMinutes is 1440 (24:00), it means end of day (next day at 00:00)
+  // Create the close time by adding minutes from dayOpen to handle wrap-around correctly
+  const dayClose = new Date(dayOpen.getTime() + (operatingHours.closeMinutes - operatingHours.openMinutes) * 60 * 1000);
+  
   if (!(dayClose.getTime() > dayOpen.getTime())) return res.status(500).json({ error: 'Invalid operating window' });
 
   // Fetch existing bookings that intersect the day window
