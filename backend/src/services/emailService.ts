@@ -312,7 +312,8 @@ function generateBookingConfirmationHTML(params: BookingConfirmationParams): str
   const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { 
     hour: 'numeric', 
     minute: '2-digit',
-    hour12: true 
+    hour12: true,
+    timeZone: 'America/Halifax'
   });
   
   const formatDate = (dateStr: string) => {
@@ -454,7 +455,8 @@ export async function sendBookingConfirmation(params: BookingConfirmationParams)
   const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { 
     hour: 'numeric', 
     minute: '2-digit',
-    hour12: true 
+    hour12: true,
+    timeZone: 'America/Halifax'
   });
   
   const text = `

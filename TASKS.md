@@ -32,7 +32,12 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - **Why:** No backups currently enabled - critical for production system
   - Clean up the operation hours in Rooms table.
   - The timeline view in booking should be responsive. Which means we need to either replace the graph or adjust it
-  - Check Jin's bug. She found there is a bug on showing different confirmation page and email.
+- [x] **Fix Confirmation Email Timezone Bug** - Email showed UTC time instead of Halifax time
+  - [x] Issue: Email times were 4 hours ahead (e.g., 2:30 PM instead of 10:30 AM)
+  - [x] Root cause: `toLocaleTimeString` on server used UTC, not Halifax timezone
+  - [x] Fixed `emailService.ts` - added `timeZone: 'America/Halifax'` to formatTime functions
+  - [x] Fixed `booking-confirmation.tsx` - consistent Halifax timezone display
+  - [x] Verified with booking `b0c38ad0-ba04-4c69-b7f1-d38e7a80332e` (DB: 14:30 UTC = 10:30 AM Halifax)
 - [x] **Timeline View Total Hours Display** - Show total booked hours per day in timeline
   - [x] Added amber badge showing total hours at corner of each day's timeline
   - [x] Added green badge showing total revenue (with tax) per day
