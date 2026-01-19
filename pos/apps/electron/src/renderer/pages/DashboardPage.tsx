@@ -782,12 +782,14 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek }: TimelineViewP
           {weekDays.map((day: Date, idx: number) => {
             const dayKey = dateKey(day);
             const dayBookings = bookings.filter((b: import('../app/BookingContext').Booking) => b.date === dayKey);
+            const totalHours = dayBookings.reduce((sum: number, b: import('../app/BookingContext').Booking) => sum + (b.duration || 0), 0);
             return (
               <div key={`${dayKey}-${dayBookings.length}`} className="space-y-2">
                 <div className="flex items-center gap-3">
                   <h3 className="text-sm font-semibold text-white min-w-[120px]">{day.toLocaleDateString('en-US',{weekday:'long'})}</h3>
                   <div className="text-[11px] text-slate-400">{day.toLocaleDateString('en-US',{month:'long',day:'numeric'})}</div>
                   <div className="flex-1 h-px bg-slate-700" />
+                  <Badge className="bg-amber-600/60 text-amber-200">{totalHours} hour{totalHours!==1?'s':''}</Badge>
                   <Badge className="bg-slate-700/60 text-slate-300">{dayBookings.length} booking{dayBookings.length!==1?'s':''}</Badge>
                 </div>
                 <div className="space-y-2">

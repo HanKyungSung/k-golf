@@ -30,7 +30,13 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - [ ] Verify backup schedule and test restoration process
   - [ ] Consider database backup script to external storage (Spaces/S3)
   - **Why:** No backups currently enabled - critical for production system
+  - Clean up the operation hours in Rooms table.
   - The timeline view in booking should be responsive. Which means we need to either replace the graph or adjust it
+  - Check Jin's bug. She found there is a bug on showing different confirmation page and email.
+- [x] **Timeline View Total Hours Display** - Show total booked hours per day in timeline
+  - [x] Added amber badge showing total hours at corner of each day's timeline
+  - [x] Updated both Web POS (`frontend/src/pages/pos/dashboard.tsx`) and Electron POS (`pos/apps/electron/src/renderer/pages/DashboardPage.tsx`)
+  - [x] Uses filtered bookings (BOOKED/COMPLETED only) for accurate counting
 
 ### 🔄 Ongoing Tasks
 - Dashboard for the users

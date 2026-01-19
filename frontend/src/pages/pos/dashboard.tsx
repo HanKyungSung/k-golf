@@ -805,6 +805,8 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
           {weekDays.map((day) => {
             const dayStr = dateKey(day);
             const dayBookings = bookings.filter(b => b.date === dayStr);
+            const filteredDayBookings = filterBookingsByStatus(dayBookings);
+            const totalHours = filteredDayBookings.reduce((sum, b) => sum + (b.duration || 0), 0);
 
             return (
               <div key={dayStr} className="space-y-2">
@@ -817,8 +819,11 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
                     {day.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
                   </div>
                   <div className="flex-1 h-px bg-slate-700" />
+                  <Badge className="bg-amber-600/60 text-amber-200">
+                    {totalHours} hour{totalHours !== 1 ? 's' : ''}
+                  </Badge>
                   <Badge className="bg-slate-700/60 text-slate-300">
-                    {dayBookings.length} booking{dayBookings.length !== 1 ? 's' : ''}
+                    {filteredDayBookings.length} booking{filteredDayBookings.length !== 1 ? 's' : ''}
                   </Badge>
                 </div>
 
