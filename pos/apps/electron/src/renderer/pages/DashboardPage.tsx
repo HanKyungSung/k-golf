@@ -493,7 +493,8 @@ const DashboardPage: React.FC = () => {
                 weekDays={weekDays} 
                 rooms={rooms} 
                 bookings={timelineBookings} 
-                navigateWeek={navigateWeek} 
+                navigateWeek={navigateWeek}
+                taxRate={globalTaxRate}
               />
             </TabsContent>
             <TabsContent when="menu">
@@ -754,9 +755,10 @@ interface TimelineViewProps {
   rooms: import('../app/BookingContext').Room[];
   bookings: import('../app/BookingContext').Booking[];
   navigateWeek: (dir: 'prev' | 'next') => void;
+  taxRate: number;
 }
 
-function TimelineView({ weekDays, rooms, bookings, navigateWeek }: TimelineViewProps) {
+function TimelineView({ weekDays, rooms, bookings, navigateWeek, taxRate }: TimelineViewProps) {
   const dayStart = 9 * 60, dayEnd = 22 * 60, totalMinutes = dayEnd - dayStart;
   const navigate = useNavigate();
   return (
@@ -783,12 +785,15 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek }: TimelineViewP
             const dayKey = dateKey(day);
             const dayBookings = bookings.filter((b: import('../app/BookingContext').Booking) => b.date === dayKey);
             const totalHours = dayBookings.reduce((sum: number, b: import('../app/BookingContext').Booking) => sum + (b.duration || 0), 0);
+            const subtotal = dayBookings.reduce((sum: number, b: import('../app/BookingContext').Booking) => sum + (b.price || 0), 0);
+            const totalRevenue = subtotal * (1 + taxRate / 100);
             return (
               <div key={`${dayKey}-${dayBookings.length}`} className="space-y-2">
                 <div className="flex items-center gap-3">
                   <h3 className="text-sm font-semibold text-white min-w-[120px]">{day.toLocaleDateString('en-US',{weekday:'long'})}</h3>
                   <div className="text-[11px] text-slate-400">{day.toLocaleDateString('en-US',{month:'long',day:'numeric'})}</div>
                   <div className="flex-1 h-px bg-slate-700" />
+                  <Badge className="bg-green-600/60 text-green-200">${totalRevenue.toFixed(2)}</Badge>
                   <Badge className="bg-amber-600/60 text-amber-200">{totalHours} hour{totalHours!==1?'s':''}</Badge>
                   <Badge className="bg-slate-700/60 text-slate-300">{dayBookings.length} booking{dayBookings.length!==1?'s':''}</Badge>
                 </div>

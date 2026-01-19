@@ -484,6 +484,7 @@ export default function POSDashboard() {
               onBookingClick={openBookingDetail}
               currentWeekStart={currentWeekStart}
               setCurrentWeekStart={setCurrentWeekStart}
+              taxRate={taxRate}
             />
           </TabsContent>
 
@@ -693,9 +694,10 @@ interface TimelineViewProps {
   onBookingClick: (bookingId: string) => void;
   currentWeekStart: Date;
   setCurrentWeekStart: (date: Date) => void;
+  taxRate: number;
 }
 
-function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCurrentWeekStart }: TimelineViewProps) {
+function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCurrentWeekStart, taxRate }: TimelineViewProps) {
   const navigate = useNavigate();
   const dayStart = 10 * 60; // 10:00 AM
   const dayEnd = 24 * 60;   // Midnight (12:00 AM next day)
@@ -807,6 +809,8 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
             const dayBookings = bookings.filter(b => b.date === dayStr);
             const filteredDayBookings = filterBookingsByStatus(dayBookings);
             const totalHours = filteredDayBookings.reduce((sum, b) => sum + (b.duration || 0), 0);
+            const subtotal = filteredDayBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+            const totalRevenue = subtotal * (1 + taxRate / 100);
 
             return (
               <div key={dayStr} className="space-y-2">
@@ -819,6 +823,9 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
                     {day.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
                   </div>
                   <div className="flex-1 h-px bg-slate-700" />
+                  <Badge className="bg-green-600/60 text-green-200">
+                    ${totalRevenue.toFixed(2)}
+                  </Badge>
                   <Badge className="bg-amber-600/60 text-amber-200">
                     {totalHours} hour{totalHours !== 1 ? 's' : ''}
                   </Badge>

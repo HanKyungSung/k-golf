@@ -35,8 +35,10 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Check Jin's bug. She found there is a bug on showing different confirmation page and email.
 - [x] **Timeline View Total Hours Display** - Show total booked hours per day in timeline
   - [x] Added amber badge showing total hours at corner of each day's timeline
+  - [x] Added green badge showing total revenue (with tax) per day
   - [x] Updated both Web POS (`frontend/src/pages/pos/dashboard.tsx`) and Electron POS (`pos/apps/electron/src/renderer/pages/DashboardPage.tsx`)
   - [x] Uses filtered bookings (BOOKED/COMPLETED only) for accurate counting
+  - [x] Revenue calculated as subtotal × (1 + taxRate/100)
 
 ### 🔄 Ongoing Tasks
 - Dashboard for the users
