@@ -167,9 +167,13 @@ export default function BookingPage() {
       setLoadingBookings(true);
       try {
         const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
-        const dateStr = toLocalYMD(selectedDate);
+        
+        // Convert selected date to UTC timestamps for start and end of day in browser timezone
+        const dayStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0);
+        const dayEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999);
+        
         const res = await fetch(
-          `${apiBase}/api/bookings/by-room-date?roomId=${backendId}&date=${dateStr}`,
+          `${apiBase}/api/bookings/by-room-date?roomId=${backendId}&startTime=${dayStart.toISOString()}&endTime=${dayEnd.toISOString()}`,
           { credentials: "include" }
         );
         if (!res.ok) {

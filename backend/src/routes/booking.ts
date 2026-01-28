@@ -130,26 +130,34 @@ router.get('/mine', requireAuth, async (req, res) => {
 
 // Get bookings by room and date for timeline visualization
 router.get('/by-room-date', async (req, res) => {
-  const { roomId, date } = req.query as { roomId?: string; date?: string };
+  const { roomId, date, startTime, endTime } = req.query as { roomId?: string; date?: string; startTime?: string; endTime?: string };
   
   if (!roomId) {
     return res.status(400).json({ error: 'roomId required' });
   }
-  if (!date) {
-    return res.status(400).json({ error: 'date required (YYYY-MM-DD)' });
+  
+  // Support both old format (date) and new format (startTime/endTime)
+  if (!date && (!startTime || !endTime)) {
+    return res.status(400).json({ error: 'Either date or startTime+endTime required' });
   }
 
   try {
-    // Parse the date string (YYYY-MM-DD)
-    const [y, m, d] = date.split('-').map(Number);
-    if (!y || !m || !d) {
-      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    let dayStartUTC: Date;
+    let dayEndUTC: Date;
+    
+    if (startTime && endTime) {
+      // New format: Frontend sends UTC timestamps for day boundaries in browser timezone
+      dayStartUTC = new Date(startTime);
+      dayEndUTC = new Date(endTime);
+    } else {
+      // Old format: Date string (YYYY-MM-DD) - interpret as UTC for backward compatibility
+      const [y, m, d] = date!.split('-').map(Number);
+      if (!y || !m || !d) {
+        return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+      }
+      dayStartUTC = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+      dayEndUTC = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
     }
-
-    // Create UTC date boundaries for the requested calendar date
-    // This ensures consistent behavior regardless of server timezone
-    const dayStartUTC = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
-    const dayEndUTC = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
 
     // Fetch all bookings for this room (not cancelled)
     const allBookings = await prisma.booking.findMany({
@@ -160,8 +168,7 @@ router.get('/by-room-date', async (req, res) => {
       orderBy: { startTime: 'asc' },
     });
 
-    // Filter bookings where startTime falls within the requested UTC date
-    // This matches the admin dashboard logic: bookings appear only on the day they start
+    // Filter bookings where startTime falls within the requested time range
     const bookingsOnDate = allBookings.filter((b) => {
       return b.startTime >= dayStartUTC && b.startTime <= dayEndUTC;
     });
@@ -170,7 +177,7 @@ router.get('/by-room-date', async (req, res) => {
     const formattedBookings = bookingsOnDate.map((b) => ({
       id: b.id,
       roomId: b.roomId,
-      date: date,
+      date: date || startTime!.split('T')[0], // Use date if provided, otherwise extract from startTime
       startTime: b.startTime.toISOString(),
       endTime: b.endTime.toISOString(),
       customerName: b.customerName || 'Guest',
