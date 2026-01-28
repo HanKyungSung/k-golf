@@ -453,6 +453,7 @@ router.post('/', requireAuth, async (req, res) => {
           players,
           hours,
           price: price.toFixed(2),
+          customerTimezone: bookingTimezone,
         });
         console.log(`[Booking] Confirmation email sent to ${userEmail}`);
       } catch (emailError) {

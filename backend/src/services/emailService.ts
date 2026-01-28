@@ -24,6 +24,7 @@ export interface BookingConfirmationParams {
   players: number;
   hours: number;
   price: string;
+  customerTimezone?: string; // Customer's timezone (e.g., 'America/Halifax')
 }
 
 export interface ContactEmailParams {
@@ -307,13 +308,16 @@ function generateICS(params: BookingConfirmationParams): string {
  * Generate HTML for booking confirmation email
  */
 function generateBookingConfirmationHTML(params: BookingConfirmationParams): string {
-  const { customerName, roomName, date, startTime, endTime, players, hours, price } = params;
+  const { customerName, roomName, date, startTime, endTime, players, hours, price, customerTimezone } = params;
+  
+  // Use customer's timezone or default to Halifax
+  const tz = customerTimezone || 'America/Halifax';
   
   const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { 
     hour: 'numeric', 
     minute: '2-digit',
     hour12: true,
-    timeZone: 'America/Halifax'
+    timeZone: tz
   });
   
   const formatDate = (dateStr: string) => {
@@ -323,7 +327,8 @@ function generateBookingConfirmationHTML(params: BookingConfirmationParams): str
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: tz
     });
   };
 
@@ -452,11 +457,13 @@ export async function sendBookingConfirmation(params: BookingConfirmationParams)
   const html = generateBookingConfirmationHTML(params);
   const icsContent = generateICS(params);
   
+  const tz = params.customerTimezone || 'America/Halifax';
+  
   const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { 
     hour: 'numeric', 
     minute: '2-digit',
     hour12: true,
-    timeZone: 'America/Halifax'
+    timeZone: tz
   });
   
   const text = `
