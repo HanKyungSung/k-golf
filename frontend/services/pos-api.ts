@@ -98,9 +98,15 @@ export async function getBooking(id: string): Promise<Booking> {
   const endTime = new Date(rawBooking.endTime);
   const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60));
   
+  // Extract date in browser's local timezone (browser set to Halifax)
+  const year = startTime.getFullYear();
+  const month = String(startTime.getMonth() + 1).padStart(2, '0');
+  const day = String(startTime.getDate()).padStart(2, '0');
+  const date = `${year}-${month}-${day}`;
+  
   return {
     ...rawBooking,
-    date: startTime.toISOString().split('T')[0], // YYYY-MM-DD
+    date, // YYYY-MM-DD in browser timezone
     time: startTime.toTimeString().slice(0, 5), // HH:MM
     duration: duration,
     roomName: rawBooking.roomName || `Room ${rawBooking.roomId}`, // Fallback if not provided
