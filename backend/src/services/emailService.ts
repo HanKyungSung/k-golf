@@ -21,7 +21,6 @@ export interface BookingConfirmationParams {
   date: string; // YYYY-MM-DD
   startTime: Date;
   endTime: Date;
-  players: number;
   hours: number;
   price: string;
   customerTimezone?: string; // Customer's timezone (e.g., 'America/Halifax')
@@ -259,7 +258,7 @@ ${receipt.business.phone}
  * Generate ICS calendar file content
  */
 function generateICS(params: BookingConfirmationParams): string {
-  const { customerName, bookingId, roomName, startTime, endTime, players, hours, price } = params;
+  const { customerName, bookingId, roomName, startTime, endTime, hours, price } = params;
   
   // Format dates for ICS (YYYYMMDDTHHMMSSZ)
   const formatICSDate = (date: Date): string => {
@@ -286,7 +285,7 @@ function generateICS(params: BookingConfirmationParams): string {
     `DTSTART:${dtstart}`,
     `DTEND:${dtend}`,
     `SUMMARY:K one Golf - ${roomName}`,
-    `DESCRIPTION:Your screen golf booking at K one Golf\\n\\nRoom: ${roomName}\\nPlayers: ${players}\\nDuration: ${hours} hour${hours > 1 ? 's' : ''}\\nPrice: $${price}\\n\\nBooking ID: ${bookingId}\\n\\nAddress: 45 Keltic Dr\\, Unit 6\\, Sydney\\, NS\\nPhone: (902) 270-2259`,
+    `DESCRIPTION:Your screen golf booking at K one Golf\\n\\nRoom: ${roomName}\\nDuration: ${hours} hour${hours > 1 ? 's' : ''}\\nPrice: $${price}\\n\\nBooking ID: ${bookingId}\\n\\nAddress: 45 Keltic Dr\\, Unit 6\\, Sydney\\, NS\\nPhone: (902) 270-2259`,
     'LOCATION:K one Golf\\, 45 Keltic Dr\\, Unit 6\\, Sydney\\, NS',
     `ORGANIZER;CN=K one Golf:mailto:${process.env.EMAIL_FROM || 'no-reply@konegolf.ca'}`,
     `ATTENDEE;CN=${customerName};RSVP=TRUE:mailto:${params.to}`,
@@ -308,7 +307,7 @@ function generateICS(params: BookingConfirmationParams): string {
  * Generate HTML for booking confirmation email
  */
 function generateBookingConfirmationHTML(params: BookingConfirmationParams): string {
-  const { customerName, roomName, date, startTime, endTime, players, hours, price, customerTimezone } = params;
+  const { customerName, roomName, date, startTime, endTime, hours, price, customerTimezone } = params;
   
   // Use customer's timezone or default to Halifax
   const tz = customerTimezone || 'America/Halifax';
@@ -370,13 +369,9 @@ function generateBookingConfirmationHTML(params: BookingConfirmationParams): str
         
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td style="padding: 12px 16px; background: #f8fafc; border-radius: 8px 0 0 0;">
+            <td colspan="2" style="padding: 12px 16px; background: #f8fafc; border-radius: 8px 8px 0 0;">
               <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Room</p>
               <p style="margin: 4px 0 0 0; color: #0f172a; font-size: 16px; font-weight: 600;">${roomName}</p>
-            </td>
-            <td style="padding: 12px 16px; background: #f8fafc; border-radius: 0 8px 0 0;">
-              <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Players</p>
-              <p style="margin: 4px 0 0 0; color: #0f172a; font-size: 16px; font-weight: 600;">${players}</p>
             </td>
           </tr>
           <tr>
@@ -478,7 +473,6 @@ Booking Details:
 - Room: ${params.roomName}
 - Date: ${params.date}
 - Time: ${formatTime(params.startTime)} - ${formatTime(params.endTime)}
-- Players: ${params.players}
 - Duration: ${params.hours} hour${params.hours > 1 ? 's' : ''}
 - Total: $${params.price}
 

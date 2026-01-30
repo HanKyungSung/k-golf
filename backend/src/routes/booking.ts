@@ -457,7 +457,6 @@ router.post('/', requireAuth, async (req, res) => {
           date: dateInCustomerTz,
           startTime: start,
           endTime: end,
-          players,
           hours,
           price: price.toFixed(2),
           customerTimezone: bookingTimezone,
