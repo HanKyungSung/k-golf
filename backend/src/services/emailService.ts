@@ -321,8 +321,9 @@ function generateBookingConfirmationHTML(params: BookingConfirmationParams): str
   });
   
   const formatDate = (dateStr: string) => {
+    // Parse date string as UTC to avoid timezone shifts
     const [y, m, d] = dateStr.split('-');
-    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    const date = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d), 12, 0, 0));
     return date.toLocaleDateString('en-US', { 
       weekday: 'long',
       year: 'numeric',

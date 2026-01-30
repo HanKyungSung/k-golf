@@ -441,13 +441,20 @@ router.post('/', requireAuth, async (req, res) => {
     const userEmail = (req.user as any).email;
     if (userEmail) {
       try {
-        const dateStr = start.toISOString().split('T')[0]; // YYYY-MM-DD
+        // Extract date in customer's timezone, not UTC
+        const dateInCustomerTz = start.toLocaleDateString('en-CA', { 
+          timeZone: bookingTimezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }); // Returns YYYY-MM-DD format
+        
         await sendBookingConfirmation({
           to: userEmail,
           customerName: (req.user as any).name || 'Guest',
           bookingId: booking.id,
           roomName: room.name,
-          date: dateStr,
+          date: dateInCustomerTz,
           startTime: start,
           endTime: end,
           players,
