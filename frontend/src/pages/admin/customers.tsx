@@ -1361,9 +1361,18 @@ export default function CustomerManagement() {
             </div>
           ) : customerDetail ? (
             <div className="flex-1 overflow-hidden flex flex-col">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 p-1">
+                <div className="bg-slate-700/50 rounded-lg p-4 border-l-4 border-emerald-500">
+                  <div className="text-xs text-slate-400 uppercase">Total</div>
+                  <div className="text-xl font-bold text-emerald-400">
+                    {customerDetail.totalsBySource.ONLINE.count + customerDetail.totalsBySource.WALK_IN.count + customerDetail.totalsBySource.PHONE.count}
+                  </div>
+                  <div className="text-xs text-emerald-400 font-medium">
+                    {formatCurrency(customerDetail.totalsBySource.ONLINE.spent + customerDetail.totalsBySource.WALK_IN.spent + customerDetail.totalsBySource.PHONE.spent)}
+                  </div>
+                </div>
                 <div 
-                  className={`bg-slate-700/50 rounded-lg p-3 cursor-pointer transition-all ${bookingSourceFilter === 'ONLINE' ? 'ring-2 ring-green-500' : 'hover:bg-slate-700'}`}
+                  className={`bg-slate-700/50 rounded-lg p-4 cursor-pointer transition-all ${bookingSourceFilter === 'ONLINE' ? 'ring-2 ring-green-500' : 'hover:bg-slate-700'}`}
                   onClick={() => setBookingSourceFilter(bookingSourceFilter === 'ONLINE' ? 'ALL' : 'ONLINE')}
                 >
                   <div className="text-xs text-slate-400 uppercase">Online</div>
@@ -1373,7 +1382,7 @@ export default function CustomerManagement() {
                   <div className="text-xs text-slate-400">{formatCurrency(customerDetail.totalsBySource.ONLINE.spent)}</div>
                 </div>
                 <div 
-                  className={`bg-slate-700/50 rounded-lg p-3 cursor-pointer transition-all ${bookingSourceFilter === 'WALK_IN' ? 'ring-2 ring-blue-500' : 'hover:bg-slate-700'}`}
+                  className={`bg-slate-700/50 rounded-lg p-4 cursor-pointer transition-all ${bookingSourceFilter === 'WALK_IN' ? 'ring-2 ring-blue-500' : 'hover:bg-slate-700'}`}
                   onClick={() => setBookingSourceFilter(bookingSourceFilter === 'WALK_IN' ? 'ALL' : 'WALK_IN')}
                 >
                   <div className="text-xs text-slate-400 uppercase">Walk-in</div>
@@ -1383,7 +1392,7 @@ export default function CustomerManagement() {
                   <div className="text-xs text-slate-400">{formatCurrency(customerDetail.totalsBySource.WALK_IN.spent)}</div>
                 </div>
                 <div 
-                  className={`bg-slate-700/50 rounded-lg p-3 cursor-pointer transition-all ${bookingSourceFilter === 'PHONE' ? 'ring-2 ring-amber-500' : 'hover:bg-slate-700'}`}
+                  className={`bg-slate-700/50 rounded-lg p-4 cursor-pointer transition-all ${bookingSourceFilter === 'PHONE' ? 'ring-2 ring-amber-500' : 'hover:bg-slate-700'}`}
                   onClick={() => setBookingSourceFilter(bookingSourceFilter === 'PHONE' ? 'ALL' : 'PHONE')}
                 >
                   <div className="text-xs text-slate-400 uppercase">Phone</div>
@@ -1392,7 +1401,7 @@ export default function CustomerManagement() {
                   </div>
                   <div className="text-xs text-slate-400">{formatCurrency(customerDetail.totalsBySource.PHONE.spent)}</div>
                 </div>
-                <div className="bg-slate-700/50 rounded-lg p-3">
+                <div className="bg-slate-700/50 rounded-lg p-4">
                   <div className="text-xs text-slate-400 uppercase">Member Since</div>
                   <div className="text-lg font-bold text-white">
                     {formatDate(customerDetail.createdAt)}

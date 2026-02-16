@@ -23,6 +23,7 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 ## Personal note (Do not touch)
 - Monthly revenue chart
 - logs for FE/BE
+- mobile response
 
 ### 🔄 Ongoing Tasks
 - [ ] **Enable DigitalOcean Droplet Backups** 🔴 HIGH PRIORITY
