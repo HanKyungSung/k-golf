@@ -101,15 +101,21 @@ export default function POSDashboard() {
           const start = new Date(b.startTime);
           const end = new Date(b.endTime);
           const room = roomsData.find(r => r.id === b.roomId);
+          
+          // Use local timezone for both date and time (consistent with loadData)
+          // This ensures bookings appear at correct positions in Atlantic timezone
           const year = start.getFullYear();
           const month = String(start.getMonth() + 1).padStart(2, '0');
           const day = String(start.getDate()).padStart(2, '0');
           const localDate = `${year}-${month}-${day}`;
+          const hours = String(start.getHours()).padStart(2, '0');
+          const minutes = String(start.getMinutes()).padStart(2, '0');
+          const localTime = `${hours}:${minutes}`;
           
           return {
             ...b,
             date: localDate,
-            time: start.toTimeString().slice(0, 5),
+            time: localTime,
             duration: (end.getTime() - start.getTime()) / (1000 * 60 * 60),
             roomName: room?.name || 'Unknown Room',
           };
@@ -188,14 +194,20 @@ export default function POSDashboard() {
         const end = new Date(b.endTime);
         const room = roomsData.find(r => r.id === b.roomId);
         
-        // Extract date from UTC ISO string (before timezone conversion)
-        // startTime is like "2025-12-15T01:00:00.000Z" -> extract "2025-12-15"
-        const utcDate = b.startTime.split('T')[0];
+        // Use local timezone for both date and time
+        // This ensures bookings appear at correct positions in the admin's local timezone
+        const year = start.getFullYear();
+        const month = String(start.getMonth() + 1).padStart(2, '0');
+        const day = String(start.getDate()).padStart(2, '0');
+        const localDate = `${year}-${month}-${day}`;
+        const hours = String(start.getHours()).padStart(2, '0');
+        const minutes = String(start.getMinutes()).padStart(2, '0');
+        const localTime = `${hours}:${minutes}`;
         
         return {
           ...b,
-          date: utcDate, // YYYY-MM-DD from UTC ISO string (not affected by local timezone)
-          time: start.toTimeString().slice(0, 5), // HH:MM in local time
+          date: localDate, // YYYY-MM-DD in local timezone
+          time: localTime, // HH:MM in local timezone
           duration: (end.getTime() - start.getTime()) / (1000 * 60 * 60), // hours
           roomName: room?.name || 'Unknown Room',
         };
