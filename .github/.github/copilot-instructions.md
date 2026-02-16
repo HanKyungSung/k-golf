@@ -64,3 +64,46 @@
   3. `git commit -m "descriptive message"` - Commit with clear message
   4. `git push` or `git push origin <branch>` - Push to remote
 - Use conventional commit messages: `feat:`, `fix:`, `docs:`, `chore:`, etc.
+
+## Production Environment
+
+### Server Access
+- **IP:** 147.182.215.135
+- **SSH:** `ssh root@147.182.215.135`
+- **Domain:** konegolf.ca (POS: pos.konegolf.ca)
+
+### SSH Agent Setup
+If SSH connection fails with permission denied, start the SSH agent:
+```bash
+# Start SSH agent
+eval "$(ssh-agent -s)"
+
+# Add SSH key
+ssh-add ~/.ssh/id_rsa
+# or for ed25519 keys
+ssh-add ~/.ssh/id_ed25519
+```
+
+### Production Database
+- **Container:** `kgolf-postgres`
+- **Database:** `kgolf_app`
+- **User:** `kgolf`
+- **Timezone:** America/Halifax (Atlantic Time)
+
+### Quick Commands
+```bash
+# Access prod psql
+ssh root@147.182.215.135 "docker exec -it kgolf-postgres psql -U kgolf -d kgolf_app"
+
+# Run single query from local
+ssh root@147.182.215.135 "docker exec kgolf-postgres psql -U kgolf -d kgolf_app -c '<QUERY>'"
+```
+
+### Docker Containers on Prod
+- `k-golf-backend-1` - Backend API
+- `kgolf-postgres` - PostgreSQL database
+
+## Deprecated
+
+- **Electron POS is deprecated** - Use web POS at pos.konegolf.ca instead
+- Do not reference or suggest Electron POS features
