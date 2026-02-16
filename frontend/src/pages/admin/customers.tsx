@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { buttonStyles } from '@/styles/buttonStyles';
 import { MonthlyRevenueChart } from '@/components/MonthlyRevenueChart';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '../../components/pos/PhoneInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -411,6 +412,49 @@ export default function CustomerManagement() {
     setEditModalOpen(true);
   };
 
+  // Validation helpers
+  const isValidPhone = (phone: string): boolean => {
+    return /^\+1\d{10}$/.test(phone);
+  };
+
+  const isValidEmail = (email: string): boolean => {
+    if (!email) return true; // Email is optional
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  // Check for duplicate phone
+  const checkDuplicatePhone = async (phone: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${getApiBase()}/api/customers?search=${encodeURIComponent(phone)}&limit=1`, {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.customers.some((c: Customer) => c.phone === phone);
+      }
+    } catch (err) {
+      // On error, let backend handle duplicate check
+    }
+    return false;
+  };
+
+  // Check for duplicate email
+  const checkDuplicateEmail = async (email: string): Promise<boolean> => {
+    if (!email) return false;
+    try {
+      const res = await fetch(`${getApiBase()}/api/customers?search=${encodeURIComponent(email)}&limit=5`, {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.customers.some((c: Customer) => c.email?.toLowerCase() === email.toLowerCase());
+      }
+    } catch (err) {
+      // On error, let backend handle duplicate check
+    }
+    return false;
+  };
+
   // Open create modal
   const openCreateModal = () => {
     setFormData({ name: '', phone: '', email: '', dateOfBirth: '' });
@@ -420,12 +464,53 @@ export default function CustomerManagement() {
 
   // Handle form submit (create)
   const handleCreate = async () => {
-    if (!formData.name.trim() || !formData.phone.trim()) {
-      setFormError('Name and phone are required');
+    // Validate name
+    if (!formData.name.trim()) {
+      setFormError('Name is required');
+      return;
+    }
+
+    // Validate phone format
+    if (!formData.phone.trim()) {
+      setFormError('Phone number is required');
+      return;
+    }
+    if (!isValidPhone(formData.phone)) {
+      setFormError('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    // Validate email required and format
+    if (!formData.email.trim()) {
+      setFormError('Email is required');
+      return;
+    }
+    if (!isValidEmail(formData.email.trim())) {
+      setFormError('Please enter a valid email address');
       return;
     }
 
     setSubmitting(true);
+    setFormError('');
+
+    // Check for duplicate phone
+    const isDuplicatePhone = await checkDuplicatePhone(formData.phone);
+    if (isDuplicatePhone) {
+      setFormError('A customer with this phone number already exists');
+      setSubmitting(false);
+      return;
+    }
+
+    // Check for duplicate email
+    if (formData.email.trim()) {
+      const isDuplicateEmail = await checkDuplicateEmail(formData.email.trim());
+      if (isDuplicateEmail) {
+        setFormError('A customer with this email already exists');
+        setSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const res = await fetch(`${getApiBase()}/api/customers`, {
         method: 'POST',
@@ -433,7 +518,7 @@ export default function CustomerManagement() {
         credentials: 'include',
         body: JSON.stringify({
           name: formData.name.trim(),
-          phone: formData.phone.trim(),
+          phone: formData.phone,
           email: formData.email.trim() || null,
           dateOfBirth: formData.dateOfBirth || null
         })
@@ -458,12 +543,58 @@ export default function CustomerManagement() {
   // Handle form submit (update)
   const handleUpdate = async () => {
     if (!selectedCustomer) return;
-    if (!formData.name.trim() || !formData.phone.trim()) {
-      setFormError('Name and phone are required');
+    
+    // Validate name
+    if (!formData.name.trim()) {
+      setFormError('Name is required');
+      return;
+    }
+
+    // Validate phone format
+    if (!formData.phone.trim()) {
+      setFormError('Phone number is required');
+      return;
+    }
+    if (!isValidPhone(formData.phone)) {
+      setFormError('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    // Validate email required and format
+    if (!formData.email.trim()) {
+      setFormError('Email is required');
+      return;
+    }
+    if (!isValidEmail(formData.email.trim())) {
+      setFormError('Please enter a valid email address');
       return;
     }
 
     setSubmitting(true);
+    setFormError('');
+
+    // Check for duplicate phone (only if phone changed)
+    if (formData.phone !== selectedCustomer.phone) {
+      const isDuplicatePhone = await checkDuplicatePhone(formData.phone);
+      if (isDuplicatePhone) {
+        setFormError('A customer with this phone number already exists');
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // Check for duplicate email (only if email changed)
+    const currentEmail = selectedCustomer.email?.toLowerCase() || '';
+    const newEmail = formData.email.trim().toLowerCase();
+    if (newEmail && newEmail !== currentEmail) {
+      const isDuplicateEmail = await checkDuplicateEmail(formData.email.trim());
+      if (isDuplicateEmail) {
+        setFormError('A customer with this email already exists');
+        setSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const res = await fetch(`${getApiBase()}/api/customers/${selectedCustomer.id}`, {
         method: 'PUT',
@@ -471,7 +602,7 @@ export default function CustomerManagement() {
         credentials: 'include',
         body: JSON.stringify({
           name: formData.name.trim(),
-          phone: formData.phone.trim(),
+          phone: formData.phone,
           email: formData.email.trim() || null,
           dateOfBirth: formData.dateOfBirth || null
         })
@@ -1178,35 +1309,47 @@ export default function CustomerManagement() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-slate-300">Name *</Label>
+              <Label htmlFor="name" className="text-slate-300">Name <span className="text-red-500">*</span></Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  setFormError('');
+                }}
                 className="bg-slate-700/50 border-slate-600 text-white"
                 placeholder="John Doe"
               />
             </div>
+            <PhoneInput
+              value={formData.phone}
+              onChange={(normalized) => {
+                setFormData({ ...formData, phone: normalized });
+                setFormError('');
+              }}
+              label="Phone Number"
+              required
+              className="[&_input]:bg-slate-700/50 [&_input]:border-slate-600 [&_input]:text-white [&_label]:text-slate-300"
+            />
             <div className="space-y-2">
-              <Label htmlFor="phone" className="text-slate-300">Phone *</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="bg-slate-700/50 border-slate-600 text-white"
-                placeholder="(902) 555-1234"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-300">Email</Label>
+              <Label htmlFor="email" className="text-slate-300">Email <span className="text-red-500">*</span></Label>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="bg-slate-700/50 border-slate-600 text-white"
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  setFormError('');
+                }}
+                className={`bg-slate-700/50 border-slate-600 text-white ${
+                  formData.email && !isValidEmail(formData.email) ? 'border-red-500' : ''
+                }`}
                 placeholder="john@example.com"
+                required
               />
+              {formData.email && !isValidEmail(formData.email) && (
+                <p className="text-xs text-red-400">Please enter a valid email address</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="dob" className="text-slate-300">Date of Birth</Label>
@@ -1254,32 +1397,45 @@ export default function CustomerManagement() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="edit-name" className="text-slate-300">Name *</Label>
+              <Label htmlFor="edit-name" className="text-slate-300">Name <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  setFormError('');
+                }}
                 className="bg-slate-700/50 border-slate-600 text-white"
               />
             </div>
+            <PhoneInput
+              value={formData.phone}
+              onChange={(normalized) => {
+                setFormData({ ...formData, phone: normalized });
+                setFormError('');
+              }}
+              label="Phone Number"
+              required
+              className="[&_input]:bg-slate-700/50 [&_input]:border-slate-600 [&_input]:text-white [&_label]:text-slate-300"
+            />
             <div className="space-y-2">
-              <Label htmlFor="edit-phone" className="text-slate-300">Phone *</Label>
-              <Input
-                id="edit-phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="bg-slate-700/50 border-slate-600 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-email" className="text-slate-300">Email</Label>
+              <Label htmlFor="edit-email" className="text-slate-300">Email <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="bg-slate-700/50 border-slate-600 text-white"
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  setFormError('');
+                }}
+                className={`bg-slate-700/50 border-slate-600 text-white ${
+                  formData.email && !isValidEmail(formData.email) ? 'border-red-500' : ''
+                }`}
+                required
               />
+              {formData.email && !isValidEmail(formData.email) && (
+                <p className="text-xs text-red-400">Please enter a valid email address</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-dob" className="text-slate-300">Date of Birth</Label>

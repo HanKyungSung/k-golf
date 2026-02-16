@@ -24,6 +24,8 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 - Monthly revenue chart
 - logs for FE/BE
 - mobile response
+- discount option on billing
+- what is 'unknown' from upcoming birthday badge?
 
 ### 🔄 Ongoing Tasks
 - [ ] **Enable DigitalOcean Droplet Backups** 🔴 HIGH PRIORITY
@@ -134,6 +136,17 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
 ## 🎉 Recently Completed (2026-02-16)
+- [x] **Admin Customer Form Validation** - Comprehensive validation for create/edit customer
+  - [x] Phone validation with PhoneInput component (auto-format, 10-digit validation, visual indicator)
+  - [x] Email validation (required field, format validation)
+  - [x] Duplicate phone check before save
+  - [x] Duplicate email check before save
+  - [x] Red asterisks for all required fields (Name, Phone, Email)
+  - [x] Real-time validation feedback with error messages
+- [x] **Customer Detail Modal Total Panel** - Added Total summary panel on left side
+  - [x] Shows combined booking count and total spent across all sources
+  - [x] Emerald green accent styling to distinguish from source panels
+  - [x] Increased panel padding to prevent ring border clipping
 - [x] **Clickable Birthday Badges** - Birthday pills open customer detail modal
   - [x] Added `openBirthdayCustomerDetail()` handler in customers.tsx
   - [x] Birthday badges now have cursor pointer and hover effects
