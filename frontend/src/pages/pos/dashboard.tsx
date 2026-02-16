@@ -846,9 +846,11 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
                     {day.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
                   </div>
                   <div className="flex-1 h-px bg-slate-700" />
+                  {/* TODO: Re-enable when employee permissions implemented
                   <Badge className="bg-green-600/60 text-green-200">
                     ${totalRevenue.toFixed(2)}
                   </Badge>
+                  */}
                   <Badge className="bg-amber-600/60 text-amber-200">
                     {totalHours} hour{totalHours !== 1 ? 's' : ''}
                   </Badge>
