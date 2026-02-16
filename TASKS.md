@@ -133,6 +133,10 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
 ## 🎉 Recently Completed (2026-02-16)
+- [x] **Clickable Birthday Badges** - Birthday pills open customer detail modal
+  - [x] Added `openBirthdayCustomerDetail()` handler in customers.tsx
+  - [x] Birthday badges now have cursor pointer and hover effects
+  - [x] Clicking badge loads and displays full customer profile
 - [x] **Monthly Revenue Chart** - Visual bar chart showing 12-month revenue trends
   - [x] Created [MonthlyRevenueChart.tsx](frontend/components/MonthlyRevenueChart.tsx) component using Recharts
   - [x] New backend API: `GET /api/customers/revenue-history` returns 12 months of data

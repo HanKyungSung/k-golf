@@ -556,6 +556,26 @@ export default function CustomerManagement() {
     }
   };
 
+  // Open customer detail from birthday list
+  const openBirthdayCustomerDetail = (birthdayCustomer: BirthdayCustomer) => {
+    // Create minimal customer object and load full details
+    setSelectedCustomer({
+      id: birthdayCustomer.id,
+      name: birthdayCustomer.name,
+      phone: birthdayCustomer.phone,
+      email: null,
+      dateOfBirth: birthdayCustomer.birthdayDate,
+      registrationSource: 'UNKNOWN',
+      createdAt: '',
+      bookingCount: 0,
+      totalSpent: 0,
+      lastBooking: null
+    });
+    setCustomerDetail(null);
+    setDetailModalOpen(true);
+    loadCustomerDetail(birthdayCustomer.id);
+  };
+
   if (!user || user.role !== 'ADMIN') {
     return null;
   }
@@ -702,7 +722,8 @@ export default function CustomerManagement() {
                   <Badge
                     key={customer.id}
                     variant="outline"
-                    className="border-pink-500/50 text-pink-300 bg-pink-500/10 py-1 px-3"
+                    className="border-pink-500/50 text-pink-300 bg-pink-500/10 py-1 px-3 cursor-pointer hover:bg-pink-500/20 hover:border-pink-400 transition-colors"
+                    onClick={() => openBirthdayCustomerDetail(customer)}
                   >
                     {customer.name} — {customer.daysUntilBirthday === 0 
                       ? '🎂 Today!' 
