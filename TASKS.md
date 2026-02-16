@@ -145,6 +145,23 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - [x] Root cause: Date extracted from UTC string without timezone conversion
   - [x] Fixed: Now extracts date in customer's timezone (America/Halifax) using date-fns-tz
   - [x] Removed players field from booking confirmation email (not needed)
+- [x] **Fixed POS Timeline Booking Flickering** - Bookings were shifting position after initial load
+  - [x] Issue: loadData() used UTC date split (`startTime.split('T')[0]`), polling used local timezone
+  - [x] Root cause: Inconsistent date extraction between initial load and polling refresh
+  - [x] Example: Booking at midnight UTC (2026-02-01T00:00:00Z) = 8PM Halifax on Jan 31
+    - OLD loadData showed on Feb 1 (wrong), polling showed on Jan 31 (correct) → flickering
+  - [x] Fixed: Both loadData and polling now use consistent local timezone date extraction
+- [x] **Updated Copilot Instructions** - Added production environment details
+  - [x] Added server access info (IP: 147.182.215.135, SSH command, domain)
+  - [x] Added SSH agent setup instructions for connection troubleshooting
+  - [x] Added production database access commands (container, DB name, user, timezone)
+  - [x] Added deprecated notice for Electron POS
+  - [x] Fixed nested `.github/.github/` folder issue → moved to `.github/copilot-instructions.md`
+- [x] **Fixed Seed Script Booking Overlaps** - Mock bookings were overlapping on same room
+  - [x] Added slot tracking per room per day using Map
+  - [x] Helper functions to check availability and mark slots as occupied
+  - [x] Skips booking creation if no available slot for that room that day
+  - [x] Prevents overlapping bookings on same room in seed data
 
 ## 🎉 Recently Completed (2026-01-11)
 - [x] **Migrated operating hours from Room table to Settings table** - Centralized business hours management

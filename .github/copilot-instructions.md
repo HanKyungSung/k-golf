@@ -16,10 +16,11 @@
 
 ## Task Management
 
-- **After every feature completion**, always:
+- **After EVERY task completion** (bug fix, feature, configuration change), always:
   1. Update `TASKS.md` with completed tasks and new status
   2. Update related markdown documentation files in `docs/` if feature impacts them
   3. Commit the changes with descriptive message
+- **AUTOMATIC**: Before saying "done" or "completed", check if TASKS.md needs updating
 - Mark completed tasks, add new ones if discovered, and keep the task list current
 - This ensures the project's task tracking and documentation stay synchronized with actual progress
 - **Before committing or completing work** (if user wants to commit), verify all related documentation is updated
