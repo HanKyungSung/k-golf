@@ -305,7 +305,34 @@ async function main() {
 
 				// Generate bookings for past 30 days and next 14 days
 				const today = new Date();
-				const bookingsToCreate = [];
+				const bookingsToCreate: any[] = [];
+				
+				// Track occupied slots per room per day to avoid overlaps
+				// Key: "roomId-YYYY-MM-DD", Value: array of { start: hour, end: hour }
+				const occupiedSlots: Map<string, { start: number; end: number }[]> = new Map();
+				
+				// Helper to check if a time slot is available
+				const isSlotAvailable = (roomId: string, date: Date, startHour: number, duration: number): boolean => {
+					const dateKey = `${roomId}-${date.toISOString().split('T')[0]}`;
+					const slots = occupiedSlots.get(dateKey) || [];
+					const endHour = startHour + duration;
+					
+					for (const slot of slots) {
+						// Check overlap: new booking overlaps if it starts before existing ends AND ends after existing starts
+						if (startHour < slot.end && endHour > slot.start) {
+							return false;
+						}
+					}
+					return true;
+				};
+				
+				// Helper to mark slot as occupied
+				const markSlotOccupied = (roomId: string, date: Date, startHour: number, duration: number) => {
+					const dateKey = `${roomId}-${date.toISOString().split('T')[0]}`;
+					const slots = occupiedSlots.get(dateKey) || [];
+					slots.push({ start: startHour, end: startHour + duration });
+					occupiedSlots.set(dateKey, slots);
+				};
 				
 				for (let dayOffset = -30; dayOffset <= 14; dayOffset++) {
 					const bookingDate = new Date(today);
@@ -319,15 +346,33 @@ async function main() {
 						const customer = mockCustomers[Math.floor(Math.random() * mockCustomers.length)];
 						const room = rooms[Math.floor(Math.random() * rooms.length)];
 						
-						// Random time between 9:00 and 18:00 (to avoid conflicts)
-						const hour = 9 + Math.floor(Math.random() * 9); // 9-17
-						const minute = Math.random() < 0.5 ? 0 : 30;
+						// Random duration: 1-3 hours
+						const duration = Math.floor(Math.random() * 3) + 1;
+						
+						// Find an available time slot for this room
+						// Try different hours between 9:00 and 21:00 (leaving room for duration)
+						const availableHours = [];
+						for (let h = 9; h <= 21 - duration; h++) {
+							if (isSlotAvailable(room.id, bookingDate, h, duration)) {
+								availableHours.push(h);
+							}
+						}
+						
+						// Skip if no available slot for this room today
+						if (availableHours.length === 0) {
+							continue;
+						}
+						
+						// Pick random available hour
+						const hour = availableHours[Math.floor(Math.random() * availableHours.length)];
+						const minute = 0; // Keep it simple with full hours
+						
+						// Mark slot as occupied
+						markSlotOccupied(room.id, bookingDate, hour, duration);
 						
 						const startTime = new Date(bookingDate);
 						startTime.setHours(hour, minute, 0, 0);
 						
-						// Random duration: 1-3 hours
-						const duration = Math.floor(Math.random() * 3) + 1;
 						const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
 						
 						// Random players: 1-4
