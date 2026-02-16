@@ -357,6 +357,7 @@ export default function POSDashboard() {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-amber-400">K one Golf POS</h1>
           <div className="flex items-center gap-4">
+            {/* Customers button - ADMIN only (temporarily hidden)
             {user?.role === 'ADMIN' && (
               <Link to="/admin/customers">
                 <Button variant="outline" size="sm" className={buttonStyles.headerNav}>
@@ -364,6 +365,7 @@ export default function POSDashboard() {
                 </Button>
               </Link>
             )}
+            */}
             <span className="text-sm text-slate-300">{user?.email}</span>
             <Button onClick={handleLogout} variant="outline" size="sm" className={buttonStyles.headerLogout}>Logout</Button>
           </div>
