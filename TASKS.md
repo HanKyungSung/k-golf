@@ -130,6 +130,22 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
+## 🎉 Recently Completed (2026-02-16)
+- [x] **Customer & Booking Management Admin Page** - Comprehensive admin page for managing customers and bookings
+  - [x] New `/admin/customers` page with Customers and Bookings tabs
+  - [x] Unified search: search by phone, name, email, or booking reference across both tabs
+  - [x] Metrics dashboard: total customers, new this month, today's bookings, monthly revenue, upcoming birthdays
+  - [x] Customers tab: sortable columns, pagination, customer detail modal with booking history
+  - [x] Bookings tab: date range filter, status filter (BOOKED/COMPLETED/CANCELLED), source filter (ONLINE/WALK_IN/PHONE)
+  - [x] Booking detail modal with customer info and link to customer profile
+  - [x] New API: `GET /api/customers/bookings/search` with pagination, filters, and phone/name/ref search
+  - [x] Backend: Added `todaysBookings` and `monthlyRevenue` to metrics endpoint
+- [x] **Fixed Confirmation Email Date Bug** - Email was showing wrong date due to UTC extraction
+  - [x] Issue: Booking for Feb 14 10:30 AM Halifax (Feb 14 14:30 UTC) showed as "Feb 14" in email, but booking for 7:30 PM Halifax (Feb 15 00:30 UTC) showed as "Feb 15"
+  - [x] Root cause: Date extracted from UTC string without timezone conversion
+  - [x] Fixed: Now extracts date in customer's timezone (America/Halifax) using date-fns-tz
+  - [x] Removed players field from booking confirmation email (not needed)
+
 ## 🎉 Recently Completed (2026-01-11)
 - [x] **Migrated operating hours from Room table to Settings table** - Centralized business hours management
   - [x] Created new Settings entries: `operating_hours_open` (600 = 10:00 AM) and `operating_hours_close` (1440 = 12:00 AM)

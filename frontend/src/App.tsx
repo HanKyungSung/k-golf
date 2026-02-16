@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import HomePage from './pages/home'
 import AdminPage from './pages/admin'
+import CustomerManagementPage from './pages/admin/customers'
 import BookingPage from './pages/booking'
 import BookingConfirmationPage from './pages/booking-confirmation'
 import DashboardPage from './pages/dashboard'
@@ -27,6 +28,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/customers" element={<CustomerManagementPage />} />
         <Route path="/booking" element={<BookingPage />} />
         <Route path="/booking/confirmation/:id" element={<BookingConfirmationPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />

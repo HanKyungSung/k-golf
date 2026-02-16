@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -341,6 +341,11 @@ export default function POSDashboard() {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-amber-400">K one Golf POS</h1>
           <div className="flex items-center gap-4">
+            <Link to="/admin/customers">
+              <Button variant="outline" size="sm" className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10">
+                Customers
+              </Button>
+            </Link>
             <span className="text-sm text-slate-300">{user?.email}</span>
             <Button onClick={handleLogout} variant="outline" size="sm">Logout</Button>
           </div>
