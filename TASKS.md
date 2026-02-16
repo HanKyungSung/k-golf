@@ -165,6 +165,16 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 - [x] **Monthly Revenue Date Range Display** - Show date range on admin metrics panel
   - [x] Changed "This month" to show actual date range (e.g., "Feb 1 - Feb 28")
   - [x] Dynamically calculates first and last day of current month
+- [x] **Booking Detail Modal Improvements** - Reusable fullscreen modal component
+  - [x] Created shared `BookingDetailModal` component at [frontend/components/BookingDetailModal.tsx](frontend/components/BookingDetailModal.tsx)
+  - [x] 95vw × 95vh fullscreen dialog wrapping POSBookingDetail component
+  - [x] Props: `bookingId`, `open`, `onOpenChange`, `onClose` (for refresh after changes)
+  - [x] Updated POS Dashboard to use modal instead of inline content replacement
+  - [x] Dashboard stays visible behind modal, maintains context
+  - [x] Updated Admin Customers to use shared BookingDetailModal
+  - [x] Removed duplicate inline Dialog code from admin page
+  - [x] Removed unused edit functionality (status/payment inline editing)
+  - [x] Data auto-refreshes when modal closes
 
 ## 🎉 Recently Completed (2026-01-11)
 - [x] **Migrated operating hours from Room table to Settings table** - Centralized business hours management

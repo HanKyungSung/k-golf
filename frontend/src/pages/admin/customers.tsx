@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { BookingDetailModal } from '@/components/BookingDetailModal';
 import {
   Dialog,
   DialogContent,
@@ -188,6 +189,8 @@ export default function CustomerManagement() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [bookingDetailModalOpen, setBookingDetailModalOpen] = useState(false);
+  const [fullBookingModalOpen, setFullBookingModalOpen] = useState(false);
+  const [fullBookingId, setFullBookingId] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerDetail, setCustomerDetail] = useState<CustomerDetail | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -1301,7 +1304,7 @@ export default function CustomerManagement() {
         setDetailModalOpen(open);
         if (!open) setBookingSourceFilter('ALL');
       }}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="bg-slate-800 border-slate-700 text-white !w-[90vw] !max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedCustomer?.name}
@@ -1511,7 +1514,7 @@ export default function CustomerManagement() {
 
       {/* Booking Detail Modal */}
       <Dialog open={bookingDetailModalOpen} onOpenChange={setBookingDetailModalOpen}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-lg">
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Booking Details
@@ -1530,13 +1533,14 @@ export default function CustomerManagement() {
                 </Badge>
               )}
             </DialogTitle>
-            <DialogDescription className="text-slate-400 font-mono">
+            <DialogDescription className="text-slate-400 font-mono text-xs">
               {selectedBooking?.id}
             </DialogDescription>
           </DialogHeader>
 
           {selectedBooking && (
             <div className="space-y-4 py-4">
+              {/* Time & Room Info */}
               <div className="bg-slate-700/50 rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-2 text-slate-300">
                   <Calendar className="h-4 w-4 text-amber-500" />
@@ -1567,6 +1571,7 @@ export default function CustomerManagement() {
                 </div>
               </div>
 
+              {/* Customer Info */}
               <div className="bg-slate-700/50 rounded-lg p-4 space-y-2">
                 <div className="text-xs text-slate-400 uppercase mb-2">Customer</div>
                 <div className="flex items-center justify-between">
@@ -1596,6 +1601,7 @@ export default function CustomerManagement() {
                 )}
               </div>
 
+              {/* Info Section */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400">Created by:</span>
                 <span className="text-slate-300">
@@ -1621,7 +1627,21 @@ export default function CustomerManagement() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (selectedBooking) {
+                  setFullBookingId(selectedBooking.id);
+                  setBookingDetailModalOpen(false);
+                  setFullBookingModalOpen(true);
+                }
+              }}
+              className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              Full Details
+            </Button>
             <Button
               onClick={() => setBookingDetailModalOpen(false)}
               className="bg-amber-500 hover:bg-amber-600 text-black"
@@ -1631,6 +1651,14 @@ export default function CustomerManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Full Booking Detail Modal (POS View) */}
+      <BookingDetailModal
+        bookingId={fullBookingId}
+        open={fullBookingModalOpen}
+        onOpenChange={setFullBookingModalOpen}
+        onClose={loadBookings}
+      />
     </div>
   );
 }

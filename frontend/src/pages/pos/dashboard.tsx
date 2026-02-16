@@ -16,8 +16,8 @@ import {
   type Booking,
   type Room
 } from '@/services/pos-api';
-import POSBookingDetail from './booking-detail';
 import { BookingModal } from './booking-modal';
+import { BookingDetailModal } from '@/components/BookingDetailModal';
 
 export default function POSDashboard() {
   const { user, logout } = useAuth();
@@ -40,6 +40,7 @@ export default function POSDashboard() {
   
   // Component navigation state
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
   
   // Booking modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -274,9 +275,11 @@ export default function POSDashboard() {
   // Handle booking detail navigation
   function openBookingDetail(bookingId: string) {
     setSelectedBookingId(bookingId);
+    setBookingModalOpen(true);
   }
 
   function closeBookingDetail() {
+    setBookingModalOpen(false);
     setSelectedBookingId(null);
     // Refresh data when returning from booking detail
     loadData(false);
@@ -364,16 +367,8 @@ export default function POSDashboard() {
         </div>
       </header>
 
-      {/* Main Content - Switch between Dashboard and Booking Detail */}
-      {selectedBookingId ? (
-        // Show booking detail view
-        <POSBookingDetail 
-          bookingId={selectedBookingId} 
-          onBack={closeBookingDetail}
-        />
-      ) : (
-        // Show dashboard tabs view
-        <main className="max-w-[1800px] mx-auto px-6 py-8 space-y-6 w-full">
+      {/* Main Content - Dashboard View */}
+      <main className="max-w-[1800px] mx-auto px-6 py-8 space-y-6 w-full">
         {/* Real-Time Room Status */}
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -684,7 +679,6 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
       </main>
-      )}
       
       {/* Booking Modal */}
       <BookingModal
@@ -700,6 +694,14 @@ export default function POSDashboard() {
         }}
         preselectedRoomId={preselectedRoomId}
       />
+
+      {/* Booking Detail Modal */}
+      <BookingDetailModal
+        bookingId={selectedBookingId}
+        open={bookingModalOpen}
+        onOpenChange={setBookingModalOpen}
+        onClose={closeBookingDetail}
+      />
     </div>
   );
 }
@@ -710,7 +712,7 @@ interface TimelineViewProps {
   rooms: Room[];
   onBookingClick: (bookingId: string) => void;
   currentWeekStart: Date;
-  setCurrentWeekStart: (date: Date) => void;
+  setCurrentWeekStart: React.Dispatch<React.SetStateAction<Date>>;
   taxRate: number;
 }
 

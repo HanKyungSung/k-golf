@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, User, Clock, Calendar, Mail } from 'lucide-react';
+import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, User, Clock, Calendar, Mail, X } from 'lucide-react';
 import Receipt from '../../components/Receipt';
 import { 
   getBooking, 
@@ -1106,20 +1106,23 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
             </h1>
             <p className="text-slate-400 text-sm mt-1">ID: {booking.id}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge className={`${statusStyles[booking.bookingStatus?.toLowerCase() || 'booked']} capitalize text-lg px-4 py-2`}>
-              {booking.bookingStatus?.toLowerCase() || 'booked'}
+          <div className="flex items-center gap-2">
+            <Badge className={`${statusStyles[booking.bookingStatus?.toLowerCase() || 'booked']} uppercase text-sm px-3 py-1.5`}>
+              {booking.bookingStatus || 'BOOKED'}
             </Badge>
             {booking.paymentStatus && (
-              <Badge className={`${paymentStatusStyles[booking.paymentStatus]} text-base px-3 py-1.5`}>
-                {booking.paymentStatus === 'UNPAID' && '💳 Unpaid'}
-                {booking.paymentStatus === 'BILLED' && '📄 Billed'}
-                {booking.paymentStatus === 'PAID' && '✓ Paid'}
+              <Badge className={`${paymentStatusStyles[booking.paymentStatus]} uppercase text-sm px-3 py-1.5`}>
+                {booking.paymentStatus}
               </Badge>
             )}
-            <Button size="lg" variant="outline" onClick={onBack} className="text-base px-6">
-              Back
-            </Button>
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="bg-slate-700 hover:bg-slate-600 text-white rounded-md px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 
