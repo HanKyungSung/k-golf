@@ -528,13 +528,14 @@ router.get('/:id', async (req, res) => {
 /**
  * POST /api/customers
  * 
- * Create a new customer (walk-in registration).
+ * Create a new customer or staff member (walk-in registration).
  */
 const createSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   phone: z.string().min(1, 'Phone is required'),
   email: z.string().email().optional().nullable(),
   dateOfBirth: z.string().optional().nullable(), // YYYY-MM-DD
+  role: z.enum(['CUSTOMER', 'STAFF']).optional().default('CUSTOMER'),
 });
 
 router.post('/', async (req, res) => {
@@ -547,7 +548,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const { name, phone, email, dateOfBirth } = parsed.data;
+    const { name, phone, email, dateOfBirth, role } = parsed.data;
 
     // Normalize phone
     let normalizedPhone: string;
@@ -565,14 +566,14 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ error: 'Customer with this phone already exists' });
     }
 
-    // Create customer
+    // Create customer/staff
     const customer = await prisma.user.create({
       data: {
         name,
         phone: normalizedPhone,
         email: email || null,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-        role: UserRole.CUSTOMER,
+        role: role === 'STAFF' ? UserRole.STAFF : UserRole.CUSTOMER,
         registrationSource: 'WALK_IN',
         registeredBy: req.user!.id
       },

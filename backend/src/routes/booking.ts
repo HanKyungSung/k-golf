@@ -5,6 +5,7 @@ import { getBooking, cancelBooking, updatePaymentStatus, completeBooking, update
 import * as orderRepo from '../repositories/orderRepo';
 import * as invoiceRepo from '../repositories/invoiceRepo';
 import { requireAuth } from '../middleware/requireAuth';
+import { requireStaffOrAdmin } from '../middleware/requireRole';
 import { UserRole } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { sendBookingConfirmation } from '../services/emailService';
@@ -225,12 +226,12 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Update booking status (admin only)
+// Update booking status (staff or admin)
 const updateStatusSchema = z.object({
   status: z.enum(['BOOKED', 'COMPLETED', 'CANCELLED']),
 });
 
-router.patch('/:id/status', requireAuth, requireAdmin, async (req, res) => {
+router.patch('/:id/status', requireAuth, requireStaffOrAdmin, async (req, res) => {
   const { id } = req.params;
   
   try {
@@ -285,7 +286,7 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // PATCH /api/bookings/:id/players - Update number of players
-router.patch('/:id/players', requireAuth, requireAdmin, async (req, res) => {
+router.patch('/:id/players', requireAuth, requireStaffOrAdmin, async (req, res) => {
   const { id } = req.params;
   const { players } = req.body;
 
@@ -556,9 +557,7 @@ const updateRoomSchema = z.object({
   status: z.enum(['ACTIVE', 'MAINTENANCE', 'CLOSED']).optional(),
 });
 
-router.patch('/rooms/:id', requireAuth, async (req, res) => {
-  const userRole = (req.user as any)?.role;
-  if (userRole !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
+router.patch('/rooms/:id', requireAuth, requireStaffOrAdmin, async (req, res) => {
   const parsed = updateRoomSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { id } = req.params as { id: string };
@@ -747,15 +746,9 @@ function calculatePricing(basePrice: number, taxRate: number) {
   };
 }
 
-// Middleware: Require ADMIN role
-function requireAdmin(req: any, res: any, next: any) {
-  if (!req.user || req.user.role !== UserRole.ADMIN) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  next();
-}
+// Note: Using requireStaffOrAdmin from middleware/requireRole.ts for admin booking operations
 
-router.post('/admin/create', requireAuth, requireAdmin, async (req, res) => {
+router.post('/admin/create', requireAuth, requireStaffOrAdmin, async (req, res) => {
   try {
     // Validate request body
     const parsed = adminBookingSchema.safeParse(req.body);
@@ -1080,7 +1073,7 @@ const updatePaymentStatusSchema = z.object({
   tipAmount: z.number().optional(),
 });
 
-router.patch('/:id/payment-status', requireAuth, requireAdmin, async (req, res) => {
+router.patch('/:id/payment-status', requireAuth, requireStaffOrAdmin, async (req, res) => {
   const { id } = req.params as { id: string };
   
   try {

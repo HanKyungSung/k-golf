@@ -203,7 +203,8 @@ export default function CustomerManagement() {
     name: '',
     phone: '',
     email: '',
-    dateOfBirth: ''
+    dateOfBirth: '',
+    role: 'CUSTOMER' as 'CUSTOMER' | 'STAFF'
   });
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -406,7 +407,8 @@ export default function CustomerManagement() {
       name: customer.name,
       phone: customer.phone,
       email: customer.email || '',
-      dateOfBirth: customer.dateOfBirth ? customer.dateOfBirth.split('T')[0] : ''
+      dateOfBirth: customer.dateOfBirth ? customer.dateOfBirth.split('T')[0] : '',
+      role: 'CUSTOMER' // Edit modal doesn't change role
     });
     setFormError('');
     setEditModalOpen(true);
@@ -457,7 +459,7 @@ export default function CustomerManagement() {
 
   // Open create modal
   const openCreateModal = () => {
-    setFormData({ name: '', phone: '', email: '', dateOfBirth: '' });
+    setFormData({ name: '', phone: '', email: '', dateOfBirth: '', role: 'CUSTOMER' });
     setFormError('');
     setCreateModalOpen(true);
   };
@@ -520,12 +522,14 @@ export default function CustomerManagement() {
           name: formData.name.trim(),
           phone: formData.phone,
           email: formData.email.trim() || null,
-          dateOfBirth: formData.dateOfBirth || null
+          dateOfBirth: formData.dateOfBirth || null,
+          role: formData.role
         })
       });
 
       if (res.ok) {
-        toast({ title: 'Success', description: 'Customer created successfully' });
+        const roleLabel = formData.role === 'STAFF' ? 'Staff member' : 'Customer';
+        toast({ title: 'Success', description: `${roleLabel} created successfully` });
         setCreateModalOpen(false);
         loadCustomers();
         loadMetrics();
@@ -1293,13 +1297,15 @@ export default function CustomerManagement() {
         </Tabs>
       </main>
 
-      {/* Create Customer Modal */}
+      {/* Create Customer/Staff Modal */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
         <DialogContent className="bg-slate-800 border-slate-700 text-white">
           <DialogHeader>
-            <DialogTitle>Add New Customer</DialogTitle>
+            <DialogTitle>Add New {formData.role === 'STAFF' ? 'Staff Member' : 'Customer'}</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Create a new customer record (walk-in registration)
+              {formData.role === 'STAFF' 
+                ? 'Create a staff account with POS access'
+                : 'Create a new customer record (walk-in registration)'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1361,6 +1367,24 @@ export default function CustomerManagement() {
                 className="bg-slate-700/50 border-slate-600 text-white"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="role" className="text-slate-300">Account Type</Label>
+              <Select
+                value={formData.role}
+                onValueChange={(value: 'CUSTOMER' | 'STAFF') => setFormData({ ...formData, role: value })}
+              >
+                <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600">
+                  <SelectItem value="CUSTOMER" className="text-white hover:bg-slate-700">Customer</SelectItem>
+                  <SelectItem value="STAFF" className="text-white hover:bg-slate-700">Staff (POS Access)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-400">
+                Staff members can access the POS system but not customer data.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -1375,7 +1399,7 @@ export default function CustomerManagement() {
               disabled={submitting}
               className="bg-amber-500 hover:bg-amber-600 text-black"
             >
-              {submitting ? 'Creating...' : 'Create Customer'}
+              {submitting ? 'Creating...' : formData.role === 'STAFF' ? 'Create Staff' : 'Create Customer'}
             </Button>
           </DialogFooter>
         </DialogContent>

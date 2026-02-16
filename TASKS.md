@@ -136,6 +136,18 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
 ## 🎉 Recently Completed (2026-02-16)
+- [x] **STAFF Role Implementation** - Employee POS access with limited permissions
+  - [x] Created [backend/src/middleware/requireRole.ts](backend/src/middleware/requireRole.ts) with `requireAdmin` and `requireStaffOrAdmin`
+  - [x] Updated booking.ts routes to use `requireStaffOrAdmin` for POS operations
+  - [x] Updated menu.ts to protect POST/PATCH/DELETE with `requireAdmin` (STAFF can view only)
+  - [x] Updated customers.ts POST to accept `role` parameter (CUSTOMER/STAFF)
+  - [x] Updated POS routes (pos/index.tsx) to allow STAFF access
+  - [x] Updated dashboard routing to show POS for STAFF users
+  - [x] Added Account Type dropdown to Add Customer modal (Customer/Staff)
+  - [x] Customers button in POS header visible only for ADMIN
+  - [x] Revenue badge in timeline hidden (future: show only for ADMIN)
+  - **STAFF can:** Access POS, create/manage bookings, control rooms, process payments
+  - **STAFF cannot:** Access /admin/customers, edit menu items, change settings
 - [x] **Admin Customer Form Validation** - Comprehensive validation for create/edit customer
   - [x] Phone validation with PhoneInput component (auto-format, 10-digit validation, visual indicator)
   - [x] Email validation (required field, format validation)

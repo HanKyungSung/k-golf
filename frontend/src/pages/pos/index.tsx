@@ -7,7 +7,7 @@ import POSMenuManagement from './menu-management';
 
 /**
  * POS Routes
- * Requires authenticated user with ADMIN role
+ * Requires authenticated user with ADMIN or STAFF role
  */
 export default function POSRoutes() {
   const { user, isLoading } = useAuth();
@@ -21,17 +21,17 @@ export default function POSRoutes() {
     );
   }
 
-  // Require authentication and ADMIN role
+  // Require authentication and ADMIN or STAFF role
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role !== 'ADMIN') {
+  if (user.role !== 'ADMIN' && user.role !== 'STAFF') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600 mb-4">You need admin privileges to access the POS system.</p>
+          <p className="text-slate-600 mb-4">You need staff or admin privileges to access the POS system.</p>
           <button
             onClick={() => window.history.back()}
             className="text-blue-600 hover:text-blue-700 font-medium"

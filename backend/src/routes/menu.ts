@@ -6,6 +6,8 @@
  */
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
+import { requireAuth } from '../middleware/requireAuth';
+import { requireAdmin } from '../middleware/requireRole';
 
 const router = Router();
 
@@ -93,9 +95,9 @@ router.get('/items/:id', async (req: Request, res: Response) => {
 
 /**
  * POST /api/menu/items
- * Create a new menu item
+ * Create a new menu item (admin only)
  */
-router.post('/items', async (req: Request, res: Response) => {
+router.post('/items', requireAuth, requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { name, description, price, category, available = true } = req.body;
 
@@ -146,9 +148,9 @@ router.post('/items', async (req: Request, res: Response) => {
 
 /**
  * PATCH /api/menu/items/:id
- * Update an existing menu item
+ * Update an existing menu item (admin only)
  */
-router.patch('/items/:id', async (req: Request, res: Response) => {
+router.patch('/items/:id', requireAuth, requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
 		const { name, description, price, category, available } = req.body;
@@ -202,9 +204,9 @@ router.patch('/items/:id', async (req: Request, res: Response) => {
 
 /**
  * DELETE /api/menu/items/:id
- * Delete a menu item
+ * Delete a menu item (admin only)
  */
-router.delete('/items/:id', async (req: Request, res: Response) => {
+router.delete('/items/:id', requireAuth, requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
 
