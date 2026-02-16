@@ -149,6 +149,100 @@ router.get('/metrics', async (req, res) => {
 });
 
 /**
+ * GET /api/customers/revenue-history
+ * 
+ * Get monthly revenue and booking data for the past 12 months.
+ * Used for the revenue trend chart on the admin dashboard.
+ */
+router.get('/revenue-history', async (req, res) => {
+  try {
+    const now = new Date();
+    const months: Array<{
+      month: string;
+      year: number;
+      monthNum: number;
+      revenue: number;
+      bookingCount: number;
+      completedCount: number;
+      cancelledCount: number;
+      averageBookingValue: number;
+    }> = [];
+
+    // Calculate data for each of the past 12 months
+    for (let i = 11; i >= 0; i--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
+
+      // Get revenue and booking counts for this month
+      const [revenueData, bookingStats] = await Promise.all([
+        prisma.booking.aggregate({
+          where: {
+            startTime: { gte: monthStart, lte: monthEnd },
+            bookingStatus: { not: 'CANCELLED' }
+          },
+          _sum: { price: true },
+          _count: true
+        }),
+        prisma.booking.groupBy({
+          by: ['bookingStatus'],
+          where: {
+            startTime: { gte: monthStart, lte: monthEnd }
+          },
+          _count: true
+        })
+      ]);
+
+      const revenue = Number(revenueData._sum.price || 0);
+      const bookingCount = revenueData._count || 0;
+      const completedCount = bookingStats.find(s => s.bookingStatus === 'COMPLETED')?._count || 0;
+      const cancelledCount = bookingStats.find(s => s.bookingStatus === 'CANCELLED')?._count || 0;
+
+      months.push({
+        month: monthDate.toLocaleDateString('en-US', { month: 'short' }),
+        year: monthDate.getFullYear(),
+        monthNum: monthDate.getMonth() + 1,
+        revenue,
+        bookingCount,
+        completedCount,
+        cancelledCount,
+        averageBookingValue: bookingCount > 0 ? Math.round(revenue / bookingCount) : 0
+      });
+    }
+
+    // Calculate summary stats
+    const totalRevenue = months.reduce((sum, m) => sum + m.revenue, 0);
+    const totalBookings = months.reduce((sum, m) => sum + m.bookingCount, 0);
+    const averageMonthlyRevenue = Math.round(totalRevenue / 12);
+    
+    // Current month vs last month comparison
+    const currentMonth = months[months.length - 1];
+    const lastMonth = months[months.length - 2];
+    const revenueChange = lastMonth.revenue > 0
+      ? Math.round(((currentMonth.revenue - lastMonth.revenue) / lastMonth.revenue) * 100)
+      : currentMonth.revenue > 0 ? 100 : 0;
+    const bookingChange = lastMonth.bookingCount > 0
+      ? Math.round(((currentMonth.bookingCount - lastMonth.bookingCount) / lastMonth.bookingCount) * 100)
+      : currentMonth.bookingCount > 0 ? 100 : 0;
+
+    return res.json({
+      months,
+      summary: {
+        totalRevenue,
+        totalBookings,
+        averageMonthlyRevenue,
+        averageBookingValue: totalBookings > 0 ? Math.round(totalRevenue / totalBookings) : 0,
+        revenueChange,
+        bookingChange
+      }
+    });
+  } catch (error) {
+    console.error('[REVENUE HISTORY] Error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * Helper function to get upcoming birthdays
  */
 async function getUpcomingBirthdays(days: number) {

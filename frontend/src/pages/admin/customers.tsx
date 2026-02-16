@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { buttonStyles } from '@/styles/buttonStyles';
+import { MonthlyRevenueChart } from '@/components/MonthlyRevenueChart';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -594,6 +595,11 @@ export default function CustomerManagement() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Revenue Chart */}
+        <div className="mb-8">
+          <MonthlyRevenueChart />
+        </div>
+
         {/* Metrics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <Card className="bg-slate-800/50 border-slate-700">

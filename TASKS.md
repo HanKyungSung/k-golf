@@ -133,6 +133,16 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
 ## 🎉 Recently Completed (2026-02-16)
+- [x] **Monthly Revenue Chart** - Visual bar chart showing 12-month revenue trends
+  - [x] Created [MonthlyRevenueChart.tsx](frontend/components/MonthlyRevenueChart.tsx) component using Recharts
+  - [x] New backend API: `GET /api/customers/revenue-history` returns 12 months of data
+  - [x] Metrics per month: revenue, bookingCount, completedCount, cancelledCount, averageBookingValue
+  - [x] Summary stats: totalRevenue, totalBookings, averageMonthlyRevenue, month-over-month changes
+  - [x] Combined bar chart (revenue) + line chart (booking count) with dual Y-axes
+  - [x] Custom tooltip showing detailed breakdown per month
+  - [x] Trend badges showing % change vs last month for revenue and bookings
+  - [x] Placed at top of customers page above the 5 metric cards
+  - [x] Dark theme styling matching admin dashboard
 - [x] **Unified Button Styles Across Admin Pages** - Created shared buttonStyles.ts for consistent UI
   - [x] Created [frontend/styles/buttonStyles.ts](frontend/styles/buttonStyles.ts) with all button style constants
   - [x] Style categories: primary, secondary, headerNav, headerLogout, ghost, pagination, destructive, success, info, warning
