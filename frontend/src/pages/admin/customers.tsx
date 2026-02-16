@@ -651,7 +651,12 @@ export default function CustomerManagement() {
                 {metrics?.monthlyRevenue !== undefined ? formatCurrency(metrics.monthlyRevenue) : '—'}
               </div>
               <p className="text-xs text-slate-400">
-                This month
+                {(() => {
+                  const now = new Date();
+                  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                  return `${firstDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${lastDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                })()}
               </p>
             </CardContent>
           </Card>

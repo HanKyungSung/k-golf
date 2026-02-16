@@ -162,6 +162,9 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - [x] Helper functions to check availability and mark slots as occupied
   - [x] Skips booking creation if no available slot for that room that day
   - [x] Prevents overlapping bookings on same room in seed data
+- [x] **Monthly Revenue Date Range Display** - Show date range on admin metrics panel
+  - [x] Changed "This month" to show actual date range (e.g., "Feb 1 - Feb 28")
+  - [x] Dynamically calculates first and last day of current month
 
 ## 🎉 Recently Completed (2026-01-11)
 - [x] **Migrated operating hours from Room table to Settings table** - Centralized business hours management
