@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { buttonStyles } from '@/styles/buttonStyles';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { useNavigate } from 'react-router-dom';
@@ -226,7 +227,7 @@ export default function POSMenuManagement({ onBack }: POSMenuManagementProps) {
           <h1 className="text-2xl font-bold text-amber-400">K one Golf POS - Menu Management</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-300">{user?.email}</span>
-            <Button onClick={handleLogout} variant="outline" size="sm">Logout</Button>
+            <Button onClick={handleLogout} variant="outline" size="sm" className={buttonStyles.headerLogout}>Logout</Button>
           </div>
         </div>
       </header>
@@ -242,10 +243,10 @@ export default function POSMenuManagement({ onBack }: POSMenuManagementProps) {
             <p className="text-slate-400 text-sm">Add, edit, and organize menu items</p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={onBack} variant="outline" className="bg-slate-700 text-slate-200 border-slate-600 hover:bg-slate-600">
+            <Button onClick={onBack} variant="outline" className={buttonStyles.secondary}>
               ← Back to Dashboard
             </Button>
-            <Button onClick={startCreate} className="bg-amber-500 text-black hover:bg-amber-600 font-semibold">
+            <Button onClick={startCreate} className={buttonStyles.primarySemibold}>
               + Add Item
             </Button>
           </div>
@@ -459,7 +460,7 @@ export default function POSMenuManagement({ onBack }: POSMenuManagementProps) {
                     <div className="flex gap-2 pt-2">
                       <Button 
                         type="submit" 
-                        className="flex-1 bg-amber-500 text-black hover:bg-amber-600 font-semibold"
+                        className={`flex-1 ${buttonStyles.primarySemibold}`}
                         disabled={saving}
                       >
                         {saving ? 'Saving...' : (editingId ? 'Save Changes' : 'Create Item')}
@@ -468,7 +469,7 @@ export default function POSMenuManagement({ onBack }: POSMenuManagementProps) {
                         type="button" 
                         onClick={cancelForm} 
                         variant="outline"
-                        className="bg-slate-700 text-slate-200 border-slate-600 hover:bg-slate-600"
+                        className={buttonStyles.secondary}
                         disabled={saving}
                       >
                         Cancel
@@ -523,14 +524,14 @@ export default function POSMenuManagement({ onBack }: POSMenuManagementProps) {
             <Button 
               variant="outline" 
               onClick={() => setConfirmDeleteId(null)} 
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              className={buttonStyles.secondary}
               disabled={deleting}
             >
               Cancel
             </Button>
             <Button 
               onClick={performDelete} 
-              className="bg-red-500 text-white hover:bg-red-600"
+              className={buttonStyles.destructive}
               disabled={deleting}
             >
               {deleting ? 'Deleting...' : 'Delete'}

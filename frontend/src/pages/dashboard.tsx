@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom"
 import React from "react"
 import { Button } from "@/components/ui/button"
+import { buttonStyles } from "@/styles/buttonStyles"
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
@@ -121,7 +122,7 @@ const CustomerDashboard = () => {
               <Button
                 variant="outline"
                 onClick={async () => { await logout(); navigate('/'); }}
-                className="border-red-400/50 text-red-400 hover:bg-red-500/10 bg-transparent"
+                className={buttonStyles.headerLogout}
               >
                 Logout
               </Button>

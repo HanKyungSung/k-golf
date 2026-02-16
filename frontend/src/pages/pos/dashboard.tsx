@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { buttonStyles } from '@/styles/buttonStyles';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -357,12 +358,12 @@ export default function POSDashboard() {
           <h1 className="text-2xl font-bold text-amber-400">K one Golf POS</h1>
           <div className="flex items-center gap-4">
             <Link to="/admin/customers">
-              <Button variant="outline" size="sm" className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10">
+              <Button variant="outline" size="sm" className={buttonStyles.headerNav}>
                 Customers
               </Button>
             </Link>
             <span className="text-sm text-slate-300">{user?.email}</span>
-            <Button onClick={handleLogout} variant="outline" size="sm">Logout</Button>
+            <Button onClick={handleLogout} variant="outline" size="sm" className={buttonStyles.headerLogout}>Logout</Button>
           </div>
         </div>
       </header>
@@ -383,7 +384,7 @@ export default function POSDashboard() {
             </div>
             <Button 
               onClick={() => setShowCreateModal(true)}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold flex items-center gap-2"
+              className={`${buttonStyles.primarySemibold} flex items-center gap-2`}
             >
               <Plus className="h-4 w-4" />
               <span>Create Booking</span>
@@ -450,7 +451,8 @@ export default function POSDashboard() {
 
                         <Button 
                           size="sm" 
-                          className="w-full text-xs" 
+                          className={`w-full text-xs ${buttonStyles.secondary}`}
+                          variant="outline"
                           onClick={() => openBookingDetail(currentBooking.id)}
                         >
                           Manage
@@ -462,7 +464,7 @@ export default function POSDashboard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="w-full text-xs"
+                          className={`w-full text-xs ${buttonStyles.secondary}`}
                           onClick={() => {
                             setPreselectedRoomId(room.id);
                             setShowCreateModal(true);
@@ -510,8 +512,8 @@ export default function POSDashboard() {
                 <div className="space-y-4 text-sm">
                   <p className="text-slate-300">Menu management allows you to add, edit, and manage food and drink items.</p>
                   <div className="flex gap-3">
-                    <Button size="sm" onClick={() => navigate('/pos/menu')}>Open Menu Management</Button>
-                    <Button size="sm" variant="outline" onClick={() => navigate('/pos/menu')}>Quick Edit</Button>
+                    <Button size="sm" className={buttonStyles.primary} onClick={() => navigate('/pos/menu')}>Open Menu Management</Button>
+                    <Button size="sm" variant="outline" className={buttonStyles.secondary} onClick={() => navigate('/pos/menu')}>Quick Edit</Button>
                   </div>
                   <p className="text-[11px] text-slate-500">Future enhancements: category CRUD, bulk availability toggles, price history, printing labels.</p>
                 </div>
@@ -630,20 +632,20 @@ export default function POSDashboard() {
                           max="100"
                         />
                         <span className="text-slate-300">%</span>
-                        <Button onClick={saveTaxRate} size="sm" className="bg-green-500 hover:bg-green-600">
+                        <Button onClick={saveTaxRate} size="sm" className={buttonStyles.success}>
                           Save
                         </Button>
                         <Button onClick={() => {
                           setEditingTax(false);
                           setTempTaxRate(taxRate.toString());
-                        }} size="sm" variant="outline">
+                        }} size="sm" variant="outline" className={buttonStyles.secondary}>
                           Cancel
                         </Button>
                       </>
                     ) : (
                       <>
                         <span className="text-2xl font-bold text-white">{taxRate}%</span>
-                        <Button onClick={() => setEditingTax(true)} size="sm">
+                        <Button onClick={() => setEditingTax(true)} size="sm" variant="outline" className={buttonStyles.secondary}>
                           Edit
                         </Button>
                       </>
@@ -802,11 +804,11 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
             <CardDescription>Horizontal timeline by room and day</CardDescription>
           </div>
           <div className="flex items-center gap-3">
-            <Button size="sm" variant="outline" onClick={() => navigateWeek('prev')}>← Prev Week</Button>
+            <Button size="sm" variant="outline" className={buttonStyles.pagination} onClick={() => navigateWeek('prev')}>← Prev Week</Button>
             <span className="text-white text-sm font-medium min-w-[200px] text-center">
               {weekDays[0].toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – {weekDays[6].toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
             </span>
-            <Button size="sm" variant="outline" onClick={() => navigateWeek('next')}>Next Week →</Button>
+            <Button size="sm" variant="outline" className={buttonStyles.pagination} onClick={() => navigateWeek('next')}>Next Week →</Button>
           </div>
         </div>
       </CardHeader>

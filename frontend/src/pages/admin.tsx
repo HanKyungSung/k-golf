@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
+import { buttonStyles } from "@/styles/buttonStyles"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -148,7 +149,7 @@ export default function AdminPage() {
               <Button
                 variant="outline"
                 onClick={async () => { await logout(); navigate('/'); }}
-                className="border-red-400/50 text-red-400 hover:bg-red-500/10 bg-transparent"
+                className={buttonStyles.headerLogout}
               >
                 Logout
               </Button>

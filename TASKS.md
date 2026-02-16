@@ -21,6 +21,8 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 ---
 
 ## Personal note (Do not touch)
+- Monthly revenue chart
+- logs for FE/BE
 
 ### 🔄 Ongoing Tasks
 - [ ] **Enable DigitalOcean Droplet Backups** 🔴 HIGH PRIORITY
@@ -131,6 +133,15 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
 ## 🎉 Recently Completed (2026-02-16)
+- [x] **Unified Button Styles Across Admin Pages** - Created shared buttonStyles.ts for consistent UI
+  - [x] Created [frontend/styles/buttonStyles.ts](frontend/styles/buttonStyles.ts) with all button style constants
+  - [x] Style categories: primary, secondary, headerNav, headerLogout, ghost, pagination, destructive, success, info, warning
+  - [x] Updated [admin.tsx](frontend/src/pages/admin.tsx) - Fixed Logout button (red → slate)
+  - [x] Updated [dashboard.tsx](frontend/src/pages/dashboard.tsx) - Fixed Logout button (red → slate)
+  - [x] Updated [pos/dashboard.tsx](frontend/src/pages/pos/dashboard.tsx) - Updated ~10 buttons (Customers, Logout, Create Booking, Manage, Book, Menu buttons, Tax Save/Cancel/Edit, Prev/Next Week)
+  - [x] Updated [menu-management.tsx](frontend/src/pages/pos/menu-management.tsx) - Updated Logout, Back, Add Item, Save/Cancel, Delete dialog buttons
+  - [x] Added import to [customers.tsx](frontend/src/pages/admin/customers.tsx) for future use
+  - [x] Consistent dark theme: amber primary CTAs, slate secondary/cancel buttons
 - [x] **Customer & Booking Management Admin Page** - Comprehensive admin page for managing customers and bookings
   - [x] New `/admin/customers` page with Customers and Bookings tabs
   - [x] Unified search: search by phone, name, email, or booking reference across both tabs
