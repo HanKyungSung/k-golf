@@ -24,7 +24,6 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 - bday email notification with coupon
   - also need the button for discount
     - bday, wild card for discount etc
-- fix staff interface for when they create a booking. they should see more bookings based on the phone number they enter.
 - Monthly revenue chart
 - logs for FE/BE
 - mobile response
