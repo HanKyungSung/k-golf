@@ -15,7 +15,17 @@ import { normalizePhone, validatePhone } from '../utils/phoneUtils';
 const router = Router();
 
 /**
- * Middleware to require ADMIN role
+ * Middleware to require ADMIN or STAFF role
+ */
+function requireAdminOrStaff(req: any, res: Response, next: Function) {
+  if (req.user?.role !== UserRole.ADMIN && req.user?.role !== UserRole.STAFF) {
+    return res.status(403).json({ error: 'Admin or Staff access required' });
+  }
+  next();
+}
+
+/**
+ * Middleware to require ADMIN role only
  */
 function requireAdmin(req: any, res: Response, next: Function) {
   if (req.user?.role !== UserRole.ADMIN) {
@@ -42,7 +52,7 @@ const lookupQuerySchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
 });
 
-router.get('/lookup', requireAuth, requireAdmin, async (req, res) => {
+router.get('/lookup', requireAuth, requireAdminOrStaff, async (req, res) => {
   try {
     // Validate query params
     const parsed = lookupQuerySchema.safeParse(req.query);
@@ -74,56 +84,49 @@ router.get('/lookup', requireAuth, requireAdmin, async (req, res) => {
       });
     }
 
-    // Lookup user with aggregated booking stats
+    // Always search bookings by customerPhone (works for guest bookings too)
+    const bookingsByPhone = await prisma.booking.groupBy({
+      by: ['bookingSource'],
+      where: { customerPhone: normalizedPhone },
+      _count: { id: true },
+    });
+
+    const bookingCounts = {
+      ONLINE: 0,
+      WALK_IN: 0,
+      PHONE: 0,
+    };
+    for (const row of bookingsByPhone) {
+      if (row.bookingSource in bookingCounts) {
+        bookingCounts[row.bookingSource as keyof typeof bookingCounts] = row._count.id;
+      }
+    }
+
+    // Lookup user account by phone
     const user = await prisma.user.findUnique({
       where: { phone: normalizedPhone },
-      include: {
-        _count: {
-          select: { bookings: true }
-        },
-        bookings: {
-          select: {
-            startTime: true,
-            price: true,
-          },
-          orderBy: {
-            startTime: 'desc'
-          },
-          take: 1 // Get most recent booking for lastBookingDate
-        }
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        role: true,
+        createdAt: true,
       }
     });
 
-    // User not found
-    if (!user) {
-      return res.status(200).json({ found: false });
-    }
-
-    // Calculate aggregate stats
-    const allBookings = await prisma.booking.findMany({
-      where: { userId: user.id },
-      select: { price: true }
-    });
-
-    const totalSpent = allBookings.reduce((sum, booking) => sum + Number(booking.price), 0);
-    const bookingCount = user._count.bookings;
-    const lastBookingDate = user.bookings[0]?.startTime || null;
-
-    // Return user data with stats
+    // Return user existence + booking counts by phone
     return res.status(200).json({
-      found: true,
-      user: {
+      found: !!user,
+      user: user ? {
         id: user.id,
         name: user.name,
         phone: user.phone,
         email: user.email,
         role: user.role,
-        registrationSource: user.registrationSource,
         memberSince: user.createdAt,
-        bookingCount,
-        lastBookingDate,
-        totalSpent: totalSpent.toFixed(2),
-      }
+      } : null,
+      bookingCounts,
     });
 
   } catch (error) {

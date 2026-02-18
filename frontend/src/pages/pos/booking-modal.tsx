@@ -5,7 +5,9 @@ import { Label } from '@/components/ui/label';
 import { PhoneInput } from '../../components/pos/PhoneInput';
 import { TimePicker } from '../../components/pos/TimePicker';
 import { DatePicker } from '../../components/pos/DatePicker';
+import { Badge } from '@/components/ui/badge';
 import { createBooking, type Room } from '@/services/pos-api';
+import { Loader2, User } from 'lucide-react';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -18,12 +20,19 @@ interface BookingModalProps {
 type Step = 'customer' | 'details';
 type BookingSource = 'WALK_IN' | 'PHONE' | 'ONLINE';
 
-interface CustomerMatch {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  bookingCount: number;
+interface LookupResult {
+  found: boolean;
+  user: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string | null;
+  } | null;
+  bookingCounts: {
+    ONLINE: number;
+    WALK_IN: number;
+    PHONE: number;
+  };
 }
 
 export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoomId }: BookingModalProps) {
@@ -34,10 +43,10 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
   const [phone, setPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [searchResults, setSearchResults] = useState<CustomerMatch[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
   
   // Booking details
   const [roomId, setRoomId] = useState('');
@@ -73,9 +82,9 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
     setPhone('');
     setCustomerName('');
     setCustomerEmail('');
-    setSearchResults([]);
     setSelectedCustomerId(null);
     setHasSearched(false);
+    setLookupResult(null);
     setRoomId('');
     setDate('');
     setTime('');
@@ -91,7 +100,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
 
   const handlePhoneSearch = async () => {
     if (!phone || phone.length < 10) {
-      setSearchResults([]);
+      setLookupResult(null);
       setHasSearched(false);
       return;
     }
@@ -110,22 +119,15 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
       
       const data = await response.json();
       setHasSearched(true);
+      setLookupResult(data);
       
       if (data.found && data.user) {
-        setSearchResults([{
-          id: data.user.id,
-          name: data.user.name,
-          phone: data.user.phone,
-          email: data.user.email,
-          bookingCount: data.stats?.bookingCount || 0,
-        }]);
         setSelectedCustomerId(data.user.id);
         setCustomerName(data.user.name);
         if (data.user.email) {
           setCustomerEmail(data.user.email);
         }
       } else {
-        setSearchResults([]);
         setSelectedCustomerId(null);
         setCustomerName('');
       }
@@ -142,7 +144,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
       if (phone.length === 12 && phone.startsWith('+1')) {
         handlePhoneSearch();
       } else {
-        setSearchResults([]);
+        setLookupResult(null);
         setHasSearched(false);
       }
     }, 500);
@@ -151,20 +153,6 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
   }, [phone]);
 
 
-
-  const handleSelectCustomer = (customer: CustomerMatch) => {
-    setSelectedCustomerId(customer.id);
-    setCustomerName(customer.name);
-    if (customer.email) {
-      setCustomerEmail(customer.email);
-    }
-  };
-
-  const handleClearSelection = () => {
-    setSelectedCustomerId(null);
-    setCustomerName('');
-    setCustomerEmail('');
-  };
 
   const nextStep = () => {
     const steps: Step[] = ['customer', 'details'];
@@ -185,6 +173,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
   };
 
   const canProceedFromCustomer = () => {
+    if (isSearching) return false;
     return phone.length === 12 && phone.startsWith('+1') && customerName.trim().length > 0;
   };
 
@@ -277,7 +266,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2">Customer Information</h3>
-                <p className="text-sm text-slate-400 mb-4">Search by phone or enter new customer details</p>
+                <p className="text-sm text-slate-400 mb-4">Search by phone number to check customer</p>
               </div>
 
               {/* Booking Source Buttons */}
@@ -314,47 +303,54 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
                   )}
                 </div>
 
-                {hasSearched && searchResults.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-300">Found {searchResults.length} customer(s):</label>
-                    {searchResults.map(customer => (
-                      <button
-                        key={customer.id}
-                        onClick={() => handleSelectCustomer(customer)}
-                        className={`w-full text-left p-4 rounded border transition-all ${
-                          selectedCustomerId === customer.id
-                            ? 'bg-amber-500/10 border-amber-500'
-                            : 'bg-slate-900/50 border-slate-600 hover:border-amber-500/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
+                {/* Customer Lookup Result */}
+                {hasSearched && lookupResult && (
+                  <div className="space-y-3">
+                    {/* Part 1: User Existence */}
+                    {lookupResult.found && lookupResult.user ? (
+                      <div className="p-4 rounded-lg bg-slate-900/50 border border-emerald-500/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                            <User className="h-4 w-4 text-emerald-400" />
+                          </div>
                           <div>
-                            <div className="font-semibold text-white">{customer.name}</div>
-                            <div className="text-sm text-slate-400">{customer.phone}</div>
-                            {customer.email && <div className="text-xs text-slate-500">{customer.email}</div>}
+                            <h4 className="font-semibold text-white">{lookupResult.user.name}</h4>
+                            <p className="text-xs text-slate-400">{lookupResult.user.phone}{lookupResult.user.email ? ` · ${lookupResult.user.email}` : ''}</p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-1 rounded text-xs font-medium bg-emerald-500/20 text-emerald-300">
-                              Registered
-                            </span>
-                            <span className="text-xs text-slate-400">{customer.bookingCount} bookings</span>
-                          </div>
+                          <Badge className="ml-auto bg-emerald-500/20 text-emerald-300 border-emerald-500/50 text-xs">
+                            Registered
+                          </Badge>
                         </div>
-                      </button>
-                    ))}
-                    
-                    <button
-                      onClick={handleClearSelection}
-                      className="w-full p-3 rounded border border-slate-600 bg-slate-900/30 hover:bg-slate-900/50 text-slate-300 text-sm font-medium transition-all"
-                    >
-                      + Create New Customer Profile
-                    </button>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-lg bg-slate-900/50 border border-slate-600">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center">
+                            <User className="h-4 w-4 text-slate-400" />
+                          </div>
+                          <p className="text-sm text-slate-400">No registered account for this phone number</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Part 2: Booking Counts by Source */}
+                    {lookupResult.bookingCounts && (
+                      <div className="p-3 rounded-lg bg-slate-900/50 border border-slate-700">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-sm text-slate-400">Bookings:</span>
+                          <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-300 text-xs font-medium">Online {lookupResult.bookingCounts.ONLINE}</span>
+                          <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-medium">Walk-in {lookupResult.bookingCounts.WALK_IN}</span>
+                          <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-xs font-medium">Phone {lookupResult.bookingCounts.PHONE}</span>
+                          <span className="ml-auto text-xs text-slate-500">Total {lookupResult.bookingCounts.ONLINE + lookupResult.bookingCounts.WALK_IN + lookupResult.bookingCounts.PHONE}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {hasSearched && searchResults.length === 0 && (
-                  <div className="p-4 rounded bg-slate-900/50 border border-slate-600">
-                    <p className="text-sm text-slate-400">No existing customer found with this phone number</p>
+                {hasSearched && !lookupResult && (
+                  <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+                    <p className="text-sm text-red-400">Failed to look up customer</p>
                   </div>
                 )}
 
@@ -368,9 +364,6 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
                     placeholder={selectedCustomerId ? "Edit name if needed" : "Enter customer name"}
                     className="h-9 px-3 py-2 bg-slate-900/50 border-slate-600 text-white focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
                   />
-                  {selectedCustomerId && (
-                    <p className="text-xs text-slate-400 mt-1">Name can be edited (phone is the primary identifier)</p>
-                  )}
                 </div>
 
                 {bookingSource === 'ONLINE' && (
@@ -492,7 +485,14 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
                 onClick={nextStep}
                 disabled={currentStep === 'customer' && !canProceedFromCustomer()}
               >
-                Continue
+                {isSearching ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Searching...
+                  </>
+                ) : (
+                  'Continue'
+                )}
               </Button>
             ) : (
               <Button 

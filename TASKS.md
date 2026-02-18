@@ -21,6 +21,10 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 ---
 
 ## Personal note (Do not touch)
+- bday email notification with coupon
+  - also need the button for discount
+    - bday, wild card for discount etc
+- fix staff interface for when they create a booking. they should see more bookings based on the phone number they enter.
 - Monthly revenue chart
 - logs for FE/BE
 - mobile response
@@ -134,6 +138,17 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Set up Gmail "Send As" with k-golf.ca SMTP credentials
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
+
+## 🎉 Recently Completed (2026-02-18)
+- [x] **Booking Modal - Phone Lookup with Booking Counts** - Two-part customer check when creating bookings
+  - [x] Part 1: User existence check (Registered / No registered account)
+  - [x] Part 2: Booking counts by source (Online / Walk-in / Phone) with total
+  - [x] Backend `/api/users/lookup` now searches `Booking.customerPhone` via `groupBy` (works for guest bookings too)
+  - [x] Lookup endpoint also allows STAFF access (was ADMIN-only)
+  - [x] Single API call returns both user existence and booking counts
+  - [x] Removed separate `/api/customers/:id` fetch - no longer needed
+  - [x] Removed booking history list, total spent, member since (simplified UI)
+  - [x] Staff can quickly see if phone number has any booking history
 
 ## 🎉 Recently Completed (2026-02-16)
 - [x] **STAFF Role Implementation** - Employee POS access with limited permissions
