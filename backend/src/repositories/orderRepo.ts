@@ -9,6 +9,7 @@ export interface CreateOrderInput {
   seatIndex?: number; // Optional: null means shared order
   quantity: number;
   unitPrice: number | string;
+  discountType?: string; // "FLAT" or "PERCENT" (null = not a discount)
 }
 
 export async function createOrder(data: CreateOrderInput): Promise<Order> {
@@ -21,6 +22,7 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
       menuItemId: data.menuItemId ?? null,
       customItemName: data.customItemName ?? null,
       customItemPrice: data.customItemPrice ? Number(data.customItemPrice) : null,
+      discountType: data.discountType ?? null,
       seatIndex: data.seatIndex,
       quantity: data.quantity,
       unitPrice: unitPrice,

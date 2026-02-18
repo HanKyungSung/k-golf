@@ -69,7 +69,9 @@ export async function sendVerificationEmail({ to, token, expiresAt, email }: Ver
 function generateReceiptHTML(receipt: ReceiptData): string {
   const seatRows = receipt.items.seats
     .map(
-      (seat) => `
+      (seat) => {
+        const hasDiscounts = seat.discounts && seat.discounts.length > 0;
+        return `
         <tr>
           <td colspan="3" style="padding: 12px 0 4px 0; font-weight: 600; color: #334155; border-top: 1px solid #e2e8f0;">
             Seat ${seat.seatIndex}
@@ -86,7 +88,24 @@ function generateReceiptHTML(receipt: ReceiptData): string {
         `
           )
           .join('')}
-      `
+        ${hasDiscounts ? `
+          <tr>
+            <td colspan="2" style="padding: 4px 8px; color: #64748b; font-size: 12px; border-top: 1px dashed #e2e8f0;">Subtotal</td>
+            <td style="padding: 4px 8px; text-align: right; color: #64748b; font-size: 12px; border-top: 1px dashed #e2e8f0;">$${seat.preDiscountSubtotal.toFixed(2)}</td>
+          </tr>
+          ${seat.discounts
+            .map(
+              (d) => `
+            <tr>
+              <td colspan="2" style="padding: 2px 8px; color: #059669; font-size: 12px;">↳ ${d.name}</td>
+              <td style="padding: 2px 8px; text-align: right; color: #059669; font-size: 12px;">-$${Math.abs(d.total).toFixed(2)}</td>
+            </tr>
+          `
+            )
+            .join('')}
+        ` : ''}
+      `;
+      }
     )
     .join('');
 

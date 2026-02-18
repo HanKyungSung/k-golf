@@ -110,6 +110,10 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [showCustomItemDialog, setShowCustomItemDialog] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
   const [customItemPrice, setCustomItemPrice] = useState('');
+  const [showDiscountDialog, setShowDiscountDialog] = useState(false);
+  const [discountName, setDiscountName] = useState('');
+  const [discountAmount, setDiscountAmount] = useState('');
+  const [discountType, setDiscountType] = useState<'FLAT' | 'PERCENT'>('FLAT');
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [showSplitDialog, setShowSplitDialog] = useState(false);
   const [selectedOrderItem, setSelectedOrderItem] = useState<OrderItem | null>(null);
@@ -237,16 +241,15 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
               });
             }
           } else {
-            // Handle custom items (no menuItemId)
+            // Handle custom items and discounts (no menuItemId)
+            const isDiscountOrder = Number(order.unitPrice) < 0;
             const customMenuItem: MenuItem = {
               id: `custom-${order.id}`,
-              name: order.customItemName || 'Custom Item',
-              description: 'Custom Item',
+              name: order.customItemName || (isDiscountOrder ? 'Discount' : 'Custom Item'),
+              description: isDiscountOrder ? 'Discount' : 'Custom Item',
               price: Number(order.customItemPrice || order.unitPrice),
-              category: 'FOOD' as any,
-              hours: null,
+              category: 'FOOD',
               available: true,
-              sortOrder: 999,
               createdAt: order.createdAt,
               updatedAt: order.createdAt,
             };
@@ -517,6 +520,61 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     } catch (err) {
       console.error('Failed to add custom item:', err);
       alert(`Failed to add custom item: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
+  const handleAddDiscount = async (seat: number) => {
+    if (!booking || !discountName.trim() || !discountAmount || parseFloat(discountAmount) <= 0) {
+      alert('Please enter valid discount name and amount');
+      return;
+    }
+
+    setOrderLoading(true);
+    try {
+      let finalPrice: number;
+      let label = discountName.trim();
+
+      if (discountType === 'PERCENT') {
+        const pct = parseFloat(discountAmount);
+        if (pct > 100) {
+          alert('Percentage cannot exceed 100%');
+          setOrderLoading(false);
+          return;
+        }
+        // Calculate seat subtotal for this seat (only regular items, exclude existing discounts)
+        const seatItems = getItemsForSeat(seat);
+        const regularSubtotal = seatItems
+          .filter(item => (item.splitPrice || item.menuItem.price) >= 0)
+          .reduce((sum, item) => sum + (item.splitPrice || item.menuItem.price) * item.quantity, 0);
+        finalPrice = Math.round(regularSubtotal * pct) / 100;
+        label = `${label} (${pct}%)`;
+      } else {
+        finalPrice = parseFloat(discountAmount);
+      }
+
+      // Store as negative price for discount
+      await apiCreateOrder({
+        bookingId: booking.id,
+        customItemName: label,
+        customItemPrice: -finalPrice,
+        seatIndex: seat,
+        quantity: 1,
+        discountType,
+      });
+
+      // Reload data
+      await loadData();
+
+      // Reset form and close dialog
+      setDiscountName('');
+      setDiscountAmount('');
+      setDiscountType('FLAT');
+      setShowDiscountDialog(false);
+    } catch (err) {
+      console.error('Failed to add discount:', err);
+      alert(`Failed to add discount: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setOrderLoading(false);
     }
@@ -1221,9 +1279,13 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
             <Accordion type="multiple" value={expandedSeats} onValueChange={setExpandedSeats} className="space-y-4">
               {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => {
                 const seatItems = getItemsForSeat(seat);
+                const regularItems = seatItems.filter(item => (item.splitPrice || item.menuItem.price) >= 0);
+                const discountItems = seatItems.filter(item => (item.splitPrice || item.menuItem.price) < 0);
                 const isPaid = isSeatPaid(seat);
                 const payment = getSeatPayment(seat);
-                const subtotal = calculateSeatSubtotal(seat);
+                const subtotal = calculateSeatSubtotal(seat); // backend subtotal (includes discounts)
+                const preDiscountSubtotal = regularItems.reduce((sum, item) => sum + (item.splitPrice || item.menuItem.price) * item.quantity, 0);
+                const discountTotal = discountItems.reduce((sum, item) => sum + (item.splitPrice || item.menuItem.price) * item.quantity, 0);
                 const tax = calculateSeatTax(seat);
                 const tipAmount = isPaid
                   ? payment?.tip || 0
@@ -1247,8 +1309,13 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                           <div className={`w-4 h-4 rounded-full ${seatColors[seat - 1]}`} />
                           <span className="font-bold text-white text-lg">Seat {seat}</span>
                           <Badge variant="outline" className="text-slate-300 border-slate-600">
-                            {seatItems.length} items
+                            {regularItems.length} items
                           </Badge>
+                          {discountItems.length > 0 && (
+                            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/50 text-xs">
+                              {discountItems.length} discount{discountItems.length > 1 ? 's' : ''}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-3">
                           <Button
@@ -1281,7 +1348,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                     <AccordionContent className="px-6 pb-6">
                       <div className="space-y-4 pt-2">
                         {/* Order Items */}
-                        {seatItems.length === 0 ? (
+                        {regularItems.length === 0 && discountItems.length === 0 ? (
                           <div className="text-center py-8 text-slate-400 bg-slate-900/30 rounded-lg">
                             <p>No items ordered yet</p>
                             <p className="text-sm mt-1">Add items from the menu</p>
@@ -1289,7 +1356,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                         ) : (
                           <div className="space-y-2">
                             <h4 className="text-sm font-semibold text-slate-300 mb-2">Order Items</h4>
-                            {seatItems.map((item) => (
+                            {regularItems.map((item) => (
                               <div
                                 key={item.id}
                                 className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-700"
@@ -1299,7 +1366,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                     <p className="text-white font-medium">
                                       {item.menuItem ? item.menuItem.name : (item as any).customItemName || 'Custom Item'}
                                     </p>
-                                    {!item.menuItem && (
+                                    {item.menuItem?.id?.startsWith('custom-') && (
                                       <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/50 text-xs">
                                         Custom
                                       </Badge>
@@ -1380,8 +1447,29 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                           <div className="space-y-2 font-mono text-sm">
                             <div className="flex justify-between text-slate-300">
                               <span>Subtotal</span>
-                              <span>${subtotal.toFixed(2)}</span>
+                              <span>${preDiscountSubtotal.toFixed(2)}</span>
                             </div>
+                            {discountItems.map((item) => (
+                              <div key={item.id} className="flex justify-between items-center text-emerald-400">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs">↳</span>
+                                  <span>{item.menuItem.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span>-${Math.abs((item.splitPrice || item.menuItem.price) * item.quantity).toFixed(2)}</span>
+                                  {!isPaid && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => removeOrderItem(item.id)}
+                                      className="h-6 w-6 p-0 bg-red-500/20 border-red-500/50 hover:bg-red-500/30"
+                                    >
+                                      <Trash2 className="h-3 w-3 text-red-400" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                             <div className="flex justify-between text-slate-300">
                               <span>Tax ({effectiveTaxRate}%)</span>
                               <span>${tax.toFixed(2)}</span>
@@ -1667,6 +1755,17 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                       </Button>
                     </div>
 
+                    {/* Discount Button */}
+                    <div className="mt-2">
+                      <Button
+                        onClick={() => setShowDiscountDialog(true)}
+                        className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold py-6 text-lg shadow-lg"
+                      >
+                        <Minus className="w-5 h-5 mr-2" />
+                        Discount
+                      </Button>
+                    </div>
+
                     {(['hours', 'food', 'drinks', 'appetizers', 'desserts'] as const).map((category) => (
                       <TabsContent key={category} value={category}>
                         <div className="space-y-2 max-h-[500px] overflow-y-auto">
@@ -1948,6 +2047,133 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                 setShowCustomItemDialog(false);
                 setCustomItemName('');
                 setCustomItemPrice('');
+              }}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              disabled={orderLoading}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Discount Dialog */}
+      <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Add Discount</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Enter discount details, then select which seat to apply it to
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Discount Name Input */}
+            <div className="space-y-2">
+              <Label htmlFor="discountName" className="text-white">Discount Name</Label>
+              <Input
+                id="discountName"
+                placeholder="e.g., Senior Discount, Loyalty Reward"
+                value={discountName}
+                onChange={(e) => setDiscountName(e.target.value)}
+                className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500"
+                autoFocus
+              />
+            </div>
+
+            {/* Discount Type Toggle */}
+            <div className="space-y-2">
+              <Label className="text-white">Discount Type</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  onClick={() => setDiscountType('FLAT')}
+                  className={`h-12 text-lg font-semibold ${
+                    discountType === 'FLAT'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                  }`}
+                >
+                  $ Flat
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setDiscountType('PERCENT')}
+                  className={`h-12 text-lg font-semibold ${
+                    discountType === 'PERCENT'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                  }`}
+                >
+                  % Percent
+                </Button>
+              </div>
+            </div>
+
+            {/* Amount Input */}
+            <div className="space-y-2">
+              <Label htmlFor="discountAmount" className="text-white">
+                {discountType === 'FLAT' ? 'Amount ($)' : 'Percentage (%)'}
+              </Label>
+              <Input
+                id="discountAmount"
+                type="number"
+                step={discountType === 'FLAT' ? '0.01' : '1'}
+                min="0"
+                max={discountType === 'PERCENT' ? '100' : undefined}
+                placeholder={discountType === 'FLAT' ? '0.00' : '0'}
+                value={discountAmount}
+                onChange={(e) => setDiscountAmount(e.target.value)}
+                className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500"
+              />
+            </div>
+
+            {/* Preview */}
+            {discountName && discountAmount && parseFloat(discountAmount) > 0 && (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="font-semibold text-white">
+                      {discountName}
+                      {discountType === 'PERCENT' && ` (${discountAmount}%)`}
+                    </div>
+                    <div className="text-xs text-slate-400">Discount • {discountType === 'FLAT' ? 'Flat Amount' : 'Percentage'}</div>
+                  </div>
+                  <div className="text-emerald-400 font-bold text-lg">
+                    {discountType === 'FLAT'
+                      ? `-$${parseFloat(discountAmount).toFixed(2)}`
+                      : `-${discountAmount}%`}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Seat Selection */}
+            <div className="space-y-2">
+              <Label className="text-white">Select Seat</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => (
+                  <Button
+                    key={seat}
+                    onClick={() => handleAddDiscount(seat)}
+                    disabled={orderLoading || !discountName.trim() || !discountAmount || parseFloat(discountAmount) <= 0}
+                    className={`h-16 ${seatColors[seat - 1]} hover:opacity-90 text-white text-lg font-semibold disabled:opacity-50`}
+                  >
+                    {orderLoading ? 'Applying...' : `Seat ${seat}`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDiscountDialog(false);
+                setDiscountName('');
+                setDiscountAmount('');
+                setDiscountType('FLAT');
               }}
               className="border-slate-600 text-slate-300 hover:bg-slate-700"
               disabled={orderLoading}

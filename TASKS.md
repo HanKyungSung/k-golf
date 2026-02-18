@@ -71,6 +71,16 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
     - **Reason to defer:** Current behavior is transparent and simpler for accounting
     - **When to implement:** If staff frequently adjust splits after creation
     - **Details:** See analysis in git commit message for smart split tracking options
+- [x] **Discount feature on POS billing** - Add discount (flat $ or %) per seat in booking detail
+  - [x] Database: Added `discountType` (FLAT/PERCENT) to Order model + migration
+  - [x] Backend: orderRepo, booking route accept `discountType`, validate negative price for discounts
+  - [x] Frontend API: `pos-api.ts` passes `discountType` in createOrder
+  - [x] Discount button (emerald/teal gradient) with Minus icon below Custom Item button
+  - [x] Discount dialog: name input, FLAT/PERCENT toggle, amount input, preview, seat selection
+  - [x] Percentage discounts auto-calculate from seat subtotal, label shows `(X%)`
+  - [x] Discount orders stored as negative `customItemPrice` with `discountType`
+  - [x] Green "Discount" badge for discount items, purple "Custom" for custom items
+  - [x] Emerald price display for negative (discount) amounts
 - [x] **Landing page contact form** - Functional contact form with email integration
   - [x] Created /api/contact endpoint with Zod validation
   - [x] Added sendContactEmail function to email service

@@ -44,6 +44,13 @@ export interface ReceiptData {
         unitPrice: number;
         total: number;
       }>;
+      discounts: Array<{
+        name: string;
+        quantity: number;
+        unitPrice: number;
+        total: number;
+      }>;
+      preDiscountSubtotal: number;
       subtotal: number;
     }>;
   };
@@ -122,18 +129,23 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
 
   // Build seat data from orders
   const seats = Array.from(seatOrders.entries()).map(([seatIndex, orders]) => {
-    const orderItems = orders.map((order: any) => ({
+    const allItems = orders.map((order: any) => ({
       name: order.menuItem?.name || order.customItemName || 'Unknown Item',
       quantity: order.quantity,
       unitPrice: Number(order.unitPrice),
       total: Number(order.totalPrice),
     }));
 
-    const subtotal = orderItems.reduce((sum, item) => sum + item.total, 0);
+    const regularItems = allItems.filter(item => item.total >= 0);
+    const discountItems = allItems.filter(item => item.total < 0);
+    const preDiscountSubtotal = regularItems.reduce((sum, item) => sum + item.total, 0);
+    const subtotal = allItems.reduce((sum, item) => sum + item.total, 0);
 
     return {
       seatIndex,
-      orders: orderItems,
+      orders: regularItems,
+      discounts: discountItems,
+      preDiscountSubtotal,
       subtotal,
     };
   });

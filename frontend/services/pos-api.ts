@@ -411,6 +411,7 @@ export async function createOrder(data: {
   customItemPrice?: number;
   seatIndex: number;
   quantity: number;
+  discountType?: 'FLAT' | 'PERCENT';
 }): Promise<{ order: Order; updatedInvoice?: Invoice }> {
   const body: any = {
     seatIndex: data.seatIndex,
@@ -423,6 +424,11 @@ export async function createOrder(data: {
   } else {
     body.customItemName = data.customItemName;
     body.customItemPrice = data.customItemPrice;
+  }
+
+  // Add discount type if present
+  if (data.discountType) {
+    body.discountType = data.discountType;
   }
   
   const res = await fetch(`${API_BASE}/api/bookings/${data.bookingId}/orders`, {
@@ -609,6 +615,13 @@ export interface ReceiptData {
         unitPrice: number;
         total: number;
       }>;
+      discounts: Array<{
+        name: string;
+        quantity: number;
+        unitPrice: number;
+        total: number;
+      }>;
+      preDiscountSubtotal: number;
       subtotal: number;
     }>;
   };

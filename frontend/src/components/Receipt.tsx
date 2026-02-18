@@ -40,6 +40,13 @@ export interface ReceiptData {
         unitPrice: number;
         total: number;
       }>;
+      discounts: Array<{
+        name: string;
+        quantity: number;
+        unitPrice: number;
+        total: number;
+      }>;
+      preDiscountSubtotal: number;
       subtotal: number;
     }>;
   };
@@ -141,11 +148,13 @@ export function Receipt({ data, printMode, printingSeatIndex }: ReceiptProps) {
         )}
 
         {/* Seat Orders */}
-        {seatsToShow.map((seat) => (
+        {seatsToShow.map((seat) => {
+          const hasDiscounts = seat.discounts && seat.discounts.length > 0;
+          return (
           <div key={seat.seatIndex} className="mb-3">
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-bold text-slate-700">Seat {seat.seatIndex}</span>
-              <span className="text-xs text-slate-500">Subtotal: ${seat.subtotal.toFixed(2)}</span>
+              <span className="text-xs text-slate-500">Total: ${seat.subtotal.toFixed(2)}</span>
             </div>
             
             {seat.orders.map((order, idx) => (
@@ -156,8 +165,24 @@ export function Receipt({ data, printMode, printingSeatIndex }: ReceiptProps) {
                 <span className="font-medium">${order.total.toFixed(2)}</span>
               </div>
             ))}
+
+            {hasDiscounts && (
+              <>
+                <div className="flex justify-between text-xs text-slate-500 mt-1 pl-2 border-t border-dotted border-slate-200 pt-1">
+                  <span>Subtotal</span>
+                  <span>${seat.preDiscountSubtotal.toFixed(2)}</span>
+                </div>
+                {seat.discounts.map((discount, idx) => (
+                  <div key={`d-${idx}`} className="flex justify-between text-xs text-emerald-700 mb-0.5 pl-2">
+                    <span>↳ {discount.name}</span>
+                    <span className="font-medium">-${Math.abs(discount.total).toFixed(2)}</span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="border-t border-dashed border-slate-300 my-3"></div>

@@ -1116,18 +1116,23 @@ router.patch('/:id/payment-status', requireAuth, requireStaffOrAdmin, async (req
 const createOrderSchema = z.object({
   menuItemId: z.string().min(1).optional(), // Optional for custom items
   customItemName: z.string().min(1).optional(), // Required when menuItemId is null
-  customItemPrice: z.number().positive().optional(), // Required when menuItemId is null
+  customItemPrice: z.number().optional(), // Required when menuItemId is null (negative for discounts)
   seatIndex: z.number().int().min(1).max(4).optional(), // null for shared orders
   quantity: z.number().int().min(1),
+  discountType: z.enum(['FLAT', 'PERCENT']).optional(), // Non-null = discount order
 }).refine(
   (data) => {
+    // Discount orders use customItemName + negative customItemPrice + discountType
+    if (data.discountType) {
+      return !!data.customItemName && data.customItemPrice !== undefined && data.customItemPrice < 0;
+    }
     // Either menuItemId OR (customItemName + customItemPrice) must be provided
     const hasMenuItem = !!data.menuItemId;
     const hasCustomItem = !!data.customItemName && data.customItemPrice !== undefined;
     return hasMenuItem !== hasCustomItem; // XOR: exactly one must be true
   },
   {
-    message: 'Either menuItemId OR (customItemName + customItemPrice) must be provided',
+    message: 'Either menuItemId OR (customItemName + customItemPrice) must be provided. Discounts require discountType and negative price.',
   }
 );
 
@@ -1143,7 +1148,7 @@ router.post('/:bookingId/orders', requireAuth, async (req, res) => {
       });
     }
 
-    const { menuItemId, customItemName, customItemPrice, seatIndex, quantity } = parsed.data;
+    const { menuItemId, customItemName, customItemPrice, seatIndex, quantity, discountType } = parsed.data;
 
     // Verify booking exists
     const booking = await getBooking(bookingId);
@@ -1186,6 +1191,7 @@ router.post('/:bookingId/orders', requireAuth, async (req, res) => {
       seatIndex: seatIndex || undefined,
       quantity,
       unitPrice,
+      discountType: discountType || undefined,
     });
 
     // Recalculate invoice if seat-specific
