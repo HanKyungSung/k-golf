@@ -76,10 +76,22 @@ export default function BookingPage() {
   const [loadingRooms, setLoadingRooms] = useState(false);
   const selectedBackendId = rooms.find((r) => r.id === selectedRoom)?.backendId;
 
+  // Auto-scroll to next section when a step is completed
+  useEffect(() => {
+    if (selectedRoom && dateTimeSectionRef.current) {
+      setTimeout(() => {
+        dateTimeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+  }, [selectedRoom]);
+
   // Operating hours from backend
   const [operatingHours, setOperatingHours] = useState<{ openMinutes: number; closeMinutes: number } | null>(null);
   const [timeValidationError, setTimeValidationError] = useState<string>("");
   const timelineScrollRef = useRef<HTMLDivElement>(null);
+  const dateTimeSectionRef = useRef<HTMLDivElement>(null);
+  const timelineSectionRef = useRef<HTMLDivElement>(null);
+  const summarySectionRef = useRef<HTMLDivElement>(null);
 
   // Restore saved booking selections from sessionStorage on mount
   useEffect(() => {
@@ -317,6 +329,13 @@ export default function BookingPage() {
     const minutesFromOpen = (startHour - 10) * 60 + Number(startTime.split(":")[1]);
     const targetPx = (minutesFromOpen / totalMinutes) * innerWidth;
     container.scrollTo({ left: targetPx - containerWidth / 2, behavior: 'smooth' });
+
+    // Scroll to timeline/summary section
+    if (timelineSectionRef.current) {
+      setTimeout(() => {
+        timelineSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
   }, [startTime]);
 
   const handleBooking = async () => {
@@ -468,7 +487,7 @@ export default function BookingPage() {
               <Star className="h-6 w-6 text-amber-400" />
               Choose Your Room
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-6">
                 {rooms.map((room) => {
                   const roomNumber = room.name.match(/\d+/)?.[0] || '1';
                   const handPreference = ['1', '2'].includes(roomNumber) ? 'Right-Handed' : 'Both Hands';
@@ -483,12 +502,12 @@ export default function BookingPage() {
                       }`}
                       onClick={() => setSelectedRoom(room.id)}
                     >
-                      <CardHeader className="pb-3">
-                        <div className="relative mb-3">
+                      <CardHeader className="p-3 sm:pb-3 sm:p-6">
+                        <div className="relative mb-2 sm:mb-3">
                           <img
                             src={room.image || "/placeholder.svg"}
                             alt={room.name}
-                            className="w-full h-24 object-cover rounded-lg"
+                            className="w-full h-16 sm:h-24 object-cover rounded-lg"
                           />
                         </div>
                         <CardTitle className="text-base text-white">
@@ -499,11 +518,11 @@ export default function BookingPage() {
                           Up to {room.capacity} players
                         </CardDescription>
                       </CardHeader>
-                      <CardContent className="pt-0">
+                      <CardContent className="pt-0 p-3 sm:p-6 sm:pt-0">
                         <div className="space-y-2">
-                          <div className="text-center mb-3">
-                            <div className="text-lg font-bold text-amber-400">$35</div>
-                            <div className="text-xs text-slate-400">per hour (+ tax)</div>
+                          <div className="text-center mb-2 sm:mb-3">
+                            <div className="text-base sm:text-lg font-bold text-amber-400">$35</div>
+                            <div className="text-[10px] sm:text-xs text-slate-400">per hour (+ tax)</div>
                           </div>
 
                           {/* Hand Preference Badge */}
@@ -544,7 +563,7 @@ export default function BookingPage() {
 
           {/* Date and Time Selection */}
           {selectedRoom && (
-            <div>
+            <div ref={dateTimeSectionRef}>
               <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
                 <CalendarIcon className="h-6 w-6 text-amber-400" />
                 Select Date & Time
@@ -675,7 +694,7 @@ export default function BookingPage() {
 
           {/* Booking Summary and Timeline */}
           {selectedDate && selectedRoom && (
-            <div className="space-y-6">
+            <div ref={timelineSectionRef} className="space-y-6">
               {/* Current Bookings Timeline */}
               <div>
                 <h3 className="text-2xl font-semibold text-white mb-6">
