@@ -22,12 +22,8 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 
 ## Personal note (Do not touch)
 - bday email notification with coupon
-  - also need the button for discount
-    - bday, wild card for discount etc
-- Monthly revenue chart
 - logs for FE/BE
 - mobile response
-- discount option on billing
 - what is 'unknown' from upcoming birthday badge?
 
 ### 🔄 Ongoing Tasks

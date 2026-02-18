@@ -31,7 +31,7 @@ export function BookingDetailModal({
       }
     }}>
       <DialogContent 
-        className="bg-slate-900 border-slate-700 text-white !w-[95vw] !max-w-[95vw] !h-[95vh] !max-h-[95vh] p-0 overflow-auto"
+        className="bg-slate-900 border-slate-700 text-white !w-[95vw] !max-w-[95vw] !h-[95vh] !max-h-[95vh] p-0 overflow-hidden"
         showCloseButton={false}
       >
         {bookingId && (
