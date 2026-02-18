@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,6 +79,7 @@ export default function BookingPage() {
   // Operating hours from backend
   const [operatingHours, setOperatingHours] = useState<{ openMinutes: number; closeMinutes: number } | null>(null);
   const [timeValidationError, setTimeValidationError] = useState<string>("");
+  const timelineScrollRef = useRef<HTMLDivElement>(null);
 
   // Restore saved booking selections from sessionStorage on mount
   useEffect(() => {
@@ -301,6 +302,22 @@ export default function BookingPage() {
       setTimeValidationError("");
     }
   }, [startTime, numberOfPlayers, operatingHours]);
+
+  // Auto-scroll timeline to center on selected time (mobile)
+  useEffect(() => {
+    if (!startTime || !timelineScrollRef.current) return;
+    const container = timelineScrollRef.current;
+    const [startHour] = startTime.split(":").map(Number);
+    if (startHour < 10) return;
+
+    // Calculate scroll position: proportion of inner width, minus half the container width to center
+    const innerWidth = container.scrollWidth;
+    const containerWidth = container.clientWidth;
+    const totalMinutes = 14 * 60;
+    const minutesFromOpen = (startHour - 10) * 60 + Number(startTime.split(":")[1]);
+    const targetPx = (minutesFromOpen / totalMinutes) * innerWidth;
+    container.scrollTo({ left: targetPx - containerWidth / 2, behavior: 'smooth' });
+  }, [startTime]);
 
   const handleBooking = async () => {
     if (!user) {
@@ -664,120 +681,137 @@ export default function BookingPage() {
                 <h3 className="text-2xl font-semibold text-white mb-6">
                   Current Bookings for {selectedRoomData?.name}
                 </h3>
-                <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+                <div className="bg-slate-800/50 p-3 sm:p-6 rounded-lg border border-slate-700">
+                  {/* Scrollable timeline wrapper */}
                   <div className="relative">
-                    {/* Timeline with hour labels */}
-                    <div className="space-y-2">
-                      {/* Hour labels row */}
-                      <div className="flex items-center">
-                        <div className="w-20 text-xs font-medium text-slate-400">Time</div>
-                        <div className="flex-1 flex justify-between px-1">
-                          {Array.from({ length: 15 }).map((_, i) => {
-                            const hour = 10 + i;
-                            const displayHour = hour > 12 ? hour - 12 : hour;
-                            const ampm = hour >= 12 ? 'PM' : 'AM';
-                            return (
-                              <div key={i} className="text-xs text-slate-400 font-medium" style={{ width: '7.14%', textAlign: 'center' }}>
-                                {i % 2 === 0 && `${displayHour}${ampm}`}
-                              </div>
-                            );
-                          })}
+                    <div
+                      ref={timelineScrollRef}
+                      className="overflow-x-auto md:overflow-x-visible scroll-smooth snap-x snap-mandatory md:snap-none timeline-scroll"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                      {/* Hide scrollbar for webkit */}
+                      <style>{`
+                        .timeline-scroll::-webkit-scrollbar { display: none; }
+                      `}</style>
+                      <div className="min-w-[700px] md:min-w-0 space-y-2">
+                        {/* Hour labels row */}
+                        <div className="flex items-center">
+                          <div className="w-20 text-xs font-medium text-slate-400 shrink-0">Time</div>
+                          <div className="flex-1 flex justify-between px-1">
+                            {Array.from({ length: 15 }).map((_, i) => {
+                              const hour = 10 + i;
+                              const displayHour = hour > 12 ? hour - 12 : hour;
+                              const ampm = hour >= 12 ? 'PM' : 'AM';
+                              return (
+                                <div key={i} className="text-xs text-slate-400 font-medium snap-center" style={{ width: '7.14%', textAlign: 'center' }}>
+                                  {i % 2 === 0 && `${displayHour}${ampm}`}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Timeline bar */}
+                        <div className="flex items-center">
+                          <div className="w-20 text-xs text-slate-500 shrink-0">Bookings</div>
+                          <div className="flex-1 h-14 bg-slate-900/50 rounded-lg relative border border-slate-700 overflow-hidden">
+                            {/* Hour markers */}
+                            {Array.from({ length: 15 }).map((_, i) => (
+                              <div
+                                key={i}
+                                className="absolute top-0 bottom-0 border-l border-slate-700/50"
+                                style={{ left: `${(i / 14) * 100}%` }}
+                              />
+                            ))}
+
+                            {/* Existing bookings */}
+                            {timelineBookings.map((booking) => {
+                              const [startHour, startMin] = booking.startTime.split(":").map(Number);
+                              const [endHour, endMin] = booking.endTime.split(":").map(Number);
+                              const startMinutes = (startHour - 10) * 60 + startMin;
+                              const endMinutes = endHour === 0 ? (24 - 10) * 60 + endMin : (endHour - 10) * 60 + endMin;
+                              const duration = endMinutes - startMinutes;
+                              const totalMinutes = 14 * 60;
+                              const left = (startMinutes / totalMinutes) * 100;
+                              const width = (duration / totalMinutes) * 100;
+
+                              return (
+                                <div
+                                  key={booking.id}
+                                  className="absolute top-1 bottom-1 bg-slate-600/50 border border-slate-500/50 rounded px-1 flex items-center justify-center"
+                                  style={{
+                                    left: `${Math.max(0, Math.min(100, left))}%`,
+                                    width: `${Math.max(0, Math.min(100 - left, width))}%`,
+                                  }}
+                                >
+                                  <span className="text-[10px] text-slate-300 font-medium truncate">Booked</span>
+                                </div>
+                              );
+                            })}
+
+                            {/* Proposed booking */}
+                            {startTime &&
+                              endTime &&
+                              (() => {
+                                const [startHour, startMin] = startTime.split(":").map(Number);
+                                const [endHour, endMin] = endTime.split(":").map(Number);
+                                if (startHour < 10 || (endHour > 0 && endHour < 10)) return null;
+                                const startMinutes = (startHour - 10) * 60 + startMin;
+                                const endMinutes = endHour === 0 ? (24 - 10) * 60 + endMin : (endHour - 10) * 60 + endMin;
+                                const duration = endMinutes - startMinutes;
+                                const totalMinutes = 14 * 60;
+                                const left = (startMinutes / totalMinutes) * 100;
+                                const width = (duration / totalMinutes) * 100;
+                                const available = canBook;
+
+                                return (
+                                  <div
+                                    className={`absolute top-1 bottom-1 border-2 rounded px-1 flex items-center justify-center ${
+                                      available
+                                        ? "bg-green-500/30 border-green-500/70"
+                                        : "bg-amber-500/30 border-amber-500/70"
+                                    }`}
+                                    style={{
+                                      left: `${Math.max(0, Math.min(100, left))}%`,
+                                      width: `${Math.max(0, Math.min(100 - left, width))}%`,
+                                    }}
+                                  >
+                                    <span
+                                      className={`text-[10px] font-medium truncate ${
+                                        available ? "text-green-300" : "text-amber-300"
+                                      }`}
+                                    >
+                                      Your Booking
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                          </div>
                         </div>
                       </div>
-
-                      {/* Timeline bar */}
-                      <div className="flex items-center">
-                        <div className="w-20 text-xs text-slate-500">Bookings</div>
-                        <div className="flex-1 h-14 bg-slate-900/50 rounded-lg relative border border-slate-700 overflow-hidden">
-                          {/* Hour markers */}
-                          {Array.from({ length: 15 }).map((_, i) => (
-                            <div
-                              key={i}
-                              className="absolute top-0 bottom-0 border-l border-slate-700/50"
-                              style={{ left: `${(i / 14) * 100}%` }}
-                            />
-                          ))}
-
-                        {/* Existing bookings */}
-                        {timelineBookings.map((booking) => {
-                          const [startHour, startMin] = booking.startTime.split(":").map(Number);
-                          const [endHour, endMin] = booking.endTime.split(":").map(Number);
-                          const startMinutes = (startHour - 10) * 60 + startMin;
-                          const endMinutes = endHour === 0 ? (24 - 10) * 60 + endMin : (endHour - 10) * 60 + endMin;
-                          const duration = endMinutes - startMinutes;
-                          const totalMinutes = 14 * 60;
-                          const left = (startMinutes / totalMinutes) * 100;
-                          const width = (duration / totalMinutes) * 100;
-
-                          return (
-                            <div
-                              key={booking.id}
-                              className="absolute top-1 bottom-1 bg-slate-600/50 border border-slate-500/50 rounded px-1 flex items-center justify-center"
-                              style={{
-                                left: `${Math.max(0, Math.min(100, left))}%`,
-                                width: `${Math.max(0, Math.min(100 - left, width))}%`,
-                              }}
-                            >
-                              <span className="text-[10px] text-slate-300 font-medium truncate">Booked</span>
-                            </div>
-                          );
-                        })}
-
-                        {/* Proposed booking */}
-                        {startTime &&
-                          endTime &&
-                          (() => {
-                            const [startHour, startMin] = startTime.split(":").map(Number);
-                            const [endHour, endMin] = endTime.split(":").map(Number);
-                            if (startHour < 10 || (endHour > 0 && endHour < 10)) return null;
-                            const startMinutes = (startHour - 10) * 60 + startMin;
-                            const endMinutes = endHour === 0 ? (24 - 10) * 60 + endMin : (endHour - 10) * 60 + endMin;
-                            const duration = endMinutes - startMinutes;
-                            const totalMinutes = 14 * 60;
-                            const left = (startMinutes / totalMinutes) * 100;
-                            const width = (duration / totalMinutes) * 100;
-                            const available = canBook;
-
-                            return (
-                              <div
-                                className={`absolute top-1 bottom-1 border-2 rounded px-1 flex items-center justify-center ${
-                                  available
-                                    ? "bg-green-500/30 border-green-500/70"
-                                    : "bg-amber-500/30 border-amber-500/70"
-                                }`}
-                                style={{
-                                  left: `${Math.max(0, Math.min(100, left))}%`,
-                                  width: `${Math.max(0, Math.min(100 - left, width))}%`,
-                                }}
-                              >
-                                <span
-                                  className={`text-[10px] font-medium truncate ${
-                                    available ? "text-green-300" : "text-amber-300"
-                                  }`}
-                                >
-                                  Your Booking
-                                </span>
-                              </div>
-                            );
-                          })()}
-                      </div>
                     </div>
+
+                    {/* Fade hints on edges (mobile only) */}
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-slate-800/80 to-transparent md:hidden" />
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-slate-800/80 to-transparent md:hidden" />
                   </div>
 
-                    {/* Legend */}
-                    <div className="flex gap-6 justify-center pt-4 border-t border-slate-700">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-slate-600/50 border border-slate-500/50 rounded" />
-                        <span className="text-xs text-slate-400">Booked</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-green-500/30 border-2 border-green-500/70 rounded" />
-                        <span className="text-xs text-slate-400">Your Booking (Available)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-amber-500/30 border-2 border-amber-500/70 rounded" />
-                        <span className="text-xs text-slate-400">Your Booking (Conflict)</span>
-                      </div>
+                  {/* Scroll hint (mobile only) */}
+                  <p className="text-center text-[10px] text-slate-500 mt-1 md:hidden">← swipe to scroll →</p>
+
+                  {/* Legend */}
+                  <div className="flex flex-wrap gap-3 sm:gap-6 justify-center pt-4 border-t border-slate-700">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-slate-600/50 border border-slate-500/50 rounded" />
+                      <span className="text-xs text-slate-400">Booked</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-green-500/30 border-2 border-green-500/70 rounded" />
+                      <span className="text-xs text-slate-400">Available</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-amber-500/30 border-2 border-amber-500/70 rounded" />
+                      <span className="text-xs text-slate-400">Conflict</span>
                     </div>
                   </div>
                 </div>
@@ -792,7 +826,7 @@ export default function BookingPage() {
                     <CardDescription className="text-slate-400">Review your selection before booking</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-slate-400">Room</p>
                         <p className="text-white font-semibold">{selectedRoomData?.name}</p>
