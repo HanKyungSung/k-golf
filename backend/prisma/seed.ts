@@ -148,45 +148,42 @@ async function main() {
 		});
 		console.log(`Seeded admin user: ${adminEmail} / ${adminPhone} / ${adminPassword} (role: ADMIN)`);
 	} else {
-		// Ensure existing admin has ADMIN role and updated phone
-		if ((existingAdmin as any).role !== 'ADMIN' || (existingAdmin as any).phone !== adminPhone) {
+		// Only update phone if needed — do NOT override role (it may have been manually changed)
+		if ((existingAdmin as any).phone !== adminPhone) {
 			await prisma.user.update({
 				where: { id: existingAdmin.id },
 				data: { 
-					role: 'ADMIN', 
-					emailVerifiedAt: new Date(),
 					phone: adminPhone,
 				},
 			});
-			console.log(`Updated existing user to ADMIN role with phone: ${adminEmail} / ${adminPhone}`);
+			console.log(`Updated existing user phone: ${adminEmail} / ${adminPhone} (role unchanged: ${(existingAdmin as any).role})`);
 		} else {
-			console.log(`Admin user already exists: ${adminEmail} / ${adminPhone}`);
+			console.log(`Admin user already exists: ${adminEmail} / ${adminPhone} (role: ${(existingAdmin as any).role})`);
 		}
 	}
 
-	// Create a second admin account for testing (separate from primary admin)
-	// Prevents issues from shared account access
-	const admin2Email = 'admin2@konegolf.ca';
-	const admin2Phone = '+14165553333'; // Separate phone for admin2
-	const admin2Password = 'admin2password123';
+	// Create superadmin account (idempotent by email)
+	const superadminEmail = 'superadmin@konegolf.ca';
+	const superadminPhone = '+19025551000';
+	const superadminPassword = process.env.SEED_SUPERADMIN_PASSWORD || 'superadmin123';
 	
-	const existingAdmin2 = await prisma.user.findFirst({
+	const existingSuperadmin = await prisma.user.findFirst({
 		where: {
 			OR: [
-				{ email: admin2Email },
-				{ phone: admin2Phone }
+				{ email: superadminEmail },
+				{ phone: superadminPhone }
 			]
 		}
 	});
 
-	if (!existingAdmin2) {
-		const passwordHash = await hashPassword(admin2Password);
+	if (!existingSuperadmin) {
+		const passwordHash = await hashPassword(superadminPassword);
 		await prisma.user.create({
 			data: {
-				email: admin2Email,
-				name: 'Admin 2 (Test)',
-				phone: admin2Phone,
-				dateOfBirth: new Date('1990-07-22'),
+				email: superadminEmail,
+				name: 'Super Admin',
+				phone: superadminPhone,
+				dateOfBirth: new Date('1985-01-01'),
 				passwordHash,
 				passwordUpdatedAt: new Date(),
 				emailVerifiedAt: new Date(),
@@ -194,18 +191,10 @@ async function main() {
 				registrationSource: 'ONLINE',
 			} as any,
 		});
-		console.log(`Seeded secondary admin user: ${admin2Email} / ${admin2Phone} / ${admin2Password} (role: ADMIN)`);
+		console.log(`Seeded superadmin user: ${superadminEmail} / ${superadminPhone} (role: ADMIN)`);
 	} else {
-		// Ensure existing admin2 has ADMIN role
-		if ((existingAdmin2 as any).role !== 'ADMIN') {
-			await prisma.user.update({
-				where: { id: existingAdmin2.id },
-				data: { role: 'ADMIN', emailVerifiedAt: new Date() },
-			});
-			console.log(`Updated existing user to ADMIN role: ${admin2Email} / ${admin2Phone}`);
-		} else {
-			console.log(`Admin 2 already exists: ${admin2Email} / ${admin2Phone}`);
-		}
+		// Do NOT override role — it may have been manually changed
+		console.log(`Superadmin already exists: ${superadminEmail} / ${superadminPhone} (role: ${(existingSuperadmin as any).role})`);
 	}
 
 	// Create a test user for manual login (idempotent by email)
