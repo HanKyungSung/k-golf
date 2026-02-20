@@ -108,34 +108,14 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 - User search functionality.
   - baed on email/phone/name (phone is probably the most reliable)
 
-- **Mobile Responsive Design Improvements** - Make frontend mobile-friendly
-  - [ ] **Phase 1: Fix Auth Buttons for Mobile**
-    - [ ] Make auth buttons responsive (shrink/stack on small screens)
-    - [ ] Use size="sm" and responsive text sizing (text-xs md:text-sm)
-    - [ ] Consider icon-only buttons on mobile with text on desktop
-    - [ ] Test button layouts on 320px-375px screens
-  - [ ] **Phase 2: Responsive Typography**
-    - [ ] Fix heading sizes: text-2xl md:text-3xl lg:text-4xl pattern
-    - [ ] Update all section headings (Premium Experience, Simple Pricing, etc.)
-    - [ ] Scale hero heading properly across breakpoints
-    - [ ] Adjust body text sizing for mobile readability
-  - [ ] **Phase 3: Layout & Spacing Optimization**
-    - [ ] Review grid layouts for mobile (ensure single column base)
-    - [ ] Add responsive padding/margin scaling
-    - [ ] Test timeline visualization on mobile (consider horizontal scroll)
-    - [ ] Optimize form layouts for touch interaction
-    - [ ] Add flex-wrap to button groups
-  - [ ] **Phase 4: Testing & Validation**
-    - [ ] Test on 375px width (iPhone SE)
-    - [ ] Test on 390px width (iPhone 12/13)
-    - [ ] Test on 768px width (iPad)
-    - [ ] Verify no horizontal scrolling on any device
-    - [ ] Ensure touch targets are ≥44px
-  - [ ] **Optional: Hamburger Menu** (Add if users request navigation)
-    - [ ] Create mobile hamburger menu component
-    - [ ] Use Sheet component from shadcn/ui
-    - [ ] Include navigation links and auth buttons
-    - [ ] Show on mobile (<768px), hide on desktop
+- [x] **Mobile Responsive Design Improvements** - Make admin/POS pages mobile-friendly ✅ `d04f92c`
+  - [x] Shared AdminHeader component with hamburger menu for mobile navigation
+  - [x] Responsive padding & grids across all admin/POS pages
+  - [x] Table column hiding on small screens (customers & bookings tables)
+  - [x] POS timeline scrollable container with stacked header on mobile
+  - [x] Booking-detail icon-only action buttons on mobile
+  - [x] POS menu tabs consolidated into single scrollable row
+  - [x] MonthlyRevenueChart responsive header & stats
 
 - **Setup Gmail "Send As" for k-golf.ca domain** 🔄 FUTURE TASK
   - Create email account on Postfix server (noreply@k-golf.ca)
@@ -143,6 +123,18 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Set up Gmail "Send As" with k-golf.ca SMTP credentials
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
+
+## 🎉 Recently Completed (2026-02-20)
+- [x] **Mobile Responsive Admin/POS Pages** `d04f92c` - Full mobile responsiveness for all admin and POS pages
+  - [x] Created shared `AdminHeader` component with hamburger menu (mobile) and inline nav (desktop)
+  - [x] Responsive padding (`px-3 sm:px-6`, `py-4 sm:py-8`) across all pages
+  - [x] Responsive grids (`grid-cols-1 sm:grid-cols-2/4`) for room cards, tabs, tip buttons
+  - [x] Customer table: hide Email, Source (md), Last Booking (lg) on small screens
+  - [x] Bookings table: hide Ref#, Source (lg), Phone, Room (md) on small screens
+  - [x] POS timeline: scrollable container with `min-w-[700px]`, stacked header with short date format
+  - [x] Booking-detail: icon-only Move/Split buttons on mobile, consolidated 5-tab scrollable row
+  - [x] MonthlyRevenueChart: flex-wrap header/stats, responsive gap sizing
+  - [x] Integrated AdminHeader into pos/dashboard, pos/menu-management, admin/customers, dashboard
 
 ## 🎉 Recently Completed (2026-02-18)
 - [x] **Booking Modal - Phone Lookup with Booking Counts** - Two-part customer check when creating bookings
