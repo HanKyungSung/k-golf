@@ -1,10 +1,10 @@
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import React from "react"
 import { Button } from "@/components/ui/button"
-import { buttonStyles } from "@/styles/buttonStyles"
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
+import { AdminHeader } from '@/components/AdminHeader'
 import { toast } from "@/hooks/use-toast"
 import POSDashboard from "./pos/dashboard"
 
@@ -37,8 +37,7 @@ type ApiBooking = {
 type ApiRoom = { id: string; name: string; capacity: number };
 
 const CustomerDashboard = () => {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const [bookings, setBookings] = React.useState<ApiBooking[]>([])
   const [roomsById, setRoomsById] = React.useState<Record<string, ApiRoom>>({})
   const [loading, setLoading] = React.useState(true)
@@ -108,28 +107,11 @@ const CustomerDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black">
       {/* Header */}
-      <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
-                K one Golf
-              </h1>
-              <span className="ml-2 text-sm text-slate-400">Premium Screen Golf</span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-300">Welcome, {user?.name || user?.email}</span>
-              <Button
-                variant="outline"
-                onClick={async () => { await logout(); navigate('/'); }}
-                className={buttonStyles.headerLogout}
-              >
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader
+        title="K one Golf"
+        subtitle="Premium Screen Golf"
+        variant="admin"
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">

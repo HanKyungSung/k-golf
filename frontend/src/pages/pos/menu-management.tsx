@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { buttonStyles } from '@/styles/buttonStyles';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { useNavigate } from 'react-router-dom';
+import { AdminHeader } from '@/components/AdminHeader';
 import { 
   listMenuItems, 
   createMenuItem, 
@@ -46,8 +46,7 @@ interface POSMenuManagementProps {
 }
 
 export default function POSMenuManagement({ onBack }: POSMenuManagementProps) {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   
   // Data state
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -204,11 +203,6 @@ export default function POSMenuManagement({ onBack }: POSMenuManagementProps) {
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -222,18 +216,10 @@ export default function POSMenuManagement({ onBack }: POSMenuManagementProps) {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       {/* Header - Consistent with POS Dashboard */}
-      <header className="border-b border-slate-700 bg-slate-800">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-amber-400">K one Golf POS - Menu Management</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-300">{user?.email}</span>
-            <Button onClick={handleLogout} variant="outline" size="sm" className={buttonStyles.headerLogout}>Logout</Button>
-          </div>
-        </div>
-      </header>
+      <AdminHeader title="K one Golf POS" subtitle="Menu Management" />
 
       {/* Main Content */}
-      <main className="max-w-[1800px] mx-auto px-6 py-8 space-y-6 w-full">
+      <main className="max-w-[1800px] mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 w-full">
         {/* Page Header with Actions */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>

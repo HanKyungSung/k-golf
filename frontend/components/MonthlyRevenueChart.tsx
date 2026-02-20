@@ -164,7 +164,7 @@ export function MonthlyRevenueChart() {
   return (
     <Card className="bg-slate-800/50 border-slate-700">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <CardTitle className="text-white flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-amber-500" />
@@ -176,7 +176,7 @@ export function MonthlyRevenueChart() {
           </div>
           
           {/* Summary Stats */}
-          <div className="flex gap-4">
+          <div className="flex gap-3 sm:gap-4 flex-wrap">
             <div className="text-right">
               <p className="text-xs text-slate-400">Total Revenue</p>
               <p className="text-lg font-bold text-emerald-400">{formatCurrency(summary.totalRevenue)}</p>
@@ -193,7 +193,7 @@ export function MonthlyRevenueChart() {
         </div>
         
         {/* Month-over-month changes */}
-        <div className="flex gap-3 mt-4">
+        <div className="flex flex-wrap gap-2 sm:gap-3 mt-4">
           <Badge 
             className={`${summary.revenueChange >= 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-red-500/20 text-red-300 border-red-500/30'} border flex items-center gap-1`}
           >

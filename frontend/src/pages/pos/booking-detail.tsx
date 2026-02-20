@@ -1155,7 +1155,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
         <div className="print-separator" />
       </div>
 
-      <main className="flex-1 px-6 py-8 space-y-6 max-w-[1800px] mx-auto w-full">
+      <main className="flex-1 px-3 sm:px-6 py-4 sm:py-8 space-y-6 max-w-[1800px] mx-auto w-full">
         {/* Header */}
         <div className="flex items-center justify-between no-print">
           <div>
@@ -1194,7 +1194,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                   <div className={`w-3 h-3 rounded-full ${roomColors[booking.roomId]}`} />
                   {roomColor}
                 </CardTitle>
-                <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 text-sm">
                   <div className="flex items-center gap-2 text-slate-300">
                     <span className="text-amber-400">Name:</span>
                     <span>{booking.customerName}</span>
@@ -1303,12 +1303,12 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                       value={`seat-${seat}`}
                       className="border border-slate-700 rounded-lg bg-slate-800/50 overflow-hidden"
                     >
-                    <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-800/80">
-                      <div className="flex items-center justify-between w-full pr-4">
-                        <div className="flex items-center gap-3">
+                    <AccordionTrigger className="px-3 sm:px-6 py-3 sm:py-4 hover:no-underline hover:bg-slate-800/80">
+                      <div className="flex flex-wrap items-center justify-between w-full pr-4 gap-2">
+                        <div className="flex items-center gap-2 sm:gap-3">
                           <div className={`w-4 h-4 rounded-full ${seatColors[seat - 1]}`} />
-                          <span className="font-bold text-white text-lg">Seat {seat}</span>
-                          <Badge variant="outline" className="text-slate-300 border-slate-600">
+                          <span className="font-bold text-white text-base sm:text-lg">Seat {seat}</span>
+                          <Badge variant="outline" className="text-slate-300 border-slate-600 text-xs">
                             {regularItems.length} items
                           </Badge>
                           {discountItems.length > 0 && (
@@ -1317,7 +1317,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
                           <Button
                             size="sm"
                             variant="outline"
@@ -1345,7 +1345,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                         </div>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="px-6 pb-6">
+                    <AccordionContent className="px-3 sm:px-6 pb-4 sm:pb-6">
                       <div className="space-y-4 pt-2">
                         {/* Order Items */}
                         {regularItems.length === 0 && discountItems.length === 0 ? (
@@ -1383,17 +1383,17 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                     )}
                                   </p>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                   <span className="text-amber-400 font-bold min-w-[80px] text-right">
                                     ${((item.splitPrice || item.menuItem.price) * item.quantity).toFixed(2)}
                                   </span>
                                   {!isPaid && (
-                                    <>
+                                    <div className="flex items-center gap-1">
                                       <Button
                                         size="sm"
                                         variant="outline"
                                         onClick={() => handleMoveItem(item)}
-                                        className="h-8 px-2 bg-blue-500/20 border-blue-500/50 hover:bg-blue-500/30 text-blue-400"
+                                        className="h-8 px-2 bg-blue-500/20 border-blue-500/50 hover:bg-blue-500/30 text-blue-400 hidden sm:inline-flex"
                                         title="Move to another seat"
                                       >
                                         Move
@@ -1401,11 +1401,29 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                       <Button
                                         size="sm"
                                         variant="outline"
+                                        onClick={() => handleMoveItem(item)}
+                                        className="h-8 w-8 p-0 bg-blue-500/20 border-blue-500/50 hover:bg-blue-500/30 text-blue-400 sm:hidden"
+                                        title="Move to another seat"
+                                      >
+                                        <MoveRight className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
                                         onClick={() => handleSplitItem(item)}
-                                        className="h-8 px-2 bg-purple-500/20 border-purple-500/50 hover:bg-purple-500/30 text-purple-400"
+                                        className="h-8 px-2 bg-purple-500/20 border-purple-500/50 hover:bg-purple-500/30 text-purple-400 hidden sm:inline-flex"
                                         title="Split to multiple seats"
                                       >
                                         Split
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleSplitItem(item)}
+                                        className="h-8 w-8 p-0 bg-purple-500/20 border-purple-500/50 hover:bg-purple-500/30 text-purple-400 sm:hidden"
+                                        title="Split to multiple seats"
+                                      >
+                                        <Split className="h-3 w-3" />
                                       </Button>
                                       <Button
                                         size="sm"
@@ -1429,9 +1447,9 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                         onClick={() => removeOrderItem(item.id)}
                                         className="h-8 w-8 p-0 bg-red-500/20 border-red-500/50 hover:bg-red-500/30"
                                       >
-                                        <Trash2 className="h-3 w-3 text-red-400" />
+                                      <Trash2 className="h-3 w-3 text-red-400" />
                                       </Button>
-                                    </>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -1577,7 +1595,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                   className="pl-7 bg-slate-700 border-slate-500 text-white placeholder:text-slate-400 focus:border-amber-500 focus:ring-amber-500"
                                 />
                               </div>
-                              <div className="grid grid-cols-4 gap-2">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 {[10, 15, 18, 20].map((percentage) => (
                                   <Button
                                     key={percentage}
@@ -1734,15 +1752,15 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                   </div>
                 ) : (
                   <Tabs defaultValue="hours" className="space-y-4">
-                    <TabsList className="grid-cols-3 w-full bg-slate-900/50">
-                      <TabsTrigger value="hours">Hours</TabsTrigger>
-                      <TabsTrigger value="food">Food</TabsTrigger>
-                      <TabsTrigger value="drinks">Drinks</TabsTrigger>
-                    </TabsList>
-                    <TabsList className="grid-cols-2 w-full bg-slate-900/50">
-                      <TabsTrigger value="appetizers">Appetizers</TabsTrigger>
-                      <TabsTrigger value="desserts">Desserts</TabsTrigger>
-                    </TabsList>
+                    <div className="overflow-x-auto -mx-2 px-2">
+                      <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-5 bg-slate-900/50">
+                        <TabsTrigger value="hours">Hours</TabsTrigger>
+                        <TabsTrigger value="food">Food</TabsTrigger>
+                        <TabsTrigger value="drinks">Drinks</TabsTrigger>
+                        <TabsTrigger value="appetizers">Appetizers</TabsTrigger>
+                        <TabsTrigger value="desserts">Desserts</TabsTrigger>
+                      </TabsList>
+                    </div>
                     
                     {/* Custom Item Button */}
                     <div className="mt-4">

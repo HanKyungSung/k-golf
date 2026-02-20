@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { buttonStyles } from '@/styles/buttonStyles';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,9 +19,10 @@ import {
 } from '@/services/pos-api';
 import { BookingModal } from './booking-modal';
 import { BookingDetailModal } from '@/components/BookingDetailModal';
+import { AdminHeader } from '@/components/AdminHeader';
 
 export default function POSDashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -331,11 +332,6 @@ export default function POSDashboard() {
     return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
   };
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -353,25 +349,15 @@ export default function POSDashboard() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       {/* Header - Always visible */}
-      <header className="border-b border-slate-700 bg-slate-800">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-amber-400">K one Golf POS</h1>
-          <div className="flex items-center gap-4">
-            {user?.role === 'ADMIN' && (
-              <Link to="/admin/customers">
-                <Button variant="outline" size="sm" className={buttonStyles.headerNav}>
-                  Customers
-                </Button>
-              </Link>
-            )}
-            <span className="text-sm text-slate-300">{user?.email}</span>
-            <Button onClick={handleLogout} variant="outline" size="sm" className={buttonStyles.headerLogout}>Logout</Button>
-          </div>
-        </div>
-      </header>
+      <AdminHeader
+        title="K one Golf POS"
+        navItems={[
+          { label: 'Customers', to: '/admin/customers', show: user?.role === 'ADMIN' },
+        ]}
+      />
 
       {/* Main Content - Dashboard View */}
-      <main className="max-w-[1800px] mx-auto px-6 py-8 space-y-6 w-full">
+      <main className="max-w-[1800px] mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 w-full">
         {/* Real-Time Room Status */}
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -486,7 +472,7 @@ export default function POSDashboard() {
 
         {/* Tabs for different management views */}
         <Tabs defaultValue="timeline" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="rooms">Room Management</TabsTrigger>
             <TabsTrigger value="menu">Menu</TabsTrigger>
@@ -555,7 +541,7 @@ export default function POSDashboard() {
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <div className="grid grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>
                               <h4 className="text-sm font-semibold text-slate-400 mb-3">Room Details</h4>
                               <div className="space-y-2">
@@ -800,17 +786,17 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <CardTitle>Timeline View</CardTitle>
             <CardDescription>Horizontal timeline by room and day</CardDescription>
           </div>
-          <div className="flex items-center gap-3">
-            <Button size="sm" variant="outline" className={buttonStyles.pagination} onClick={() => navigateWeek('prev')}>← Prev Week</Button>
-            <span className="text-white text-sm font-medium min-w-[200px] text-center">
-              {weekDays[0].toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – {weekDays[6].toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <Button size="sm" variant="outline" className={buttonStyles.pagination} onClick={() => navigateWeek('prev')}>← Prev</Button>
+            <span className="text-white text-xs sm:text-sm font-medium flex-1 sm:flex-none sm:min-w-[200px] text-center truncate">
+              {weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
-            <Button size="sm" variant="outline" className={buttonStyles.pagination} onClick={() => navigateWeek('next')}>Next Week →</Button>
+            <Button size="sm" variant="outline" className={buttonStyles.pagination} onClick={() => navigateWeek('next')}>Next →</Button>
           </div>
         </div>
       </CardHeader>
@@ -825,6 +811,9 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
           ))}
         </div>
 
+        {/* Scrollable timeline container for mobile */}
+        <div className="overflow-x-auto -mx-3 sm:-mx-6 px-3 sm:px-6">
+          <div className="min-w-[700px]">
         {/* Timeline Grid */}
         <div className="space-y-8">
           {weekDays.map((day) => {
@@ -956,6 +945,8 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
               </div>
             );
           })}
+        </div>
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { buttonStyles } from '@/styles/buttonStyles';
 import { MonthlyRevenueChart } from '@/components/MonthlyRevenueChart';
 import { Input } from '@/components/ui/input';
 import { PhoneInput } from '../../components/pos/PhoneInput';
@@ -39,6 +38,7 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth';
+import { AdminHeader } from '@/components/AdminHeader';
 import { toast } from '@/hooks/use-toast';
 import { 
   Search, 
@@ -156,7 +156,7 @@ interface Pagination {
 const getApiBase = () => process.env.REACT_APP_API_BASE || 'http://localhost:8080';
 
 export default function CustomerManagement() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   
   // Tab state
@@ -718,36 +718,15 @@ export default function CustomerManagement() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black">
       {/* Header */}
-      <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
-                K one Golf
-              </h1>
-              <span className="ml-2 text-sm text-slate-400">Customer & Booking Management</span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-300">Admin: {user.name}</span>
-              <Link to="/pos/dashboard">
-                <Button
-                  variant="outline"
-                  className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 bg-transparent"
-                >
-                  Dashboard
-                </Button>
-              </Link>
-              <Button
-                variant="outline"
-                onClick={async () => { await logout(); navigate('/'); }}
-                className="border-slate-500/50 text-slate-400 hover:bg-slate-500/10 bg-transparent"
-              >
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader
+        title="K one Golf"
+        subtitle="Customer & Booking Management"
+        variant="admin"
+        sticky
+        navItems={[
+          { label: 'Dashboard', to: '/pos/dashboard' },
+        ]}
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Revenue Chart */}
@@ -934,7 +913,7 @@ export default function CustomerManagement() {
                           </div>
                         </TableHead>
                         <TableHead className="text-slate-300">Phone</TableHead>
-                        <TableHead className="text-slate-300">Email</TableHead>
+                        <TableHead className="text-slate-300 hidden md:table-cell">Email</TableHead>
                         <TableHead 
                           className="text-slate-300 cursor-pointer hover:text-white"
                           onClick={() => handleCustomerSort('bookingCount')}
@@ -954,7 +933,7 @@ export default function CustomerManagement() {
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="text-slate-300 cursor-pointer hover:text-white"
+                          className="text-slate-300 cursor-pointer hover:text-white hidden lg:table-cell"
                           onClick={() => handleCustomerSort('lastBooking')}
                         >
                           <div className="flex items-center gap-1">
@@ -962,7 +941,7 @@ export default function CustomerManagement() {
                             <ArrowUpDown className="h-3 w-3" />
                           </div>
                         </TableHead>
-                        <TableHead className="text-slate-300">Source</TableHead>
+                        <TableHead className="text-slate-300 hidden md:table-cell">Source</TableHead>
                         <TableHead className="text-slate-300 text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -992,7 +971,7 @@ export default function CustomerManagement() {
                             <TableCell className="text-slate-300">
                               {formatPhone(customer.phone)}
                             </TableCell>
-                            <TableCell className="text-slate-300">
+                            <TableCell className="text-slate-300 hidden md:table-cell">
                               {customer.email || '—'}
                             </TableCell>
                             <TableCell className="text-slate-300">
@@ -1001,10 +980,10 @@ export default function CustomerManagement() {
                             <TableCell className="text-slate-300">
                               {formatCurrency(customer.totalSpent)}
                             </TableCell>
-                            <TableCell className="text-slate-300">
+                            <TableCell className="text-slate-300 hidden lg:table-cell">
                               {formatDate(customer.lastBooking)}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden md:table-cell">
                               <Badge 
                                 variant="outline" 
                                 className={
@@ -1093,7 +1072,7 @@ export default function CustomerManagement() {
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-40 bg-slate-800/50 border-slate-600 text-white"
+                  className="w-full sm:w-40 bg-slate-800/50 border-slate-600 text-white"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -1102,11 +1081,11 @@ export default function CustomerManagement() {
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-40 bg-slate-800/50 border-slate-600 text-white"
+                  className="w-full sm:w-40 bg-slate-800/50 border-slate-600 text-white"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36 bg-slate-800/50 border-slate-600 text-white">
+                <SelectTrigger className="w-full sm:w-36 bg-slate-800/50 border-slate-600 text-white">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-800 border-slate-700">
@@ -1117,7 +1096,7 @@ export default function CustomerManagement() {
                 </SelectContent>
               </Select>
               <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                <SelectTrigger className="w-36 bg-slate-800/50 border-slate-600 text-white">
+                <SelectTrigger className="w-full sm:w-36 bg-slate-800/50 border-slate-600 text-white">
                   <SelectValue placeholder="Source" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-800 border-slate-700">
@@ -1151,9 +1130,9 @@ export default function CustomerManagement() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-700 hover:bg-transparent">
-                        <TableHead className="text-slate-300">Ref#</TableHead>
+                        <TableHead className="text-slate-300 hidden lg:table-cell">Ref#</TableHead>
                         <TableHead className="text-slate-300">Customer</TableHead>
-                        <TableHead className="text-slate-300">Phone</TableHead>
+                        <TableHead className="text-slate-300 hidden md:table-cell">Phone</TableHead>
                         <TableHead 
                           className="text-slate-300 cursor-pointer hover:text-white"
                           onClick={() => handleBookingSort('startTime')}
@@ -1164,8 +1143,8 @@ export default function CustomerManagement() {
                           </div>
                         </TableHead>
                         <TableHead className="text-slate-300">Time</TableHead>
-                        <TableHead className="text-slate-300">Room</TableHead>
-                        <TableHead className="text-slate-300">Source</TableHead>
+                        <TableHead className="text-slate-300 hidden md:table-cell">Room</TableHead>
+                        <TableHead className="text-slate-300 hidden lg:table-cell">Source</TableHead>
                         <TableHead className="text-slate-300">Status</TableHead>
                         <TableHead 
                           className="text-slate-300 cursor-pointer hover:text-white text-right"
@@ -1198,7 +1177,7 @@ export default function CustomerManagement() {
                             className="border-slate-700 hover:bg-slate-700/30 cursor-pointer"
                             onClick={() => openBookingDetailModal(booking)}
                           >
-                            <TableCell className="font-mono text-xs text-slate-400">
+                            <TableCell className="font-mono text-xs text-slate-400 hidden lg:table-cell">
                               {booking.id.slice(0, 8)}...
                             </TableCell>
                             <TableCell className="font-medium text-white">
@@ -1209,7 +1188,7 @@ export default function CustomerManagement() {
                                 </Badge>
                               )}
                             </TableCell>
-                            <TableCell className="text-slate-300">
+                            <TableCell className="text-slate-300 hidden md:table-cell">
                               {formatPhone(booking.customerPhone)}
                             </TableCell>
                             <TableCell className="text-slate-300">
@@ -1218,10 +1197,10 @@ export default function CustomerManagement() {
                             <TableCell className="text-slate-300">
                               {formatTime(booking.startTime)}
                             </TableCell>
-                            <TableCell className="text-slate-300">
+                            <TableCell className="text-slate-300 hidden md:table-cell">
                               {booking.roomName}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden lg:table-cell">
                               <Badge 
                                 variant="outline"
                                 className={
@@ -1512,7 +1491,7 @@ export default function CustomerManagement() {
         setDetailModalOpen(open);
         if (!open) setBookingSourceFilter('ALL');
       }}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white !w-[90vw] !max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="bg-slate-800 border-slate-700 text-white !w-[95vw] sm:!w-[90vw] !max-w-[95vw] sm:!max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedCustomer?.name}
@@ -1626,8 +1605,8 @@ export default function CustomerManagement() {
                       <TableHead className="text-slate-300">Date</TableHead>
                       <TableHead className="text-slate-300">Time</TableHead>
                       <TableHead className="text-slate-300">Room</TableHead>
-                      <TableHead className="text-slate-300">Source</TableHead>
-                      <TableHead className="text-slate-300">Created By</TableHead>
+                      <TableHead className="text-slate-300 hidden md:table-cell">Source</TableHead>
+                      <TableHead className="text-slate-300 hidden lg:table-cell">Created By</TableHead>
                       <TableHead className="text-slate-300">Status</TableHead>
                       <TableHead className="text-slate-300 text-right">Price</TableHead>
                     </TableRow>
@@ -1662,7 +1641,7 @@ export default function CustomerManagement() {
                           <TableCell className="text-slate-300">
                             {booking.roomName}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             <Badge 
                               variant="outline"
                               className={
@@ -1676,7 +1655,7 @@ export default function CustomerManagement() {
                               {booking.bookingSource}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-slate-300">
+                          <TableCell className="text-slate-300 hidden lg:table-cell">
                             {booking.createdByName || (
                               <span className="text-slate-500 italic">Self</span>
                             )}
