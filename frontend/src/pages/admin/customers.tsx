@@ -1630,7 +1630,11 @@ export default function CustomerManagement() {
                       return filteredBookings.map((booking) => (
                         <TableRow 
                           key={booking.id} 
-                          className="border-slate-700 hover:bg-slate-700/30"
+                          className="border-slate-700 hover:bg-slate-700/30 cursor-pointer"
+                          onClick={() => {
+                            setFullBookingId(booking.id);
+                            setFullBookingModalOpen(true);
+                          }}
                         >
                           <TableCell className="text-slate-300">
                             {formatDate(booking.startTime)}
@@ -1853,7 +1857,13 @@ export default function CustomerManagement() {
         bookingId={fullBookingId}
         open={fullBookingModalOpen}
         onOpenChange={setFullBookingModalOpen}
-        onClose={loadBookings}
+        onClose={() => {
+          loadBookings();
+          // Refresh customer detail if open (booking may have been modified)
+          if (customerDetail) {
+            loadCustomerDetail(customerDetail.id);
+          }
+        }}
       />
     </div>
   );
