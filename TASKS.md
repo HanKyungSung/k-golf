@@ -125,6 +125,9 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Alternative: Consider using SendGrid (already integrated in DNS)
 
 ## 🎉 Recently Completed (2026-02-20)
+- [x] **Clickable Booking Rows in Customer Detail** `fb1d8a9` - Open POS booking detail from customer card
+  - [x] Booking rows in customer detail modal now open full POS booking detail modal on click
+  - [x] Auto-refreshes customer detail on modal close if booking was modified
 - [x] **Mobile Responsive Admin/POS Pages** `d04f92c` - Full mobile responsiveness for all admin and POS pages
   - [x] Created shared `AdminHeader` component with hamburger menu (mobile) and inline nav (desktop)
   - [x] Responsive padding (`px-3 sm:px-6`, `py-4 sm:py-8`) across all pages
