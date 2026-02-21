@@ -70,16 +70,18 @@ export default function POSDashboard() {
     const pollInterval = setInterval(async () => {
       try {
         // Update room status and today's bookings
+        // Use local timezone so "today" matches the user's actual day (e.g., Atlantic Time)
         const now = new Date();
-        const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
-        const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
         
         // Also fetch current week's bookings to keep timeline fresh
+        // Use local timezone so week boundaries align with Atlantic Time days
         const localYear = currentWeekStart.getFullYear();
         const localMonth = currentWeekStart.getMonth();
         const localDate = currentWeekStart.getDate();
-        const weekStartUTC = new Date(Date.UTC(localYear, localMonth, localDate, 0, 0, 0));
-        const weekEndUTC = new Date(Date.UTC(localYear, localMonth, localDate + 6, 23, 59, 59));
+        const weekStartUTC = new Date(localYear, localMonth, localDate, 0, 0, 0);
+        const weekEndUTC = new Date(localYear, localMonth, localDate + 6, 23, 59, 59);
         
         const [todayBookingsData, weekBookingsData, roomsData] = await Promise.all([
           listBookings({ 
@@ -143,9 +145,10 @@ export default function POSDashboard() {
       // Calculate date ranges for API calls
       const now = new Date();
       
-      // Today's range (for Room Status - real-time view) - using UTC
-      const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
-      const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
+      // Today's range (for Room Status - real-time view) - using local timezone
+      // This ensures "today" matches the user's actual day (e.g., Atlantic Time)
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
       
       // Selected week range (for Timeline - use currentWeekStart for navigation)
       // currentWeekStart is a local time Date at Monday 00:00:00
@@ -154,10 +157,10 @@ export default function POSDashboard() {
       const localMonth = currentWeekStart.getMonth();
       const localDate = currentWeekStart.getDate();
       
-      // Create UTC start (Monday at 00:00:00 UTC)
-      const weekStartUTC = new Date(Date.UTC(localYear, localMonth, localDate, 0, 0, 0));
-      // Create UTC end (Sunday at 23:59:59 UTC)
-      const weekEndUTC = new Date(Date.UTC(localYear, localMonth, localDate + 6, 23, 59, 59));
+      // Create start/end using local timezone so boundaries align with Atlantic Time days
+      // e.g., March 19 23:59:59 Atlantic = March 20 02:59:59 UTC (captures late-night bookings)
+      const weekStartUTC = new Date(localYear, localMonth, localDate, 0, 0, 0);
+      const weekEndUTC = new Date(localYear, localMonth, localDate + 6, 23, 59, 59);
       
       console.log('[Dashboard] Week range:', {
         currentWeekStart: currentWeekStart.toString(),
