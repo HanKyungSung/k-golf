@@ -11,7 +11,7 @@ import { UserRole } from '@prisma/client';
 import { requireAuth } from '../middleware/requireAuth';
 import { prisma } from '../lib/prisma';
 import { normalizePhone, validatePhone } from '../utils/phoneUtils';
-import { todayRange, monthRange, dayRange, getAtlanticComponents, toDateString, VENUE_TIMEZONE } from '../utils/timezone';
+import { todayRange, monthRange, dayRange, getAtlanticComponents, toDateString } from '../utils/timezone';
 
 const router = Router();
 
@@ -188,8 +188,6 @@ router.get('/revenue-history', async (req, res) => {
       const range = monthRange(mYear, mMonth);
       const monthStart = range.start;
       const monthEnd = range.end;
-      // For display label
-      const monthDate = new Date(mYear, mMonth - 1, 1);
 
       // Get revenue, booking counts, and payment method breakdown for this month
       const [revenueData, bookingStats, paymentBreakdown] = await Promise.all([
@@ -229,8 +227,10 @@ router.get('/revenue-history', async (req, res) => {
       const cardRevenue = Number(paymentBreakdown.find(p => p.paymentMethod === 'CARD')?._sum.totalAmount || 0);
       const otherRevenue = Math.max(0, revenue - cashRevenue - cardRevenue);
 
+      const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
       months.push({
-        month: monthDate.toLocaleDateString('en-US', { month: 'short', timeZone: VENUE_TIMEZONE }),
+        month: MONTH_NAMES[mMonth - 1],
         year: mYear,
         monthNum: mMonth,
         revenue,
