@@ -171,6 +171,8 @@ router.get('/revenue-history', async (req, res) => {
       year: number;
       monthNum: number;
       revenue: number;
+      cashRevenue: number;
+      cardRevenue: number;
       bookingCount: number;
       completedCount: number;
       cancelledCount: number;
@@ -188,8 +190,8 @@ router.get('/revenue-history', async (req, res) => {
       // For display label
       const monthDate = new Date(mYear, mMonth - 1, 1);
 
-      // Get revenue and booking counts for this month
-      const [revenueData, bookingStats] = await Promise.all([
+      // Get revenue, booking counts, and payment method breakdown for this month
+      const [revenueData, bookingStats, paymentBreakdown] = await Promise.all([
         prisma.booking.aggregate({
           where: {
             startTime: { gte: monthStart, lte: monthEnd },
@@ -204,6 +206,17 @@ router.get('/revenue-history', async (req, res) => {
             startTime: { gte: monthStart, lte: monthEnd }
           },
           _count: true
+        }),
+        prisma.invoice.groupBy({
+          by: ['paymentMethod'],
+          where: {
+            status: 'PAID',
+            booking: {
+              startTime: { gte: monthStart, lte: monthEnd },
+              bookingStatus: { not: 'CANCELLED' }
+            }
+          },
+          _sum: { totalAmount: true }
         })
       ]);
 
@@ -211,12 +224,16 @@ router.get('/revenue-history', async (req, res) => {
       const bookingCount = revenueData._count || 0;
       const completedCount = bookingStats.find(s => s.bookingStatus === 'COMPLETED')?._count || 0;
       const cancelledCount = bookingStats.find(s => s.bookingStatus === 'CANCELLED')?._count || 0;
+      const cashRevenue = Number(paymentBreakdown.find(p => p.paymentMethod === 'CASH')?._sum.totalAmount || 0);
+      const cardRevenue = Number(paymentBreakdown.find(p => p.paymentMethod === 'CARD')?._sum.totalAmount || 0);
 
       months.push({
         month: monthDate.toLocaleDateString('en-US', { month: 'short', timeZone: VENUE_TIMEZONE }),
         year: mYear,
         monthNum: mMonth,
         revenue,
+        cashRevenue,
+        cardRevenue,
         bookingCount,
         completedCount,
         cancelledCount,

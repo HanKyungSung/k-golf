@@ -27,6 +27,8 @@ interface MonthData {
   year: number;
   monthNum: number;
   revenue: number;
+  cashRevenue: number;
+  cardRevenue: number;
   bookingCount: number;
   completedCount: number;
   cancelledCount: number;
@@ -70,6 +72,24 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span className="text-slate-400">Revenue:</span>
             <span className="text-emerald-400 font-medium">{formatCurrency(data.revenue)}</span>
           </div>
+          {(data.cardRevenue > 0 || data.cashRevenue > 0) && (
+            <>
+              <div className="flex justify-between gap-4 pl-2">
+                <span className="text-slate-500 flex items-center gap-1">
+                  <span className="inline-block w-2 h-2 rounded-sm bg-blue-400"></span>
+                  Card:
+                </span>
+                <span className="text-blue-400 font-medium">{formatCurrency(data.cardRevenue)}</span>
+              </div>
+              <div className="flex justify-between gap-4 pl-2">
+                <span className="text-slate-500 flex items-center gap-1">
+                  <span className="inline-block w-2 h-2 rounded-sm bg-amber-400"></span>
+                  Cash:
+                </span>
+                <span className="text-amber-400 font-medium">{formatCurrency(data.cashRevenue)}</span>
+              </div>
+            </>
+          )}
           <div className="flex justify-between gap-4">
             <span className="text-slate-400">Bookings:</span>
             <span className="text-amber-400 font-medium">{data.bookingCount}</span>
@@ -241,11 +261,20 @@ export function MonthlyRevenueChart() {
               />
               <Bar 
                 yAxisId="left"
-                dataKey="revenue" 
-                name="Revenue" 
-                fill="#10b981" 
+                dataKey="cardRevenue" 
+                name="Card" 
+                stackId="revenue"
+                fill="#60a5fa" 
+                opacity={0.85}
+              />
+              <Bar 
+                yAxisId="left"
+                dataKey="cashRevenue" 
+                name="Cash" 
+                stackId="revenue"
+                fill="#fbbf24" 
                 radius={[4, 4, 0, 0]}
-                opacity={0.8}
+                opacity={0.85}
               />
               <Line
                 yAxisId="right"
