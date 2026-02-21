@@ -173,6 +173,7 @@ router.get('/revenue-history', async (req, res) => {
       revenue: number;
       cashRevenue: number;
       cardRevenue: number;
+      otherRevenue: number;
       bookingCount: number;
       completedCount: number;
       cancelledCount: number;
@@ -226,6 +227,7 @@ router.get('/revenue-history', async (req, res) => {
       const cancelledCount = bookingStats.find(s => s.bookingStatus === 'CANCELLED')?._count || 0;
       const cashRevenue = Number(paymentBreakdown.find(p => p.paymentMethod === 'CASH')?._sum.totalAmount || 0);
       const cardRevenue = Number(paymentBreakdown.find(p => p.paymentMethod === 'CARD')?._sum.totalAmount || 0);
+      const otherRevenue = Math.max(0, revenue - cashRevenue - cardRevenue);
 
       months.push({
         month: monthDate.toLocaleDateString('en-US', { month: 'short', timeZone: VENUE_TIMEZONE }),
@@ -234,6 +236,7 @@ router.get('/revenue-history', async (req, res) => {
         revenue,
         cashRevenue,
         cardRevenue,
+        otherRevenue,
         bookingCount,
         completedCount,
         cancelledCount,

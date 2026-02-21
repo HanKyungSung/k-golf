@@ -29,6 +29,7 @@ interface MonthData {
   revenue: number;
   cashRevenue: number;
   cardRevenue: number;
+  otherRevenue: number;
   bookingCount: number;
   completedCount: number;
   cancelledCount: number;
@@ -72,7 +73,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span className="text-slate-400">Revenue:</span>
             <span className="text-emerald-400 font-medium">{formatCurrency(data.revenue)}</span>
           </div>
-          {(data.cardRevenue > 0 || data.cashRevenue > 0) && (
+          {(data.cardRevenue > 0 || data.cashRevenue > 0 || data.otherRevenue > 0) && (
             <>
               <div className="flex justify-between gap-4 pl-2">
                 <span className="text-slate-500 flex items-center gap-1">
@@ -88,6 +89,15 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 </span>
                 <span className="text-amber-400 font-medium">{formatCurrency(data.cashRevenue)}</span>
               </div>
+              {data.otherRevenue > 0 && (
+                <div className="flex justify-between gap-4 pl-2">
+                  <span className="text-slate-500 flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-sm bg-emerald-500"></span>
+                    Unpaid:
+                  </span>
+                  <span className="text-emerald-400 font-medium">{formatCurrency(data.otherRevenue)}</span>
+                </div>
+              )}
             </>
           )}
           <div className="flex justify-between gap-4">
@@ -258,6 +268,14 @@ export function MonthlyRevenueChart() {
               <Legend 
                 wrapperStyle={{ paddingTop: '20px' }}
                 formatter={(value) => <span className="text-slate-300 text-sm">{value}</span>}
+              />
+              <Bar 
+                yAxisId="left"
+                dataKey="otherRevenue" 
+                name="Unpaid" 
+                stackId="revenue"
+                fill="#10b981" 
+                opacity={0.6}
               />
               <Bar 
                 yAxisId="left"
