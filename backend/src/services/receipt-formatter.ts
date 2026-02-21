@@ -3,6 +3,8 @@
  * Formats receipt data for thermal printers
  */
 
+import { VENUE_TIMEZONE } from '../utils/timezone';
+
 export interface ReceiptData {
   receiptNumber?: string;
   date: string;
@@ -171,7 +173,7 @@ export class ReceiptFormatter {
     this.newline();
     this.newline();
     this.size(0, 0);
-    this.text('Printed: ' + new Date().toLocaleString());
+    this.text('Printed: ' + new Date().toLocaleString('en-US', { timeZone: VENUE_TIMEZONE }));
     this.newline();
     this.newline();
 

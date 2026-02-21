@@ -1,4 +1,5 @@
 import React from 'react';
+import { VENUE_TIMEZONE } from '@/lib/timezone';
 
 export interface ReceiptData {
   receiptNumber: string;
@@ -242,7 +243,7 @@ export function Receipt({ data, printMode, printingSeatIndex }: ReceiptProps) {
       <div className="receipt-footer text-center text-xs text-slate-500">
         <p className="mb-2">Thank you for choosing {data.business.name}!</p>
         <p className="text-[10px]">
-          Generated: {new Date(data.metadata.generatedAt).toLocaleString()}
+          Generated: {new Date(data.metadata.generatedAt).toLocaleString('en-US', { timeZone: VENUE_TIMEZONE })}
         </p>
       </div>
 

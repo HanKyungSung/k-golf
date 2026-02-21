@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, User, Clock, Calendar, Mail, X } from 'lucide-react';
 import Receipt from '../../components/Receipt';
+import { VENUE_TIMEZONE } from '@/lib/timezone';
 import { 
   getBooking, 
   updateBookingStatus as apiUpdateBookingStatus,
@@ -1817,7 +1818,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       <div className="print-only mt-8 pt-6 border-t-2 border-black text-center text-sm">
         <p className="font-medium mb-2">Thank you for choosing K one Golf!</p>
         <p>Booking ID: {booking.id}</p>
-        <p>Printed: {new Date().toLocaleString()}</p>
+        <p>Printed: {new Date().toLocaleString('en-US', { timeZone: VENUE_TIMEZONE })}</p>
         {printingSeat && <p className="font-bold mt-2">Seat {printingSeat} Receipt</p>}
       </div>
 

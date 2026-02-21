@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/use-auth"
 import { Mail, CheckCircle2, XCircle } from "lucide-react"
 import { FormError } from "@/components/form/form-error"
+import { todayDateString } from "@/lib/timezone"
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -199,7 +200,7 @@ export default function SignUpPage() {
                   onChange={handleChange}
                   required
                   min="1900-01-01"
-                  max={new Date().toISOString().split('T')[0]}
+                  max={todayDateString()}
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500 [color-scheme:dark]"
                 />
               </div>

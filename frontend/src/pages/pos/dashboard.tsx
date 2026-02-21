@@ -20,6 +20,7 @@ import {
 import { BookingModal } from './booking-modal';
 import { BookingDetailModal } from '@/components/BookingDetailModal';
 import { AdminHeader } from '@/components/AdminHeader';
+import { VENUE_TIMEZONE, todayRange, weekRange, todayDateString } from '@/lib/timezone';
 
 export default function POSDashboard() {
   const { user } = useAuth();
@@ -70,28 +71,22 @@ export default function POSDashboard() {
     const pollInterval = setInterval(async () => {
       try {
         // Update room status and today's bookings
-        // Use local timezone so "today" matches the user's actual day (e.g., Atlantic Time)
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        // Use Atlantic timezone so "today" always matches venue's day
+        const today = todayRange();
         
         // Also fetch current week's bookings to keep timeline fresh
-        // Use local timezone so week boundaries align with Atlantic Time days
-        const localYear = currentWeekStart.getFullYear();
-        const localMonth = currentWeekStart.getMonth();
-        const localDate = currentWeekStart.getDate();
-        const weekStartUTC = new Date(localYear, localMonth, localDate, 0, 0, 0);
-        const weekEndUTC = new Date(localYear, localMonth, localDate + 6, 23, 59, 59);
+        // Use Atlantic timezone so week boundaries align with venue days
+        const week = weekRange(currentWeekStart);
         
         const [todayBookingsData, weekBookingsData, roomsData] = await Promise.all([
           listBookings({ 
-            startDate: todayStart.toISOString(), 
-            endDate: todayEnd.toISOString(),
+            startDate: today.start, 
+            endDate: today.end,
             limit: 100 
           }),
           listBookings({ 
-            startDate: weekStartUTC.toISOString(), 
-            endDate: weekEndUTC.toISOString(),
+            startDate: week.start, 
+            endDate: week.end,
             limit: 500 
           }),
           listRooms()
@@ -145,39 +140,29 @@ export default function POSDashboard() {
       // Calculate date ranges for API calls
       const now = new Date();
       
-      // Today's range (for Room Status - real-time view) - using local timezone
-      // This ensures "today" matches the user's actual day (e.g., Atlantic Time)
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      // Today's range (for Room Status - real-time view) - Atlantic timezone
+      const today = todayRange();
       
       // Selected week range (for Timeline - use currentWeekStart for navigation)
-      // currentWeekStart is a local time Date at Monday 00:00:00
-      // Extract the local date and convert to UTC boundaries
-      const localYear = currentWeekStart.getFullYear();
-      const localMonth = currentWeekStart.getMonth();
-      const localDate = currentWeekStart.getDate();
-      
-      // Create start/end using local timezone so boundaries align with Atlantic Time days
-      // e.g., March 19 23:59:59 Atlantic = March 20 02:59:59 UTC (captures late-night bookings)
-      const weekStartUTC = new Date(localYear, localMonth, localDate, 0, 0, 0);
-      const weekEndUTC = new Date(localYear, localMonth, localDate + 6, 23, 59, 59);
+      // Uses Atlantic timezone so boundaries correctly capture late-night bookings
+      const week = weekRange(currentWeekStart);
       
       console.log('[Dashboard] Week range:', {
         currentWeekStart: currentWeekStart.toString(),
-        weekStartUTC: weekStartUTC.toISOString(),
-        weekEndUTC: weekEndUTC.toISOString(),
+        weekStartUTC: week.start,
+        weekEndUTC: week.end,
       });
       
       // Load bookings with two separate API calls
       const [todayBookingsData, weekBookingsData, roomsData] = await Promise.all([
         listBookings({ 
-          startDate: todayStart.toISOString(), 
-          endDate: todayEnd.toISOString(),
+          startDate: today.start, 
+          endDate: today.end,
           limit: 100 // Today should have < 100 bookings
         }),
         listBookings({ 
-          startDate: weekStartUTC.toISOString(), 
-          endDate: weekEndUTC.toISOString(),
+          startDate: week.start, 
+          endDate: week.end,
           limit: 500 // Week should have < 500 bookings
         }),
         listRooms()
@@ -368,7 +353,7 @@ export default function POSDashboard() {
               <CardTitle className="flex items-center gap-3">
                 Room Status (Real-Time)
                 <span className="text-xs font-normal text-slate-400 font-mono">
-                  {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                  {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: VENUE_TIMEZONE })}
                 </span>
               </CardTitle>
               <CardDescription>Live view of currently occupied rooms</CardDescription>
@@ -797,7 +782,7 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
           <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <Button size="sm" variant="outline" className={buttonStyles.pagination} onClick={() => navigateWeek('prev')}>← Prev</Button>
             <span className="text-white text-xs sm:text-sm font-medium flex-1 sm:flex-none sm:min-w-[200px] text-center truncate">
-              {weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: VENUE_TIMEZONE })} – {weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: VENUE_TIMEZONE })}
             </span>
             <Button size="sm" variant="outline" className={buttonStyles.pagination} onClick={() => navigateWeek('next')}>Next →</Button>
           </div>
@@ -832,10 +817,10 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
                 {/* Day Header */}
                 <div className="flex items-center gap-3">
                   <h3 className="text-sm font-semibold text-white min-w-[120px]">
-                    {day.toLocaleDateString('en-US', { weekday: 'long' })}
+                    {day.toLocaleDateString('en-US', { weekday: 'long', timeZone: VENUE_TIMEZONE })}
                   </h3>
                   <div className="text-[11px] text-slate-400">
-                    {day.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                    {day.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: VENUE_TIMEZONE })}
                   </div>
                   <div className="flex-1 h-px bg-slate-700" />
                   {/* TODO: Re-enable when employee permissions implemented

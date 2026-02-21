@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useBookingData } from '../app/BookingContext';
 import { useAuth } from '../app/authState';
 import { AppHeader } from '../components/layout/AppHeader';
+import { formatDate, formatDateTime, VENUE_TIMEZONE } from '../utils/timezone';
 import { 
   Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, Button, 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -610,7 +611,7 @@ export default function BookingDetailPage() {
                             <h2 className="text-2xl font-bold mb-2">Seat {seat} Bill</h2>
                             <p><strong>Customer:</strong> {booking?.customerName}</p>
                             <p><strong>Room:</strong> {booking?.roomName}</p>
-                            <p><strong>Date:</strong> {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
+                            <p><strong>Date:</strong> {new Date().toLocaleDateString('en-US', { timeZone: VENUE_TIMEZONE })} {new Date().toLocaleTimeString('en-US', { timeZone: VENUE_TIMEZONE })}</p>
                             <hr className="my-3 border-black" />
                           </div>
 
@@ -783,7 +784,7 @@ export default function BookingDetailPage() {
                       </span>
                     }
                   />
-                  <InfoBlock label="Date" value={new Date(booking.date).toLocaleDateString()} />
+                  <InfoBlock label="Date" value={new Date(booking.date).toLocaleDateString('en-US', { timeZone: VENUE_TIMEZONE })} />
                   <InfoBlock label="Start Time" value={booking.time} />
                   <InfoBlock label="Duration" value={`${booking.duration} hour(s)`} />
                   <InfoBlock label="Players" value={`${booking.players}`} />
@@ -821,13 +822,13 @@ export default function BookingDetailPage() {
                     {booking.billedAt && (
                       <InfoBlock 
                         label="Billed At" 
-                        value={new Date(booking.billedAt).toLocaleString()} 
+                        value={new Date(booking.billedAt).toLocaleString('en-US', { timeZone: VENUE_TIMEZONE })} 
                       />
                     )}
                     {booking.paidAt && (
                       <InfoBlock 
                         label="Paid At" 
-                        value={new Date(booking.paidAt).toLocaleString()} 
+                        value={new Date(booking.paidAt).toLocaleString('en-US', { timeZone: VENUE_TIMEZONE })} 
                       />
                     )}
                     {booking.tipAmount !== undefined && booking.tipAmount > 0 && (
@@ -922,7 +923,7 @@ export default function BookingDetailPage() {
               <CardContent className="space-y-2 text-sm">
                 <div>
                   <p className="text-slate-400">Created</p>
-                  <p className="text-white">{booking.createdAt ? new Date(booking.createdAt).toLocaleString() : '—'}</p>
+                  <p className="text-white">{booking.createdAt ? new Date(booking.createdAt).toLocaleString('en-US', { timeZone: VENUE_TIMEZONE }) : '—'}</p>
                 </div>
                 <div>
                   <p className="text-slate-400">Booking ID</p>
@@ -938,7 +939,7 @@ export default function BookingDetailPage() {
       <div className="print-only mt-8 pt-6 border-t-2 border-black text-center text-sm">
         <p className="font-medium mb-2">Thank you for choosing K one Golf!</p>
         <p>Booking ID: {booking.id}</p>
-        <p>Printed: {new Date().toLocaleString()}</p>
+        <p>Printed: {new Date().toLocaleString('en-US', { timeZone: VENUE_TIMEZONE })}</p>
         {printingSeat && <p className="font-bold mt-2">Seat {printingSeat} Receipt</p>}
       </div>
 

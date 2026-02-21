@@ -9,6 +9,7 @@ import { requireStaffOrAdmin } from '../middleware/requireRole';
 import { UserRole } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { sendBookingConfirmation } from '../services/emailService';
+import { buildAtlanticDate, getAtlanticHourMinute } from '../utils/timezone';
 
 const router = Router();
 
@@ -151,13 +152,13 @@ router.get('/by-room-date', async (req, res) => {
       dayStartUTC = new Date(startTime);
       dayEndUTC = new Date(endTime);
     } else {
-      // Old format: Date string (YYYY-MM-DD) - interpret as UTC for backward compatibility
+      // Old format: Date string (YYYY-MM-DD) - interpret as Atlantic timezone day
       const [y, m, d] = date!.split('-').map(Number);
       if (!y || !m || !d) {
         return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
       }
-      dayStartUTC = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
-      dayEndUTC = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+      dayStartUTC = buildAtlanticDate(y, m, d, 0, 0, 0);
+      dayEndUTC = buildAtlanticDate(y, m, d, 23, 59, 59, 999);
     }
 
     // Fetch all bookings for this room (not cancelled)
@@ -498,14 +499,13 @@ router.get('/availability', async (req, res) => {
     return res.json({ meta: { roomId, date: dateStr, status: room.status, slots: 0 }, slots: [] });
   }
 
-  // Build day window in UTC from the provided local date string.
-  // Assumption: dateStr refers to local timezone of the venue; adjust if TZ handling is needed.
+  // Build day window using Atlantic timezone for the provided date string.
   const [y, m, d] = dateStr.split('-').map(Number);
   if (!y || !m || !d) return res.status(400).json({ error: 'invalid date format' });
 
   function makeTime(hours24: number, minutes: number) {
-    // Create a Date in local time for the venue day and then rely on JS Date to carry timezone offset.
-    return new Date(y, m - 1, d, hours24, minutes, 0, 0);
+    // Create a Date representing the specified wall-clock time in Atlantic timezone
+    return buildAtlanticDate(y, m, d, hours24, minutes, 0);
   }
 
   // Fetch operating hours from Settings instead of room
@@ -616,10 +616,12 @@ router.post('/admin/create-OLD', requireAuth, async (req, res) => {
 
   const end = new Date(start.getTime() + hours * 3600 * 1000);
 
-  // Check room hours against business operating hours
+  // Check room hours against business operating hours (use Atlantic timezone)
   const operatingHours = await getOperatingHours();
-  const startMinutes = start.getHours() * 60 + start.getMinutes();
-  const endMinutes = end.getHours() * 60 + end.getMinutes();
+  const startAtlantic = getAtlanticHourMinute(start);
+  const endAtlantic = getAtlanticHourMinute(end);
+  const startMinutes = startAtlantic.hour * 60 + startAtlantic.minute;
+  const endMinutes = endAtlantic.hour * 60 + endAtlantic.minute;
 
   if (startMinutes < operatingHours.openMinutes || endMinutes > operatingHours.closeMinutes) {
     return res.status(400).json({

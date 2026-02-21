@@ -5,6 +5,7 @@ import { getBooking } from '../repositories/bookingRepo';
 import * as receiptRepo from '../repositories/receiptRepo';
 import { requireAuth } from '../middleware/requireAuth';
 import { ReceiptFormatter } from '../services/receipt-formatter';
+import { formatDateTime } from '../utils/timezone';
 
 const router = Router();
 
@@ -49,13 +50,7 @@ router.post('/receipt', requireAuth, async (req, res) => {
     
     const commands = formatter.formatReceipt({
       receiptNumber: receiptData.receiptNumber,
-      date: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
+      date: formatDateTime(new Date()),
       customerName: booking.customerName,
       customerPhone: booking.customerPhone,
       customerEmail: booking.customerEmail || undefined,
@@ -120,13 +115,7 @@ router.post('/test', async (req, res) => {
     const formatter = new ReceiptFormatter(48);
     const commands = formatter.formatReceipt({
       receiptNumber: 'TEST-001',
-      date: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
+      date: formatDateTime(new Date()),
       customerName: 'John Doe',
       customerPhone: '+1-555-123-4567',
       customerEmail: 'john@example.com',

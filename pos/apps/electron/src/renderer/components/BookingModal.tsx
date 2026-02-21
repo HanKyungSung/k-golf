@@ -3,6 +3,7 @@ import { Button, Card, Input, Label } from './ui/primitives';
 import { PhoneInput } from './PhoneInput';
 import { TimePicker } from './ui/TimePicker';
 import { DatePicker } from './ui/DatePicker';
+import { VENUE_TIMEZONE } from '../utils/timezone';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -217,7 +218,7 @@ export function BookingModal({ isOpen, onClose, rooms, onSuccess, preselectedRoo
           const conflictStart = new Date(errorData.conflictingBooking.startTime);
           const conflictEnd = new Date(errorData.conflictingBooking.endTime);
           throw new Error(
-            `${errorData.error || 'Booking conflict'}. Existing booking: ${conflictStart.toLocaleString()} - ${conflictEnd.toLocaleTimeString()}`
+            `${errorData.error || 'Booking conflict'}. Existing booking: ${conflictStart.toLocaleString('en-US', { timeZone: VENUE_TIMEZONE })} - ${conflictEnd.toLocaleTimeString('en-US', { timeZone: VENUE_TIMEZONE })}`
           );
         }
         

@@ -40,6 +40,7 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { AdminHeader } from '@/components/AdminHeader';
 import { toast } from '@/hooks/use-toast';
+import { VENUE_TIMEZONE } from '@/lib/timezone';
 import { 
   Search, 
   Plus, 
@@ -633,7 +634,8 @@ export default function CustomerManagement() {
     return new Date(dateStr).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: VENUE_TIMEZONE
     });
   };
 
@@ -660,7 +662,8 @@ export default function CustomerManagement() {
     return new Date(dateStr).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
+      timeZone: VENUE_TIMEZONE
     });
   };
 
@@ -799,7 +802,7 @@ export default function CustomerManagement() {
                   const now = new Date();
                   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
                   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                  return `${firstDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${lastDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                  return `${firstDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: VENUE_TIMEZONE })} - ${lastDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: VENUE_TIMEZONE })}`;
                 })()}
               </p>
             </CardContent>

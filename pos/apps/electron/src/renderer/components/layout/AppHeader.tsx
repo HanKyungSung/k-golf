@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../app/authState';
 import { Button } from '../common/Button';
+import { VENUE_TIMEZONE } from '../../utils/timezone';
 
 // @ts-ignore - Import VERSION.txt to get version
 import version from '../../VERSION.txt';
@@ -52,7 +53,7 @@ export const AppHeader: React.FC<Props> = ({ onTest, onSync }) => {
             className="text-[11px] px-2 py-1 rounded border border-slate-600 bg-slate-800/60 text-slate-300 font-mono"
             title="Current local time"
           >
-            {currentTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+            {currentTime.toLocaleDateString('en-US', { timeZone: VENUE_TIMEZONE, month: 'short', day: 'numeric' })} {currentTime.toLocaleTimeString('en-US', { timeZone: VENUE_TIMEZONE, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
           </span>
           <span
             id="app-version"

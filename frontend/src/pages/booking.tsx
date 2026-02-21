@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { Clock, Users, Star, CalendarIcon } from "lucide-react";
 import { TimePicker } from "../components/pos/TimePicker";
+import { VENUE_TIMEZONE, toDateString } from "@/lib/timezone";
 
 interface Room {
   // Unique UI id per card to control selection/highlight
@@ -201,12 +202,14 @@ export default function BookingPage() {
           startTime: new Date(b.startTime).toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
+            hour12: false,
+            timeZone: VENUE_TIMEZONE
           }),
           endTime: new Date(b.endTime).toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
+            hour12: false,
+            timeZone: VENUE_TIMEZONE
           }),
         }));
         setBookings(mappedBookings);
@@ -258,7 +261,7 @@ export default function BookingPage() {
 
   // Check if a time slot is available
   const isTimeSlotAvailable = (roomId: string, date: Date, start: string, end: string): boolean => {
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr = toDateString(date);
     const roomBookings = bookings.filter((b) => b.roomId === roomId && b.date === dateStr);
 
     const [startHour, startMin] = start.split(":").map(Number);
@@ -420,7 +423,7 @@ export default function BookingPage() {
 
   const getBookingsForTimeline = () => {
     if (!selectedRoom || !selectedDate) return [];
-    const dateStr = selectedDate.toISOString().split("T")[0];
+    const dateStr = toDateString(selectedDate);
     return bookings.filter((b) => b.roomId === selectedRoom && b.date === dateStr);
   };
 

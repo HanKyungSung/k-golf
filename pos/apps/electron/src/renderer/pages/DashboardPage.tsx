@@ -3,6 +3,7 @@ import { useAuth } from '../app/authState';
 import { AppHeader } from '../components/layout/AppHeader';
 import { useNavigate } from 'react-router-dom';
 import { useBookingData } from '../app/BookingContext';
+import { VENUE_TIMEZONE, todayDateString, todayRange, weekRange as tzWeekRange, getAtlanticDateParts, buildAtlanticDate } from '../utils/timezone';
 
 // Types now provided by context (imported through hook). Keeping utility code local.
 
@@ -16,12 +17,10 @@ const timeSlots = Array.from({ length: (22 - 9) * 2 + 1 }, (_, i) => {
   const h = 9 + Math.floor(i / 2); const m = i % 2 === 0 ? '00' : '30'; return `${String(h).padStart(2,'0')}:${m}`;
 });
 const dayRange = (startISO: Date) => Array.from({ length: 7 }, (_, i) => new Date(startISO.getTime() + i * 86400000));
-// Convert Date to YYYY-MM-DD in LOCAL timezone (not UTC) to match booking.date format
+// Convert Date to YYYY-MM-DD in Atlantic timezone to match booking.date format
 const dateKey = (d: Date) => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const { year, month, day } = getAtlanticDateParts(d);
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 };
 function isBookingInSlot(b: import('../app/BookingContext').Booking, slot: string) {
   const [sh, sm] = b.time.split(':').map(Number); const startMinutes = sh*60+sm; const [slh, slm] = slot.split(':').map(Number); const slotMinutes = slh*60+slm; const endMinutes = startMinutes + b.duration*60; return slotMinutes >= startMinutes && slotMinutes < endMinutes;
@@ -64,12 +63,12 @@ const DashboardPage: React.FC = () => {
   
   // Initialize to the start of the current week (Monday)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // If Sunday, go back 6 days; otherwise go to Monday
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + daysToMonday);
-    monday.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const { year, month, day } = getAtlanticDateParts(now);
+    const atlanticToday = buildAtlanticDate(year, month, day, 0, 0, 0);
+    const dayOfWeek = atlanticToday.getUTCDay(); // Use UTC since buildAtlanticDate returns UTC-aligned
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(atlanticToday.getTime() + daysToMonday * 86400000);
     return monday;
   });
   
@@ -100,13 +99,11 @@ const DashboardPage: React.FC = () => {
   
   // Fetch bookings for current week (this covers both timeline and today)
   React.useEffect(() => {
-    const weekEnd = new Date(currentWeekStart);
-    weekEnd.setDate(currentWeekStart.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
+    const { start, end } = tzWeekRange(currentWeekStart);
     
     fetchBookings({
-      startDate: currentWeekStart.toISOString(),
-      endDate: weekEnd.toISOString()
+      startDate: start,
+      endDate: end
     });
   }, [currentWeekStart, fetchBookings]);
   
@@ -117,12 +114,7 @@ const DashboardPage: React.FC = () => {
   
   // Update today's bookings from context bookings
   React.useEffect(() => {
-    const today = new Date();
-    // Get today's date in YYYY-MM-DD format in LOCAL timezone (not UTC)
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const todayDateStr = `${year}-${month}-${day}`;
+    const todayDateStr = todayDateString();
     
     const filtered = bookings.filter(b => b.date === todayDateStr);
     setTodayBookings(filtered);
@@ -131,16 +123,16 @@ const DashboardPage: React.FC = () => {
   // Helper function to check if a booking is currently active
   const isBookingActive = React.useCallback((booking: import('../app/BookingContext').Booking, now: Date) => {
     // Parse booking date and time to create start and end times
-    // booking.date is "YYYY-MM-DD" in local timezone
+    // booking.date is "YYYY-MM-DD" in Atlantic timezone
     const [year, month, day] = booking.date.split('-').map(Number);
     const [hours, minutes] = booking.time.split(':').map(Number);
     
-    // Create start time in LOCAL timezone (not UTC)
-    const startTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    // Create start time in Atlantic timezone
+    const startTime = buildAtlanticDate(year, month, day, hours, minutes, 0);
     
-    const endTime = new Date(startTime);
-    endTime.setHours(startTime.getHours() + Math.floor(booking.duration));
-    endTime.setMinutes(startTime.getMinutes() + (booking.duration % 1) * 60);
+    const endHours = Math.floor(booking.duration);
+    const endMinutes = (booking.duration % 1) * 60;
+    const endTime = new Date(startTime.getTime() + (endHours * 60 + endMinutes) * 60000);
     
     // Check if current time is between start and end, and booking is not cancelled or completed
     // Use bookingStatus (CANCELLED/COMPLETED) for more reliable filtering (case-insensitive)
@@ -204,7 +196,7 @@ const DashboardPage: React.FC = () => {
               <CardTitle className="flex items-center gap-3">
                 Room Status (Real-Time)
                 <span className="text-xs font-normal text-slate-400 font-mono">
-                  {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                  {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: VENUE_TIMEZONE })}
                 </span>
               </CardTitle>
               <CardDescription>Live view of currently occupied rooms</CardDescription>
@@ -367,7 +359,7 @@ const DashboardPage: React.FC = () => {
                             )}
                           </div>
                           <div className="text-xs text-slate-400 truncate">{b.customerEmail} • {b.roomName}</div>
-                          <div className="text-xs text-slate-500 mt-1">{new Date(b.date).toLocaleDateString()} at {b.time} • {b.players}p • {b.duration}h</div>
+                          <div className="text-xs text-slate-500 mt-1">{new Date(b.date).toLocaleDateString('en-US', { timeZone: VENUE_TIMEZONE })} at {b.time} • {b.players}p • {b.duration}h</div>
                         </div>
                         <div className="flex items-center gap-2 text-right">
                           <div className="w-16 text-white font-semibold text-sm">${b.price}</div>
@@ -396,12 +388,8 @@ const DashboardPage: React.FC = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {rooms.map((room) => {
-                      // Filter bookings for this room using the same local date logic
-                      const today = new Date();
-                      const year = today.getFullYear();
-                      const month = String(today.getMonth() + 1).padStart(2, '0');
-                      const day = String(today.getDate()).padStart(2, '0');
-                      const todayDateStr = `${year}-${month}-${day}`;
+                      // Filter bookings for this room using Atlantic timezone date
+                      const todayDateStr = todayDateString();
                       
                       const roomTodayBookings = bookings.filter(
                         (booking) => booking.roomId === String(room.id) && booking.date === todayDateStr
@@ -714,23 +702,18 @@ const DashboardPage: React.FC = () => {
         preselectedRoomId={preselectedRoomId}
         onSuccess={async () => {
           // Refresh both today's and timeline bookings
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const endOfDay = new Date(today);
-          endOfDay.setHours(23, 59, 59, 999);
+          const { start: todayStart, end: todayEnd } = todayRange();
           
           await fetchBookings({
-            startDate: today.toISOString(),
-            endDate: endOfDay.toISOString()
+            startDate: todayStart,
+            endDate: todayEnd
           });
           
-          const weekEnd = new Date(currentWeekStart);
-          weekEnd.setDate(currentWeekStart.getDate() + 6);
-          weekEnd.setHours(23, 59, 59, 999);
+          const { start: weekStart, end: weekEnd } = tzWeekRange(currentWeekStart);
           
           await fetchBookings({
-            startDate: currentWeekStart.toISOString(),
-            endDate: weekEnd.toISOString()
+            startDate: weekStart,
+            endDate: weekEnd
           });
         }}
       />
@@ -771,7 +754,7 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek, taxRate }: Time
           </div>
           <div className="flex items-center gap-3">
             <Button size="sm" variant="outline" onClick={()=>navigateWeek('prev')}>Prev</Button>
-            <span className="text-white text-sm font-medium min-w-[200px] text-center">{weekDays[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})} – {weekDays[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</span>
+            <span className="text-white text-sm font-medium min-w-[200px] text-center">{weekDays[0].toLocaleDateString('en-US',{month:'long',day:'numeric',timeZone:VENUE_TIMEZONE})} – {weekDays[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:VENUE_TIMEZONE})}</span>
             <Button size="sm" variant="outline" onClick={()=>navigateWeek('next')}>Next</Button>
           </div>
         </div>
@@ -790,8 +773,8 @@ function TimelineView({ weekDays, rooms, bookings, navigateWeek, taxRate }: Time
             return (
               <div key={`${dayKey}-${dayBookings.length}`} className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-semibold text-white min-w-[120px]">{day.toLocaleDateString('en-US',{weekday:'long'})}</h3>
-                  <div className="text-[11px] text-slate-400">{day.toLocaleDateString('en-US',{month:'long',day:'numeric'})}</div>
+                  <h3 className="text-sm font-semibold text-white min-w-[120px]">{day.toLocaleDateString('en-US',{weekday:'long',timeZone:VENUE_TIMEZONE})}</h3>
+                  <div className="text-[11px] text-slate-400">{day.toLocaleDateString('en-US',{month:'long',day:'numeric',timeZone:VENUE_TIMEZONE})}</div>
                   <div className="flex-1 h-px bg-slate-700" />
                   <Badge className="bg-green-600/60 text-green-200">${totalRevenue.toFixed(2)}</Badge>
                   <Badge className="bg-amber-600/60 text-amber-200">{totalHours} hour{totalHours!==1?'s':''}</Badge>

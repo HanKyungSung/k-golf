@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { todayDateString, VENUE_TIMEZONE } from "@/lib/timezone"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/hooks/use-auth"
@@ -77,7 +78,7 @@ export default function AdminPage() {
   const navigate = useNavigate()
   const [bookings, setBookings] = useState<AdminBooking[]>(mockBookings)
   const [rooms, setRooms] = useState<Room[]>(mockRooms)
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0])
+  const [selectedDate, setSelectedDate] = useState<string>(todayDateString())
 
   useEffect(() => {
     // In a real app, check if user is admin
@@ -253,7 +254,7 @@ export default function AdminPage() {
                           {booking.customerEmail} • {booking.roomName}
                         </div>
                         <div className="text-sm text-slate-400">
-                          {new Date(booking.date).toLocaleDateString()} at {booking.time} • {booking.duration} hour(s)
+                          {new Date(booking.date).toLocaleDateString('en-US', { timeZone: VENUE_TIMEZONE })} at {booking.time} • {booking.duration} hour(s)
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -391,7 +392,7 @@ export default function AdminPage() {
                     ))
                   ) : (
                     <div className="text-center py-8 text-slate-500">
-                      No bookings scheduled for {new Date(selectedDate).toLocaleDateString()}
+                      No bookings scheduled for {new Date(selectedDate).toLocaleDateString('en-US', { timeZone: VENUE_TIMEZONE })}
                     </div>
                   )}
                 </div>

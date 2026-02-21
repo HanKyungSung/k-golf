@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { todayDateString, VENUE_TIMEZONE } from '@/lib/timezone';
 
 interface DatePickerProps {
   value: string; // YYYY-MM-DD format
@@ -17,7 +18,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   'data-testid': dataTestId,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [tempDate, setTempDate] = useState(value || new Date().toISOString().split('T')[0]);
+  const [tempDate, setTempDate] = useState(value || todayDateString());
   const pickerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -47,7 +48,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const handleCancel = () => {
-    setTempDate(value || new Date().toISOString().split('T')[0]);
+    setTempDate(value || todayDateString());
     setIsOpen(false);
   };
 
@@ -58,7 +59,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       weekday: 'short',
       year: 'numeric', 
       month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      timeZone: VENUE_TIMEZONE
     });
   };
 

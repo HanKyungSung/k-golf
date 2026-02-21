@@ -3,6 +3,7 @@ import * as bookingRepo from './bookingRepo';
 import * as invoiceRepo from './invoiceRepo';
 import * as orderRepo from './orderRepo';
 import { prisma } from '../lib/prisma';
+import { toDateString, formatTime } from '../utils/timezone';
 
 export interface ReceiptData {
   receiptNumber: string;
@@ -189,9 +190,9 @@ export async function getReceiptData(bookingId: string): Promise<ReceiptData> {
       taxId: 'HST: 820374569 RT0001',
     },
     booking: {
-      date: startTime.toISOString().split('T')[0],
-      startTime: startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      endTime: endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      date: toDateString(startTime),
+      startTime: formatTime(startTime),
+      endTime: formatTime(endTime),
       duration: durationHours,
       room: {
         name: booking.room?.name || 'Unknown Room',

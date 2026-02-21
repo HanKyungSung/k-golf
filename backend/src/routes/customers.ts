@@ -11,6 +11,7 @@ import { UserRole } from '@prisma/client';
 import { requireAuth } from '../middleware/requireAuth';
 import { prisma } from '../lib/prisma';
 import { normalizePhone, validatePhone } from '../utils/phoneUtils';
+import { todayRange, monthRange, dayRange, getAtlanticComponents, toDateString, VENUE_TIMEZONE } from '../utils/timezone';
 
 const router = Router();
 
@@ -36,9 +37,15 @@ router.use(requireAuth, requireAdmin);
 router.get('/metrics', async (req, res) => {
   try {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    // Use Atlantic timezone for all date boundaries
+    const atlanticNow = getAtlanticComponents(now);
+    const thisMonth = monthRange(atlanticNow.year, atlanticNow.month);
+    const startOfMonth = thisMonth.start;
+    const lastMonthNum = atlanticNow.month === 1 ? 12 : atlanticNow.month - 1;
+    const lastMonthYear = atlanticNow.month === 1 ? atlanticNow.year - 1 : atlanticNow.year;
+    const lastMonth = monthRange(lastMonthYear, lastMonthNum);
+    const startOfLastMonth = lastMonth.start;
+    const endOfLastMonth = lastMonth.end;
     
     // Total customers
     const totalCustomers = await prisma.user.count({
@@ -80,9 +87,10 @@ router.get('/metrics', async (req, res) => {
       }
     });
 
-    // Today's bookings count
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+    // Today's bookings count (Atlantic timezone)
+    const today = todayRange();
+    const todayStart = today.start;
+    const todayEnd = today.end;
     const todaysBookings = await prisma.booking.count({
       where: {
         startTime: { gte: todayStart, lt: todayEnd },
@@ -157,6 +165,7 @@ router.get('/metrics', async (req, res) => {
 router.get('/revenue-history', async (req, res) => {
   try {
     const now = new Date();
+    const atlanticNow = getAtlanticComponents(now);
     const months: Array<{
       month: string;
       year: number;
@@ -168,11 +177,16 @@ router.get('/revenue-history', async (req, res) => {
       averageBookingValue: number;
     }> = [];
 
-    // Calculate data for each of the past 12 months
+    // Calculate data for each of the past 12 months (Atlantic timezone boundaries)
     for (let i = 11; i >= 0; i--) {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
+      let mMonth = atlanticNow.month - i;
+      let mYear = atlanticNow.year;
+      while (mMonth <= 0) { mMonth += 12; mYear--; }
+      const range = monthRange(mYear, mMonth);
+      const monthStart = range.start;
+      const monthEnd = range.end;
+      // For display label
+      const monthDate = new Date(mYear, mMonth - 1, 1);
 
       // Get revenue and booking counts for this month
       const [revenueData, bookingStats] = await Promise.all([
@@ -199,9 +213,9 @@ router.get('/revenue-history', async (req, res) => {
       const cancelledCount = bookingStats.find(s => s.bookingStatus === 'CANCELLED')?._count || 0;
 
       months.push({
-        month: monthDate.toLocaleDateString('en-US', { month: 'short' }),
-        year: monthDate.getFullYear(),
-        monthNum: monthDate.getMonth() + 1,
+        month: monthDate.toLocaleDateString('en-US', { month: 'short', timeZone: VENUE_TIMEZONE }),
+        year: mYear,
+        monthNum: mMonth,
         revenue,
         bookingCount,
         completedCount,
@@ -247,7 +261,8 @@ router.get('/revenue-history', async (req, res) => {
  */
 async function getUpcomingBirthdays(days: number) {
   const now = new Date();
-  const currentYear = now.getFullYear();
+  const atlanticNow = getAtlanticComponents(now);
+  const currentYear = atlanticNow.year;
   
   // Get all customers with birthdays
   const customers = await prisma.user.findMany({
@@ -263,19 +278,27 @@ async function getUpcomingBirthdays(days: number) {
     }
   });
   
-  // Calculate days until birthday for each customer
+  // Calculate days until birthday for each customer (using Atlantic timezone)
   const withBirthday = customers
     .map(customer => {
       const dob = customer.dateOfBirth!;
-      // This year's birthday
-      let birthday = new Date(currentYear, dob.getMonth(), dob.getDate());
+      const dobParts = getAtlanticComponents(dob);
+      // This year's birthday in Atlantic time
+      let birthdayYear = currentYear;
+      const birthdayStr = `${currentYear}-${String(dobParts.month).padStart(2, '0')}-${String(dobParts.day).padStart(2, '0')}`;
       
       // If birthday has passed this year, use next year's
-      if (birthday < now) {
-        birthday = new Date(currentYear + 1, dob.getMonth(), dob.getDate());
+      const todayStr = toDateString(now);
+      if (birthdayStr < todayStr) {
+        birthdayYear = currentYear + 1;
       }
       
-      const daysUntil = Math.ceil((birthday.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const finalBirthdayStr = `${birthdayYear}-${String(dobParts.month).padStart(2, '0')}-${String(dobParts.day).padStart(2, '0')}`;
+      
+      // Calculate days difference using date strings (avoids timezone math)
+      const todayMs = new Date(todayStr + 'T00:00:00').getTime();
+      const birthdayMs = new Date(finalBirthdayStr + 'T00:00:00').getTime();
+      const daysUntil = Math.ceil((birthdayMs - todayMs) / (1000 * 60 * 60 * 24));
       
       return {
         id: customer.id,
@@ -283,10 +306,10 @@ async function getUpcomingBirthdays(days: number) {
         phone: customer.phone,
         dateOfBirth: dob,
         daysUntilBirthday: daysUntil,
-        birthdayDate: birthday.toISOString().split('T')[0]
+        birthdayDate: finalBirthdayStr
       };
     })
-    .filter(c => c.daysUntilBirthday <= days)
+    .filter(c => c.daysUntilBirthday >= 0 && c.daysUntilBirthday <= days)
     .sort((a, b) => a.daysUntilBirthday - b.daysUntilBirthday);
   
   return withBirthday;
