@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { z } from 'zod';
-import { createUser, findUserByEmail, findUserByPhone, hashPassword, verifyPassword, createSession, getSession, invalidateSession, createEmailVerificationToken, consumeEmailVerificationToken } from '../services/authService';
-import { sendVerificationEmail } from '../services/emailService';
+import { createUser, findUserByEmail, findUserByPhone, hashPassword, verifyPassword, createSession, getSession, invalidateSession, createEmailVerificationToken, consumeEmailVerificationToken, createPasswordResetToken, consumePasswordResetToken } from '../services/authService';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../services/emailService';
 import { normalizePhone } from '../utils/phoneUtils';
 
 const router = Router();
@@ -154,6 +154,69 @@ router.post('/resend', async (req, res) => {
     // Still return generic to avoid info leakage
   }
   return res.json({ message: 'Verification email resent.', expiresAt, retryAfterSeconds: Math.ceil(RESEND_COOLDOWN_MS / 1000) });
+});
+
+// POST /auth/forgot-password (send password reset link)
+const forgotPasswordSchema = z.object({ email: z.string().email() });
+const FORGOT_COOLDOWN_MS = 60_000;
+const forgotCooldown = new Map<string, number>();
+router.post('/forgot-password', async (req, res) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const email = parsed.data.email.toLowerCase();
+
+  // Generic response to prevent account enumeration
+  const generic = { message: 'If an account exists with that email, a password reset link has been sent.' } as const;
+
+  // Cooldown
+  const now = Date.now();
+  const last = forgotCooldown.get(email) || 0;
+  const remainingMs = FORGOT_COOLDOWN_MS - (now - last);
+  if (remainingMs > 0) {
+    return res.status(429).json({ ...generic, retryAfterSeconds: Math.ceil(remainingMs / 1000) });
+  }
+  forgotCooldown.set(email, now);
+
+  const user = await findUserByEmail(email);
+  if (!user || !user.email) {
+    return res.json({ ...generic, retryAfterSeconds: Math.ceil(FORGOT_COOLDOWN_MS / 1000) });
+  }
+
+  const { plain, expiresAt } = await createPasswordResetToken(user.id);
+  try {
+    await sendPasswordResetEmail({ to: user.email, email: user.email, token: plain, expiresAt });
+  } catch (e) {
+    console.error('sendPasswordResetEmail error', e);
+  }
+  return res.json({ ...generic, retryAfterSeconds: Math.ceil(FORGOT_COOLDOWN_MS / 1000) });
+});
+
+// POST /auth/reset-password (consume token, set new password, invalidate all sessions)
+const resetPasswordSchema = z.object({
+  email: z.string().email(),
+  token: z.string().min(10),
+  password: z.string().min(10).regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, 'Password must contain a letter and a number'),
+});
+router.post('/reset-password', async (req, res) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const { email, token, password } = parsed.data;
+  const user = await findUserByEmail(email.toLowerCase());
+  if (!user) return res.status(400).json({ error: 'Invalid or expired reset link' });
+
+  const consumed = await consumePasswordResetToken(user.id, token);
+  if (!consumed) return res.status(400).json({ error: 'Invalid or expired reset link' });
+
+  const passwordHash = await hashPassword(password);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash, passwordUpdatedAt: new Date() },
+  });
+
+  // Invalidate all existing sessions for security
+  await prisma.session.deleteMany({ where: { userId: user.id } });
+
+  return res.json({ message: 'Password reset successfully. Please log in with your new password.' });
 });
 
 // --- Cookie Helpers ---

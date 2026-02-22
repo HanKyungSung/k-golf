@@ -16,6 +16,8 @@ interface AuthContextType {
   logout: () => Promise<void>
   isLoading: boolean
   resendVerification: (email: string) => Promise<{ message: string; expiresAt?: string; retryAfterSeconds?: number }>
+  forgotPassword: (email: string) => Promise<{ message: string; retryAfterSeconds?: number }>
+  resetPassword: (email: string, token: string, password: string) => Promise<{ message: string }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -141,6 +143,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data;
   }
 
+  const forgotPassword = async (email: string): Promise<{ message: string; retryAfterSeconds?: number }> => {
+    const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
+    const res = await fetch(`${apiBase}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json().catch(() => ({ message: 'Please try again shortly.' }));
+    if (!res.ok && res.status !== 429) throw new Error(data.message || data.error || 'Request failed');
+    return data;
+  }
+
+  const resetPassword = async (email: string, token: string, password: string): Promise<{ message: string }> => {
+    const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
+    const res = await fetch(`${apiBase}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, token, password })
+    });
+    if (!res.ok) throw new Error(await getErrorMessage(res));
+    return await res.json();
+  }
+
   const logout = async () => {
     setUser(null);
     const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
@@ -151,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  return <AuthContext.Provider value={{ user, login, signup, logout, isLoading, resendVerification }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, login, signup, logout, isLoading, resendVerification, forgotPassword, resetPassword }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

@@ -37,6 +37,7 @@ model User {
   authProviders          AuthProvider[]
   sessions               Session[]
   emailVerificationToken EmailVerificationToken?
+  passwordResetToken     PasswordResetToken?
   settingsUpdates        Setting[]
   registeredByUser       User?                   @relation("UserRegistrations", fields: [registeredBy], references: [id], onDelete: SetNull)
   usersRegistered        User[]                  @relation("UserRegistrations") // Users this admin registered
@@ -191,6 +192,19 @@ model PhoneVerificationToken {
 
   @@index([expiresAt])
   @@index([phone, expiresAt])
+}
+
+// Password reset tokens (one active per user, hashed for security)
+model PasswordResetToken {
+  id         String    @id @default(uuid())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String    @unique
+  tokenHash  String    @unique
+  expiresAt  DateTime  @db.Timestamptz
+  consumedAt DateTime? @db.Timestamptz
+  createdAt  DateTime  @default(now()) @db.Timestamptz
+
+  @@index([expiresAt])
 }
 
 model Setting {

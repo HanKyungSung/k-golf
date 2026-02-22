@@ -63,6 +63,27 @@ export async function sendVerificationEmail({ to, token, expiresAt, email }: Ver
   await transport.sendMail({ from: process.env.EMAIL_FROM || 'K one Golf <no-reply@konegolf.ca>', to, subject, text, html });
 }
 
+export interface PasswordResetEmailParams {
+  to: string;
+  email: string;
+  token: string;
+  expiresAt: Date;
+}
+
+export async function sendPasswordResetEmail({ to, email, token, expiresAt }: PasswordResetEmailParams) {
+  const origin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+  const link = `${origin.replace(/\/$/, '')}/reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+  const subject = 'Reset your K one Golf password';
+  const text = `Reset your password: ${link}\n\nExpires: ${expiresAt.toISOString()}\nIf you did not request this, ignore this email.`;
+  const html = `<!doctype html><html><body style="font-family:system-ui,sans-serif;background:#f8fafc;padding:20px"><div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1)"><div style="background:linear-gradient(135deg,#f59e0b 0%,#eab308 100%);padding:24px;text-align:center"><h1 style="margin:0;color:#fff;font-size:24px;font-weight:700">K ONE GOLF</h1><p style="margin:4px 0 0;color:rgba(255,255,255,0.9);font-size:13px">Password Reset</p></div><div style="padding:32px 24px"><p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 20px">We received a request to reset your password. Click the button below to create a new password. This link expires in 15 minutes.</p><p style="text-align:center;margin:24px 0"><a href="${link}" style="display:inline-block;padding:12px 32px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">Reset Password</a></p><p style="font-size:12px;color:#64748b;margin:20px 0 0;line-height:1.5">If the button doesn't work, copy and paste this URL into your browser:<br><a href="${link}" style="color:#2563eb;word-break:break-all">${link}</a></p><p style="font-size:12px;color:#94a3b8;margin:16px 0 0">If you didn't request a password reset, you can safely ignore this email.</p></div></div></body></html>`;
+  const transport = getTransport();
+  if (!transport) {
+    console.log(`[email:dev-log] password-reset to=${to} token=${token} link=${link}`);
+    return;
+  }
+  await transport.sendMail({ from: process.env.EMAIL_FROM || 'K one Golf <no-reply@konegolf.ca>', to, subject, text, html });
+}
+
 /**
  * Generate HTML for receipt email
  */

@@ -110,3 +110,25 @@ export async function consumeEmailVerificationToken(userId: string, plain: strin
   await (prisma as any).emailVerificationToken.update({ where: { userId }, data: { consumedAt: new Date() } });
   return record;
 }
+
+// --- Password Reset Tokens ---
+
+export async function createPasswordResetToken(userId: string, expiresMinutes = 15) {
+  await (prisma as any).passwordResetToken.deleteMany({ where: { userId } });
+  const plain = generatePlainToken(24);
+  const tokenHash = hashToken(plain);
+  const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
+  await (prisma as any).passwordResetToken.create({ data: { userId, tokenHash, expiresAt } });
+  return { plain, expiresAt };
+}
+
+export async function consumePasswordResetToken(userId: string, plain: string) {
+  const tokenHash = hashToken(plain);
+  const record = await (prisma as any).passwordResetToken.findUnique({ where: { userId } });
+  if (!record) return null;
+  if (record.tokenHash !== tokenHash) return null;
+  if (record.consumedAt) return null;
+  if (record.expiresAt <= new Date()) return null;
+  await (prisma as any).passwordResetToken.update({ where: { userId }, data: { consumedAt: new Date() } });
+  return record;
+}

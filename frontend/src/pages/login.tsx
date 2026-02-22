@@ -151,6 +151,11 @@ export default function LoginPage() {
                   className="w-full bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-amber-500"
                 />
               </div>
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-sm text-amber-400 hover:text-amber-300">
+                  Forgot password?
+                </Link>
+              </div>
               <FormError message={errorText} />
               <Button
                 type="submit"
