@@ -226,6 +226,52 @@ router.patch('/:id/revoke', requireAuth, requireAdmin, async (req: Request, res:
   }
 });
 
+/**
+ * PATCH /api/coupons/:id/status
+ * Admin changes coupon status (ACTIVE, REDEEMED, EXPIRED)
+ * Clearing redeemed fields when reverting to ACTIVE
+ */
+router.patch('/:id/status', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['ACTIVE', 'REDEEMED', 'EXPIRED'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    const coupon = await prisma.coupon.findUnique({ where: { id: req.params.id } });
+    if (!coupon) return res.status(404).json({ error: 'Coupon not found' });
+    if (coupon.status === status) {
+      return res.status(409).json({ error: `Coupon is already ${status.toLowerCase()}` });
+    }
+
+    // Build update data based on target status
+    const updateData: any = { status };
+
+    if (status === 'ACTIVE') {
+      // Clear redeemed fields when reverting to ACTIVE
+      updateData.redeemedAt = null;
+      updateData.redeemedBookingId = null;
+      updateData.redeemedSeatNumber = null;
+    }
+
+    const updated = await prisma.coupon.update({
+      where: { id: req.params.id },
+      data: updateData,
+      include: {
+        couponType: true,
+        user: { select: { id: true, name: true, email: true, phone: true } },
+        redeemedBooking: { select: { id: true, startTime: true } },
+      },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error('[coupons] status change error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ─── Coupon Types ──────────────────────────────────────────────
 
 /**

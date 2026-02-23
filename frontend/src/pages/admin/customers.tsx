@@ -61,7 +61,6 @@ import {
   Send,
   Loader2,
   Ticket,
-  Ban,
   ExternalLink,
   Settings2,
   ToggleLeft,
@@ -261,7 +260,7 @@ export default function CustomerManagement() {
   const [couponTypeFilter, setCouponTypeFilter] = useState<string>('ALL');
   const [selectedCoupon, setSelectedCoupon] = useState<CouponItem | null>(null);
   const [couponDetailOpen, setCouponDetailOpen] = useState(false);
-  const [revoking, setRevoking] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
   const [typeManagementOpen, setTypeManagementOpen] = useState(false);
   const [allCouponTypes, setAllCouponTypes] = useState<CouponTypeItem[]>([]);
   const [typeFormOpen, setTypeFormOpen] = useState(false);
@@ -407,25 +406,29 @@ export default function CustomerManagement() {
   };
 
   // Revoke coupon handler
-  const handleRevokeCoupon = async (couponId: string) => {
-    setRevoking(true);
+  const handleChangeCouponStatus = async (couponId: string, newStatus: 'ACTIVE' | 'REDEEMED' | 'EXPIRED') => {
+    if (!confirm(`Change coupon status to ${newStatus}?`)) return;
+    setChangingStatus(true);
     try {
-      const res = await fetch(`${getApiBase()}/api/coupons/${couponId}/revoke`, {
+      const res = await fetch(`${getApiBase()}/api/coupons/${couponId}/status`, {
         method: 'PATCH',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
-        toast({ title: 'Coupon revoked', description: 'Coupon has been expired' });
+        const updated = await res.json();
+        toast({ title: 'Status updated', description: `Coupon is now ${newStatus}` });
+        setSelectedCoupon({ ...selectedCoupon!, ...updated, status: newStatus });
         loadCoupons();
-        setCouponDetailOpen(false);
       } else {
         const data = await res.json();
-        toast({ title: 'Error', description: data.error || 'Failed to revoke', variant: 'destructive' });
+        toast({ title: 'Error', description: data.error || 'Failed to update status', variant: 'destructive' });
       }
     } catch {
       toast({ title: 'Error', description: 'Network error', variant: 'destructive' });
     } finally {
-      setRevoking(false);
+      setChangingStatus(false);
     }
   };
 
@@ -2568,20 +2571,29 @@ export default function CustomerManagement() {
               </div>
             </div>
           )}
-          <DialogFooter className="gap-2">
-            {selectedCoupon?.status === 'ACTIVE' && (
-              <Button
-                variant="outline"
-                onClick={() => selectedCoupon && handleRevokeCoupon(selectedCoupon.id)}
-                disabled={revoking}
-                className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-              >
-                {revoking ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Revoking...</>
-                ) : (
-                  <><Ban className="h-4 w-4 mr-2" />Revoke Coupon</>
-                )}
-              </Button>
+          <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
+            {selectedCoupon && (
+              <div className="flex items-center gap-2">
+                <Label className="text-slate-400 text-sm whitespace-nowrap">Status:</Label>
+                <Select
+                  value={selectedCoupon.status}
+                  onValueChange={(val) => handleChangeCouponStatus(selectedCoupon.id, val as 'ACTIVE' | 'REDEEMED' | 'EXPIRED')}
+                  disabled={changingStatus}
+                >
+                  <SelectTrigger className="w-[140px] bg-slate-900 border-slate-600 text-white">
+                    {changingStatus ? (
+                      <span className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" />Updating...</span>
+                    ) : (
+                      <SelectValue />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-600">
+                    <SelectItem value="ACTIVE" className="text-green-400 hover:bg-slate-700">Active</SelectItem>
+                    <SelectItem value="REDEEMED" className="text-blue-400 hover:bg-slate-700">Redeemed</SelectItem>
+                    <SelectItem value="EXPIRED" className="text-red-400 hover:bg-slate-700">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             <Button
               onClick={() => setCouponDetailOpen(false)}
