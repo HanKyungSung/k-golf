@@ -151,6 +151,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   
   const seatsInitialized = React.useRef(false);
   const seatRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
 
   // Load data on mount
   useEffect(() => {
@@ -175,8 +176,9 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     try {
       setLoading(true);
       
-      // Save current scroll position
-      const scrollY = window.scrollY;
+      // Save current scroll position (use container ref if inside modal, else window)
+      const container = scrollContainerRef.current;
+      const scrollY = container ? container.scrollTop : window.scrollY;
       
       console.log('[BookingDetail] Loading data for booking ID:', bookingId);
       
@@ -221,7 +223,11 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       
       // Restore scroll position after render completes
       requestAnimationFrame(() => {
-        window.scrollTo(0, scrollY);
+        if (container) {
+          container.scrollTop = scrollY;
+        } else {
+          window.scrollTo(0, scrollY);
+        }
       });
     } catch (err) {
       console.error('[BookingDetail] Failed to load data:', err);
@@ -723,7 +729,16 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
     if (nextUnpaidSeat && seatRefs.current[nextUnpaidSeat]) {
       setTimeout(() => {
-        seatRefs.current[nextUnpaidSeat]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const el = seatRefs.current[nextUnpaidSeat];
+        if (el && scrollContainerRef.current) {
+          // Inside modal — manually scroll the container
+          const containerRect = scrollContainerRef.current.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          const offset = elRect.top - containerRect.top - containerRect.height / 2 + elRect.height / 2;
+          scrollContainerRef.current.scrollBy({ top: offset, behavior: 'smooth' });
+        } else {
+          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       }, 300);
     }
   };
@@ -1115,7 +1130,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   }
 
   return (
-    <div className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
+    <div ref={scrollContainerRef} className="w-full h-full flex flex-col overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-black">
       <style>{`
         @media print {
           * {
@@ -1596,38 +1611,30 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                             {/* Payment Method Selection */}
                             <div className="space-y-2">
                               <Label className="text-slate-300">Payment Method</Label>
-                              <RadioGroup
-                                value={paymentMethodBySeat[seat] || 'CARD'}
-                                onValueChange={(value) =>
-                                  setPaymentMethodBySeat({ ...paymentMethodBySeat, [seat]: value as 'CARD' | 'CASH' })
-                                }
-                                className="grid grid-cols-2 gap-3"
-                              >
-                                <label
-                                  htmlFor={`card-${seat}`}
+                              <div className="grid grid-cols-2 gap-3">
+                                <div
+                                  onClick={() => setPaymentMethodBySeat({ ...paymentMethodBySeat, [seat]: 'CARD' })}
                                   className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
                                     paymentMethodBySeat[seat] === 'CARD' || !paymentMethodBySeat[seat]
                                       ? 'border-amber-500 bg-amber-500/10'
                                       : 'border-slate-600 bg-slate-800/50'
                                   }`}
                                 >
-                                  <RadioGroupItem value="CARD" id={`card-${seat}`} className="sr-only" />
                                   <CreditCard className="h-5 w-5 text-white" />
                                   <span className="text-white font-medium">Card</span>
-                                </label>
-                                <label
-                                  htmlFor={`cash-${seat}`}
+                                </div>
+                                <div
+                                  onClick={() => setPaymentMethodBySeat({ ...paymentMethodBySeat, [seat]: 'CASH' })}
                                   className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
                                     paymentMethodBySeat[seat] === 'CASH'
                                       ? 'border-amber-500 bg-amber-500/10'
                                       : 'border-slate-600 bg-slate-800/50'
                                   }`}
                                 >
-                                  <RadioGroupItem value="CASH" id={`cash-${seat}`} className="sr-only" />
                                   <Banknote className="h-5 w-5 text-white" />
                                   <span className="text-white font-medium">Cash</span>
-                                </label>
-                              </RadioGroup>
+                                </div>
+                              </div>
                             </div>
 
                             {/* Tip Input */}
