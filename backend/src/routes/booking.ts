@@ -1300,6 +1300,29 @@ router.delete('/orders/:orderId', requireAuth, async (req, res) => {
 
     const { bookingId, seatIndex } = order;
 
+    // If this is a coupon discount order, revert the coupon back to ACTIVE
+    if (order.customItemName && order.customItemName.startsWith('🎟️') && order.discountType === 'FLAT' && Number(order.unitPrice) < 0) {
+      const coupon = await prisma.coupon.findFirst({
+        where: {
+          redeemedBookingId: bookingId,
+          redeemedSeatNumber: seatIndex,
+          status: 'REDEEMED',
+        },
+      });
+      if (coupon) {
+        await prisma.coupon.update({
+          where: { id: coupon.id },
+          data: {
+            status: 'ACTIVE',
+            redeemedAt: null,
+            redeemedBookingId: null,
+            redeemedSeatNumber: null,
+          },
+        });
+        console.log(`[DELETE ORDER] Reverted coupon ${coupon.code} back to ACTIVE`);
+      }
+    }
+
     // Delete order
     await orderRepo.deleteOrder(orderId);
 
