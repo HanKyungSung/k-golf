@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import QRCode from 'qrcode';
 import type { ReceiptData } from '../repositories/receiptRepo';
 
 export interface VerificationEmailParams {
@@ -628,5 +629,103 @@ ${message}
     text,
     html,
     replyTo: email,
+  });
+}
+
+// ─── Coupon Email ──────────────────────────────────────────────
+
+export interface CouponEmailParams {
+  to: string;
+  customerName: string;
+  couponCode: string;
+  couponType: 'BIRTHDAY' | 'LOYALTY' | 'CUSTOM' | string;
+  description: string;
+  discountAmount: number;
+  expiresAt?: Date | null;
+}
+
+function getCouponEmailContent(type: string): { emoji: string; heading: string; subtext: string } {
+  switch (type) {
+    case 'BIRTHDAY':
+      return { emoji: '🎂', heading: 'Happy Birthday!', subtext: 'We have a special gift for you to celebrate your birthday!' };
+    case 'LOYALTY':
+      return { emoji: '⭐', heading: 'Thank You for Your Loyalty!', subtext: 'You\'ve reached a milestone and earned a reward!' };
+    default:
+      return { emoji: '🎟️', heading: 'You\'ve Received a Coupon!', subtext: 'Here\'s a special offer just for you!' };
+  }
+}
+
+export async function sendCouponEmail(params: CouponEmailParams) {
+  const { to, customerName, couponCode, couponType, description, discountAmount, expiresAt } = params;
+  const origin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+  const couponUrl = `${origin.replace(/\/$/, '')}/coupon/${couponCode}`;
+  const { emoji, heading, subtext } = getCouponEmailContent(couponType);
+
+  // Generate QR code as base64 PNG for inline embedding
+  const qrDataUrl = await QRCode.toDataURL(couponUrl, {
+    width: 200,
+    margin: 2,
+    color: { dark: '#1e293b', light: '#ffffff' },
+  });
+  // Convert data URL to buffer for cid attachment
+  const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, '');
+  const qrBuffer = Buffer.from(qrBase64, 'base64');
+
+  const expiryLine = expiresAt
+    ? `<p style="font-size:13px;color:#94a3b8;margin:12px 0 0;text-align:center">Expires: ${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Halifax' })}</p>`
+    : '';
+
+  const subject = couponType === 'BIRTHDAY'
+    ? `${emoji} Happy Birthday, ${customerName}! You've earned 1 hour free!`
+    : couponType === 'LOYALTY'
+      ? `${emoji} Thank you, ${customerName}! You've earned 1 hour free!`
+      : `${emoji} ${customerName}, you've received a coupon from K one Golf!`;
+
+  const text = `${heading}\n\nHi ${customerName},\n\n${subtext}\n\n${description}\nValue: $${discountAmount.toFixed(2)}\n\nYour coupon code: ${couponCode}\nView your coupon: ${couponUrl}\n\nShow this code or QR to staff to redeem.\n${expiresAt ? `Expires: ${new Date(expiresAt).toLocaleDateString()}\n` : ''}`;
+
+  const html = `<!doctype html>
+<html><body style="font-family:system-ui,sans-serif;background:#f8fafc;padding:20px;margin:0">
+<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1)">
+  <div style="background:linear-gradient(135deg,#f59e0b 0%,#eab308 100%);padding:28px 24px;text-align:center">
+    <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700">K ONE GOLF</h1>
+    <p style="margin:4px 0 0;color:rgba(255,255,255,0.9);font-size:14px">${emoji} ${heading}</p>
+  </div>
+  <div style="padding:32px 24px;text-align:center">
+    <p style="color:#334155;font-size:16px;line-height:1.6;margin:0 0 8px">Hi <strong>${customerName}</strong>,</p>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 24px">${subtext}</p>
+    <div style="background:#fffbeb;border:2px dashed #f59e0b;border-radius:12px;padding:24px;margin:0 0 24px">
+      <p style="margin:0 0 4px;font-size:13px;color:#92400e;text-transform:uppercase;letter-spacing:1px;font-weight:600">Your Coupon</p>
+      <p style="margin:0 0 12px;font-size:28px;font-weight:800;color:#1e293b;letter-spacing:2px">${couponCode}</p>
+      <p style="margin:0 0 4px;font-size:15px;color:#334155;font-weight:600">${description}</p>
+      <p style="margin:0;font-size:14px;color:#64748b">Value: <strong>$${discountAmount.toFixed(2)}</strong></p>
+    </div>
+    <div style="margin:0 0 24px">
+      <p style="font-size:13px;color:#64748b;margin:0 0 12px">Scan QR code to view your coupon:</p>
+      <img src="cid:couponQR" alt="Coupon QR Code" width="180" height="180" style="border-radius:8px" />
+    </div>
+    <a href="${couponUrl}" style="display:inline-block;padding:12px 32px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">View Coupon</a>
+    ${expiryLine}
+    <p style="font-size:13px;color:#94a3b8;margin:20px 0 0">Show this code or QR to staff at K one Golf to redeem.</p>
+  </div>
+</div>
+</body></html>`;
+
+  const transport = getTransport();
+  if (!transport) {
+    console.log(`[email:dev-log] coupon to=${to} code=${couponCode} url=${couponUrl}`);
+    return;
+  }
+
+  await transport.sendMail({
+    from: process.env.EMAIL_FROM || 'K one Golf <no-reply@konegolf.ca>',
+    to,
+    subject,
+    text,
+    html,
+    attachments: [{
+      filename: 'coupon-qr.png',
+      content: qrBuffer,
+      cid: 'couponQR',
+    }],
   });
 }

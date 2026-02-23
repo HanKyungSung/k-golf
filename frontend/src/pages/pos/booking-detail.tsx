@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, User, Clock, Calendar, Mail, X } from 'lucide-react';
+import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, User, Clock, Calendar, Mail, X, Ticket, Loader2 } from 'lucide-react';
 import Receipt from '../../components/Receipt';
 import { VENUE_TIMEZONE } from '@/lib/timezone';
 import { 
@@ -36,6 +36,8 @@ import {
   type Order,
   type ReceiptData
 } from '@/services/pos-api';
+
+const API_BASE = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
 
 interface POSBookingDetailProps {
   bookingId: string;
@@ -115,6 +117,13 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [discountName, setDiscountName] = useState('');
   const [discountAmount, setDiscountAmount] = useState('');
   const [discountType, setDiscountType] = useState<'FLAT' | 'PERCENT'>('FLAT');
+
+  // Coupon dialog state
+  const [showCouponDialog, setShowCouponDialog] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponValidating, setCouponValidating] = useState(false);
+  const [couponData, setCouponData] = useState<{ code: string; description: string; discountAmount: number; couponType: { label: string }; user: { name: string }; isValid: boolean; error?: string | null } | null>(null);
+  const [couponApplying, setCouponApplying] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [showSplitDialog, setShowSplitDialog] = useState(false);
   const [selectedOrderItem, setSelectedOrderItem] = useState<OrderItem | null>(null);
@@ -578,6 +587,46 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
       alert(`Failed to add discount: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setOrderLoading(false);
+    }
+  };
+
+  const handleValidateCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponValidating(true);
+    setCouponData(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/coupons/validate/${couponCode.trim().toUpperCase()}`, { credentials: 'include' });
+      const data = await res.json();
+      setCouponData(data.isValid ? { ...data.coupon, isValid: true } : { ...data.coupon, isValid: false, error: data.error });
+    } catch {
+      setCouponData({ code: couponCode, description: '', discountAmount: 0, couponType: { label: '' }, user: { name: '' }, isValid: false, error: 'Failed to validate coupon' });
+    } finally {
+      setCouponValidating(false);
+    }
+  };
+
+  const handleApplyCoupon = async (seat: number) => {
+    if (!booking || !couponData?.isValid) return;
+    setCouponApplying(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/coupons/${couponData.code}/redeem`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id, seatNumber: seat }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to redeem coupon');
+      }
+      await loadData();
+      setCouponCode('');
+      setCouponData(null);
+      setShowCouponDialog(false);
+    } catch (err) {
+      alert(`Failed to apply coupon: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setCouponApplying(false);
     }
   };
 
@@ -1785,6 +1834,21 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                       </Button>
                     </div>
 
+                    {/* Apply Coupon Button */}
+                    <div className="mt-2">
+                      <Button
+                        onClick={() => {
+                          setCouponCode('');
+                          setCouponData(null);
+                          setShowCouponDialog(true);
+                        }}
+                        className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold py-6 text-lg shadow-lg"
+                      >
+                        <Ticket className="w-5 h-5 mr-2" />
+                        Apply Coupon
+                      </Button>
+                    </div>
+
                     {(['hours', 'food', 'drinks', 'appetizers', 'desserts'] as const).map((category) => (
                       <TabsContent key={category} value={category}>
                         <div className="space-y-2 max-h-[500px] overflow-y-auto">
@@ -2196,6 +2260,119 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
               }}
               className="border-slate-600 text-slate-300 hover:bg-slate-700"
               disabled={orderLoading}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Apply Coupon Dialog */}
+      <Dialog open={showCouponDialog} onOpenChange={setShowCouponDialog}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Ticket className="h-5 w-5 text-amber-400" />
+              Apply Coupon
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Enter the coupon code to validate and apply to a seat
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Code Input */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="e.g., KGOLF-A3X9"
+                value={couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value.toUpperCase());
+                  setCouponData(null);
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleValidateCoupon()}
+                className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 font-mono text-lg tracking-wider"
+                autoFocus
+              />
+              <Button
+                onClick={handleValidateCoupon}
+                disabled={couponValidating || !couponCode.trim()}
+                className="bg-amber-500 hover:bg-amber-600 text-black px-6"
+              >
+                {couponValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Validate'}
+              </Button>
+            </div>
+
+            {/* Validation Result */}
+            {couponData && (
+              <div className={`p-4 rounded-lg border ${couponData.isValid
+                ? 'bg-emerald-500/10 border-emerald-500/30'
+                : 'bg-red-500/10 border-red-500/30'
+              }`}>
+                {couponData.isValid ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                      <span className="font-semibold text-emerald-400">Valid Coupon</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-slate-400">Code:</span>{' '}
+                        <span className="text-white font-mono">{couponData.code}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Type:</span>{' '}
+                        <span className="text-white">{couponData.couponType?.label}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Value:</span>{' '}
+                        <span className="text-amber-400 font-bold">${Number(couponData.discountAmount).toFixed(2)}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">For:</span>{' '}
+                        <span className="text-white">{couponData.user?.name}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-300">{couponData.description}</p>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-400" />
+                    <span className="text-red-400">{couponData.error || 'Invalid coupon'}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Seat Selection (only when valid) */}
+            {couponData?.isValid && (
+              <div className="space-y-2">
+                <Label className="text-white">Apply to Seat</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => (
+                    <Button
+                      key={seat}
+                      onClick={() => handleApplyCoupon(seat)}
+                      disabled={couponApplying}
+                      className={`h-16 ${seatColors[seat - 1]} hover:opacity-90 text-white text-lg font-semibold disabled:opacity-50`}
+                    >
+                      {couponApplying ? <Loader2 className="h-5 w-5 animate-spin" /> : `Seat ${seat}`}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCouponDialog(false);
+                setCouponCode('');
+                setCouponData(null);
+              }}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
             >
               Cancel
             </Button>

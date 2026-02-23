@@ -56,7 +56,16 @@ import {
   X,
   CalendarDays,
   DollarSign,
-  Clock
+  Clock,
+  Gift,
+  Send,
+  Loader2,
+  Ticket,
+  Ban,
+  ExternalLink,
+  Settings2,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 
 // Types
@@ -97,6 +106,32 @@ interface CustomerBooking {
   bookingSource: string;
   createdBy: string | null;
   createdByName: string | null;
+  createdAt: string;
+}
+
+interface CouponItem {
+  id: string;
+  code: string;
+  description: string;
+  discountAmount: string;
+  status: 'ACTIVE' | 'REDEEMED' | 'EXPIRED';
+  expiresAt: string | null;
+  redeemedAt: string | null;
+  redeemedSeatNumber: number | null;
+  milestone: number | null;
+  createdAt: string;
+  couponType: { id: string; name: string; label: string };
+  user: { id: string; name: string; email: string | null; phone: string };
+  redeemedBooking?: { id: string; startTime: string } | null;
+}
+
+interface CouponTypeItem {
+  id: string;
+  name: string;
+  label: string;
+  defaultDescription: string;
+  defaultAmount: string;
+  active: boolean;
   createdAt: string;
 }
 
@@ -161,7 +196,7 @@ export default function CustomerManagement() {
   const navigate = useNavigate();
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<'customers' | 'bookings'>('customers');
+  const [activeTab, setActiveTab] = useState<'customers' | 'bookings' | 'coupons'>('customers');
   
   // Common state
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -209,6 +244,33 @@ export default function CustomerManagement() {
   });
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Send Coupon modal state
+  const [sendCouponModalOpen, setSendCouponModalOpen] = useState(false);
+  const [couponTypes, setCouponTypes] = useState<Array<{ id: string; name: string; label: string; defaultDescription: string; defaultAmount: string }>>([]);
+  const [couponForm, setCouponForm] = useState({ couponTypeId: '', description: '', discountAmount: '', expiresAt: '' });
+  const [sendingCoupon, setSendingCoupon] = useState(false);
+  const [couponSuccess, setCouponSuccess] = useState('');
+
+  // Coupons tab state
+  const [couponList, setCouponList] = useState<CouponItem[]>([]);
+  const [couponListLoading, setCouponListLoading] = useState(false);
+  const [couponPagination, setCouponPagination] = useState<{ page: number; limit: number; total: number; pages: number } | null>(null);
+  const [couponPage, setCouponPage] = useState(1);
+  const [couponStatusFilter, setCouponStatusFilter] = useState<string>('ALL');
+  const [couponTypeFilter, setCouponTypeFilter] = useState<string>('ALL');
+  const [selectedCoupon, setSelectedCoupon] = useState<CouponItem | null>(null);
+  const [couponDetailOpen, setCouponDetailOpen] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [typeManagementOpen, setTypeManagementOpen] = useState(false);
+  const [allCouponTypes, setAllCouponTypes] = useState<CouponTypeItem[]>([]);
+  const [typeFormOpen, setTypeFormOpen] = useState(false);
+  const [typeForm, setTypeForm] = useState({ name: '', label: '', defaultDescription: '', defaultAmount: '' });
+  const [typeFormSubmitting, setTypeFormSubmitting] = useState(false);
+
+  // Customer detail coupon history
+  const [customerCoupons, setCustomerCoupons] = useState<CouponItem[]>([]);
+  const [customerCouponsLoading, setCustomerCouponsLoading] = useState(false);
 
   // Redirect if not admin
   useEffect(() => {
@@ -302,6 +364,121 @@ export default function CustomerManagement() {
     }
   }, [bookingPage, bookingSortBy, bookingSortOrder, searchQuery, dateFrom, dateTo, statusFilter, sourceFilter]);
 
+  // Load coupons
+  const loadCoupons = useCallback(async () => {
+    try {
+      setCouponListLoading(true);
+      const params = new URLSearchParams({
+        page: couponPage.toString(),
+        limit: '20',
+        ...(searchQuery && { search: searchQuery }),
+        ...(couponStatusFilter !== 'ALL' && { status: couponStatusFilter }),
+        ...(couponTypeFilter !== 'ALL' && { type: couponTypeFilter }),
+      });
+
+      const res = await fetch(`${getApiBase()}/api/coupons?${params}`, {
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCouponList(data.coupons);
+        setCouponPagination(data.pagination);
+      } else {
+        toast({ title: 'Error', description: 'Failed to load coupons', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error('Failed to load coupons:', err);
+      toast({ title: 'Error', description: 'Network error', variant: 'destructive' });
+    } finally {
+      setCouponListLoading(false);
+    }
+  }, [couponPage, searchQuery, couponStatusFilter, couponTypeFilter]);
+
+  // Load all coupon types (including inactive) for management
+  const loadAllCouponTypes = async () => {
+    try {
+      const res = await fetch(`${getApiBase()}/api/coupons/types`, { credentials: 'include' });
+      if (res.ok) {
+        const types = await res.json();
+        setAllCouponTypes(types);
+      }
+    } catch {}
+  };
+
+  // Revoke coupon handler
+  const handleRevokeCoupon = async (couponId: string) => {
+    setRevoking(true);
+    try {
+      const res = await fetch(`${getApiBase()}/api/coupons/${couponId}/revoke`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        toast({ title: 'Coupon revoked', description: 'Coupon has been expired' });
+        loadCoupons();
+        setCouponDetailOpen(false);
+      } else {
+        const data = await res.json();
+        toast({ title: 'Error', description: data.error || 'Failed to revoke', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Network error', variant: 'destructive' });
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  // Create coupon type handler
+  const handleCreateCouponType = async () => {
+    if (!typeForm.name || !typeForm.label || !typeForm.defaultDescription || !typeForm.defaultAmount) {
+      toast({ title: 'Error', description: 'All fields are required', variant: 'destructive' });
+      return;
+    }
+    setTypeFormSubmitting(true);
+    try {
+      const res = await fetch(`${getApiBase()}/api/coupons/types`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: typeForm.name.toUpperCase(),
+          label: typeForm.label,
+          defaultDescription: typeForm.defaultDescription,
+          defaultAmount: Number(typeForm.defaultAmount),
+        }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Coupon type created' });
+        setTypeFormOpen(false);
+        setTypeForm({ name: '', label: '', defaultDescription: '', defaultAmount: '' });
+        loadAllCouponTypes();
+      } else {
+        const data = await res.json();
+        toast({ title: 'Error', description: data.error || 'Failed to create type', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Network error', variant: 'destructive' });
+    } finally {
+      setTypeFormSubmitting(false);
+    }
+  };
+
+  // Toggle coupon type active/inactive
+  const handleToggleCouponType = async (typeId: string, currentActive: boolean) => {
+    try {
+      const res = await fetch(`${getApiBase()}/api/coupons/types/${typeId}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !currentActive }),
+      });
+      if (res.ok) {
+        loadAllCouponTypes();
+      }
+    } catch {}
+  };
+
   // Initial load
   useEffect(() => {
     if (user?.role === 'ADMIN') {
@@ -317,9 +494,12 @@ export default function CustomerManagement() {
       if (activeTab === 'customers') {
         setCustomerPage(1);
         loadCustomers();
-      } else {
+      } else if (activeTab === 'bookings') {
         setBookingPage(1);
         loadBookings();
+      } else if (activeTab === 'coupons') {
+        setCouponPage(1);
+        loadCoupons();
       }
     }, 300);
     
@@ -339,9 +519,15 @@ export default function CustomerManagement() {
     }
   }, [bookingPage, bookingSortBy, bookingSortOrder, dateFrom, dateTo, statusFilter, sourceFilter]);
 
+  useEffect(() => {
+    if (user?.role === 'ADMIN' && activeTab === 'coupons') {
+      loadCoupons();
+    }
+  }, [couponPage, couponStatusFilter, couponTypeFilter]);
+
   // Handle tab change
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab as 'customers' | 'bookings');
+    setActiveTab(tab as 'customers' | 'bookings' | 'coupons');
   };
 
   // Handle customer sort change
@@ -387,12 +573,28 @@ export default function CustomerManagement() {
     }
   };
 
+  // Load coupons for a specific customer
+  const loadCustomerCoupons = async (userId: string) => {
+    setCustomerCouponsLoading(true);
+    try {
+      const res = await fetch(`${getApiBase()}/api/coupons?userId=${userId}&limit=50`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setCustomerCoupons(data.coupons || []);
+      }
+    } catch {} finally {
+      setCustomerCouponsLoading(false);
+    }
+  };
+
   // Open detail modal
   const openDetailModal = (customer: Customer) => {
     setSelectedCustomer(customer);
     setCustomerDetail(null);
+    setCustomerCoupons([]);
     setDetailModalOpen(true);
     loadCustomerDetail(customer.id);
+    loadCustomerCoupons(customer.id);
   };
 
   // Open booking detail modal
@@ -896,6 +1098,13 @@ export default function CustomerManagement() {
               <CalendarDays className="h-4 w-4 mr-2" />
               Bookings
             </TabsTrigger>
+            <TabsTrigger 
+              value="coupons"
+              className="data-[state=active]:bg-amber-500 data-[state=active]:text-black"
+            >
+              <Ticket className="h-4 w-4 mr-2" />
+              Coupons
+            </TabsTrigger>
           </TabsList>
 
           {/* Customers Tab */}
@@ -1276,6 +1485,177 @@ export default function CustomerManagement() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Coupons Tab */}
+          <TabsContent value="coupons" className="mt-0">
+            {/* Coupon Filters */}
+            <div className="flex flex-wrap gap-3 mb-4">
+              <Select value={couponStatusFilter} onValueChange={(v) => { setCouponStatusFilter(v); setCouponPage(1); }}>
+                <SelectTrigger className="w-full sm:w-36 bg-slate-800/50 border-slate-600 text-white">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectItem value="ALL">All Status</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="REDEEMED">Redeemed</SelectItem>
+                  <SelectItem value="EXPIRED">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={couponTypeFilter} onValueChange={(v) => { setCouponTypeFilter(v); setCouponPage(1); }}>
+                <SelectTrigger className="w-full sm:w-36 bg-slate-800/50 border-slate-600 text-white">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectItem value="ALL">All Types</SelectItem>
+                  <SelectItem value="BIRTHDAY">Birthday</SelectItem>
+                  <SelectItem value="LOYALTY">Loyalty</SelectItem>
+                  <SelectItem value="CUSTOM">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {(couponStatusFilter !== 'ALL' || couponTypeFilter !== 'ALL') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setCouponStatusFilter('ALL'); setCouponTypeFilter('ALL'); }}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Clear
+                </Button>
+              )}
+              <div className="ml-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { loadAllCouponTypes(); setTypeManagementOpen(true); }}
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                >
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Manage Types
+                </Button>
+              </div>
+            </div>
+
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-slate-700 hover:bg-transparent">
+                        <TableHead className="text-slate-300">Code</TableHead>
+                        <TableHead className="text-slate-300">Customer</TableHead>
+                        <TableHead className="text-slate-300 hidden md:table-cell">Type</TableHead>
+                        <TableHead className="text-slate-300">Amount</TableHead>
+                        <TableHead className="text-slate-300">Status</TableHead>
+                        <TableHead className="text-slate-300 hidden lg:table-cell">Created</TableHead>
+                        <TableHead className="text-slate-300 hidden lg:table-cell">Expires</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {couponListLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-slate-400 py-8">
+                            Loading coupons...
+                          </TableCell>
+                        </TableRow>
+                      ) : couponList.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-slate-400 py-8">
+                            No coupons found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        couponList.map((coupon) => (
+                          <TableRow
+                            key={coupon.id}
+                            className="border-slate-700 hover:bg-slate-700/30 cursor-pointer"
+                            onClick={() => { setSelectedCoupon(coupon); setCouponDetailOpen(true); }}
+                          >
+                            <TableCell className="font-mono text-amber-400 font-medium">
+                              {coupon.code}
+                            </TableCell>
+                            <TableCell className="text-white">
+                              {coupon.user.name}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  coupon.couponType.name === 'BIRTHDAY'
+                                    ? 'border-pink-500/50 text-pink-400 bg-pink-500/10'
+                                    : coupon.couponType.name === 'LOYALTY'
+                                      ? 'border-purple-500/50 text-purple-400 bg-purple-500/10'
+                                      : 'border-slate-500/50 text-slate-400 bg-slate-500/10'
+                                }
+                              >
+                                {coupon.couponType.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-emerald-400 font-medium">
+                              {formatCurrency(Number(coupon.discountAmount))}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  coupon.status === 'ACTIVE'
+                                    ? 'border-green-500/50 text-green-400 bg-green-500/10'
+                                    : coupon.status === 'REDEEMED'
+                                      ? 'border-blue-500/50 text-blue-400 bg-blue-500/10'
+                                      : 'border-red-500/50 text-red-400 bg-red-500/10'
+                                }
+                              >
+                                {coupon.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-slate-300 hidden lg:table-cell">
+                              {formatDate(coupon.createdAt)}
+                            </TableCell>
+                            <TableCell className="text-slate-300 hidden lg:table-cell">
+                              {coupon.expiresAt ? formatDate(coupon.expiresAt) : '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {couponPagination && couponPagination.pages > 1 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700">
+                    <div className="text-sm text-slate-400">
+                      Showing {((couponPagination.page - 1) * couponPagination.limit) + 1} to{' '}
+                      {Math.min(couponPagination.page * couponPagination.limit, couponPagination.total)} of{' '}
+                      {couponPagination.total} coupons
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={couponPagination.page <= 1}
+                        onClick={() => setCouponPage(couponPage - 1)}
+                        className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm text-slate-300">
+                        Page {couponPagination.page} of {couponPagination.pages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={couponPagination.page >= couponPagination.pages}
+                        onClick={() => setCouponPage(couponPage + 1)}
+                        className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -1577,6 +1957,40 @@ export default function CustomerManagement() {
                 </div>
               </div>
 
+              {/* Coupon History */}
+              {customerCoupons.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Ticket className="h-4 w-4 text-amber-400" />
+                    <span className="text-sm font-medium text-white">Coupons ({customerCoupons.length})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {customerCoupons.map((c) => (
+                      <div
+                        key={c.id}
+                        className="bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors"
+                        onClick={() => { setSelectedCoupon(c); setCouponDetailOpen(true); }}
+                      >
+                        <span className="font-mono text-xs text-amber-400">{c.code}</span>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${
+                            c.status === 'ACTIVE'
+                              ? 'border-green-500/50 text-green-400 bg-green-500/10'
+                              : c.status === 'REDEEMED'
+                                ? 'border-blue-500/50 text-blue-400 bg-blue-500/10'
+                                : 'border-red-500/50 text-red-400 bg-red-500/10'
+                          }`}
+                        >
+                          {c.status}
+                        </Badge>
+                        <span className="text-xs text-emerald-400">{formatCurrency(Number(c.discountAmount))}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {bookingSourceFilter !== 'ALL' && (
                 <div className="flex items-center gap-2 mb-3 text-sm">
                   <span className="text-slate-400">Filtered by:</span>
@@ -1706,12 +2120,184 @@ export default function CustomerManagement() {
               Edit Customer
             </Button>
             <Button
+              variant="outline"
+              onClick={async () => {
+                // Load coupon types and open send coupon modal
+                try {
+                  const res = await fetch(`${getApiBase()}/api/coupons/types`, { credentials: 'include' });
+                  if (res.ok) {
+                    const types = await res.json();
+                    setCouponTypes(types);
+                    if (types.length > 0) {
+                      setCouponForm({
+                        couponTypeId: types[0].id,
+                        description: types[0].defaultDescription,
+                        discountAmount: String(Number(types[0].defaultAmount).toFixed(2)),
+                        expiresAt: '',
+                      });
+                    }
+                  }
+                } catch {}
+                setCouponSuccess('');
+                setSendCouponModalOpen(true);
+              }}
+              className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10"
+            >
+              <Gift className="h-4 w-4 mr-2" />
+              Send Coupon
+            </Button>
+            <Button
               onClick={() => setDetailModalOpen(false)}
               className="bg-amber-500 hover:bg-amber-600 text-black"
             >
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Coupon Modal */}
+      <Dialog open={sendCouponModalOpen} onOpenChange={setSendCouponModalOpen}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-amber-400" />
+              Send Coupon
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Send a coupon to <span className="text-white font-medium">{selectedCustomer?.name}</span>
+              {selectedCustomer?.email ? ` (${selectedCustomer.email})` : ' — no email on file'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {couponSuccess ? (
+            <div className="py-6 text-center space-y-3">
+              <p className="text-4xl">🎉</p>
+              <p className="text-emerald-400 font-semibold">{couponSuccess}</p>
+              <Button onClick={() => setSendCouponModalOpen(false)} className="bg-amber-500 hover:bg-amber-600 text-black mt-2">
+                Done
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Coupon Type */}
+              <div className="space-y-2">
+                <Label className="text-slate-300">Type</Label>
+                <Select
+                  value={couponForm.couponTypeId}
+                  onValueChange={(val) => {
+                    const type = couponTypes.find(t => t.id === val);
+                    setCouponForm({
+                      couponTypeId: val,
+                      description: type?.defaultDescription || '',
+                      discountAmount: type ? String(Number(type.defaultAmount).toFixed(2)) : '',
+                      expiresAt: couponForm.expiresAt,
+                    });
+                  }}
+                >
+                  <SelectTrigger className="bg-slate-900 border-slate-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-600">
+                    {couponTypes.map(t => (
+                      <SelectItem key={t.id} value={t.id} className="text-white hover:bg-slate-700">
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label className="text-slate-300">Description</Label>
+                <Input
+                  value={couponForm.description}
+                  onChange={e => setCouponForm(f => ({ ...f, description: e.target.value }))}
+                  className="bg-slate-900 border-slate-600 text-white"
+                />
+              </div>
+
+              {/* Amount */}
+              <div className="space-y-2">
+                <Label className="text-slate-300">Discount Amount ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={couponForm.discountAmount}
+                  onChange={e => setCouponForm(f => ({ ...f, discountAmount: e.target.value }))}
+                  className="bg-slate-900 border-slate-600 text-white"
+                />
+              </div>
+
+              {/* Expiry (optional) */}
+              <div className="space-y-2">
+                <Label className="text-slate-300">Expiry Date <span className="text-slate-500">(optional)</span></Label>
+                <Input
+                  type="date"
+                  value={couponForm.expiresAt}
+                  onChange={e => setCouponForm(f => ({ ...f, expiresAt: e.target.value }))}
+                  className="bg-slate-900 border-slate-600 text-white"
+                />
+              </div>
+
+              {!selectedCustomer?.email && (
+                <p className="text-xs text-amber-400/80 bg-amber-500/10 rounded-lg p-2">
+                  ⚠️ This customer has no email. The coupon will be created but no email will be sent.
+                </p>
+              )}
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setSendCouponModalOpen(false)}
+                  className="border-slate-600 text-slate-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={sendingCoupon || !couponForm.couponTypeId || !couponForm.description}
+                  onClick={async () => {
+                    if (!selectedCustomer) return;
+                    setSendingCoupon(true);
+                    try {
+                      const res = await fetch(`${getApiBase()}/api/coupons`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          userId: selectedCustomer.id,
+                          couponTypeId: couponForm.couponTypeId,
+                          description: couponForm.description,
+                          discountAmount: Number(couponForm.discountAmount),
+                          expiresAt: couponForm.expiresAt || null,
+                        }),
+                      });
+                      if (!res.ok) {
+                        const data = await res.json();
+                        throw new Error(data.error || 'Failed to create coupon');
+                      }
+                      const coupon = await res.json();
+                      setCouponSuccess(`Coupon ${coupon.code} created${selectedCustomer.email ? ' and emailed' : ''}!`);
+                      toast({ title: 'Coupon sent', description: `Code: ${coupon.code}` });
+                    } catch (err: any) {
+                      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+                    } finally {
+                      setSendingCoupon(false);
+                    }
+                  }}
+                  className="bg-amber-500 hover:bg-amber-600 text-black"
+                >
+                  {sendingCoupon ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                  ) : (
+                    <><Send className="h-4 w-4 mr-2" />Send Coupon</>
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -1868,6 +2454,263 @@ export default function CustomerManagement() {
           }
         }}
       />
+
+      {/* Coupon Detail Modal */}
+      <Dialog open={couponDetailOpen} onOpenChange={setCouponDetailOpen}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ticket className="h-5 w-5 text-amber-400" />
+              Coupon Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedCoupon && (
+            <div className="space-y-4">
+              {/* Code + Status */}
+              <div className="bg-slate-700/50 rounded-lg p-4 flex items-center justify-between">
+                <div>
+                  <div className="font-mono text-2xl font-bold text-amber-400">{selectedCoupon.code}</div>
+                  <div className="text-sm text-slate-400 mt-1">{selectedCoupon.description}</div>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={`text-sm px-3 py-1 ${
+                    selectedCoupon.status === 'ACTIVE'
+                      ? 'border-green-500/50 text-green-400 bg-green-500/10'
+                      : selectedCoupon.status === 'REDEEMED'
+                        ? 'border-blue-500/50 text-blue-400 bg-blue-500/10'
+                        : 'border-red-500/50 text-red-400 bg-red-500/10'
+                  }`}
+                >
+                  {selectedCoupon.status}
+                </Badge>
+              </div>
+
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-700/30 rounded-lg p-3">
+                  <div className="text-xs text-slate-400 uppercase">Type</div>
+                  <div className="text-white font-medium mt-1">
+                    <Badge
+                      variant="outline"
+                      className={
+                        selectedCoupon.couponType.name === 'BIRTHDAY'
+                          ? 'border-pink-500/50 text-pink-400 bg-pink-500/10'
+                          : selectedCoupon.couponType.name === 'LOYALTY'
+                            ? 'border-purple-500/50 text-purple-400 bg-purple-500/10'
+                            : 'border-slate-500/50 text-slate-400 bg-slate-500/10'
+                      }
+                    >
+                      {selectedCoupon.couponType.label}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="bg-slate-700/30 rounded-lg p-3">
+                  <div className="text-xs text-slate-400 uppercase">Amount</div>
+                  <div className="text-emerald-400 font-bold text-lg mt-1">
+                    {formatCurrency(Number(selectedCoupon.discountAmount))}
+                  </div>
+                </div>
+                <div className="bg-slate-700/30 rounded-lg p-3">
+                  <div className="text-xs text-slate-400 uppercase">Customer</div>
+                  <div className="text-white font-medium mt-1">{selectedCoupon.user.name}</div>
+                  <div className="text-xs text-slate-400">{selectedCoupon.user.email || formatPhone(selectedCoupon.user.phone)}</div>
+                </div>
+                <div className="bg-slate-700/30 rounded-lg p-3">
+                  <div className="text-xs text-slate-400 uppercase">Created</div>
+                  <div className="text-white mt-1">{formatDate(selectedCoupon.createdAt)}</div>
+                </div>
+                {selectedCoupon.expiresAt && (
+                  <div className="bg-slate-700/30 rounded-lg p-3">
+                    <div className="text-xs text-slate-400 uppercase">Expires</div>
+                    <div className="text-white mt-1">{formatDate(selectedCoupon.expiresAt)}</div>
+                  </div>
+                )}
+                {selectedCoupon.redeemedAt && (
+                  <div className="bg-slate-700/30 rounded-lg p-3">
+                    <div className="text-xs text-slate-400 uppercase">Redeemed</div>
+                    <div className="text-white mt-1">{formatDate(selectedCoupon.redeemedAt)}</div>
+                    {selectedCoupon.redeemedSeatNumber != null && (
+                      <div className="text-xs text-slate-400">Seat {selectedCoupon.redeemedSeatNumber}</div>
+                    )}
+                  </div>
+                )}
+                {selectedCoupon.redeemedBooking && (
+                  <div className="bg-slate-700/30 rounded-lg p-3">
+                    <div className="text-xs text-slate-400 uppercase">Booking</div>
+                    <div className="text-white mt-1 text-xs font-mono">
+                      {selectedCoupon.redeemedBooking.id.slice(0, 8)}...
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {formatDate(selectedCoupon.redeemedBooking.startTime)}
+                    </div>
+                  </div>
+                )}
+                {selectedCoupon.milestone && (
+                  <div className="bg-slate-700/30 rounded-lg p-3">
+                    <div className="text-xs text-slate-400 uppercase">Milestone</div>
+                    <div className="text-purple-400 font-medium mt-1">{selectedCoupon.milestone} bookings</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Public Page Link */}
+              <div className="flex items-center gap-2 text-sm">
+                <ExternalLink className="h-3 w-3 text-slate-400" />
+                <a
+                  href={`/coupon/${selectedCoupon.code}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-400 hover:text-amber-300 underline"
+                >
+                  View public coupon page
+                </a>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            {selectedCoupon?.status === 'ACTIVE' && (
+              <Button
+                variant="outline"
+                onClick={() => selectedCoupon && handleRevokeCoupon(selectedCoupon.id)}
+                disabled={revoking}
+                className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+              >
+                {revoking ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Revoking...</>
+                ) : (
+                  <><Ban className="h-4 w-4 mr-2" />Revoke Coupon</>
+                )}
+              </Button>
+            )}
+            <Button
+              onClick={() => setCouponDetailOpen(false)}
+              className="bg-amber-500 hover:bg-amber-600 text-black"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Coupon Type Management Modal */}
+      <Dialog open={typeManagementOpen} onOpenChange={setTypeManagementOpen}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-amber-400" />
+              Coupon Types
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Manage coupon types for birthday, loyalty, and custom rewards
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 max-h-[40vh] overflow-auto">
+            {allCouponTypes.map((t) => (
+              <div key={t.id} className="bg-slate-700/50 rounded-lg p-3 flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-white">{t.label}</div>
+                  <div className="text-xs text-slate-400">{t.name} · Default: {formatCurrency(Number(t.defaultAmount))}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">{t.defaultDescription}</div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleToggleCouponType(t.id, t.active)}
+                  className={t.active ? 'text-green-400 hover:text-green-300' : 'text-red-400 hover:text-red-300'}
+                  title={t.active ? 'Click to deactivate' : 'Click to activate'}
+                >
+                  {t.active ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add new type form */}
+          {typeFormOpen ? (
+            <div className="border-t border-slate-700 pt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-slate-300 text-xs">Name (key)</Label>
+                  <Input
+                    value={typeForm.name}
+                    onChange={e => setTypeForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="e.g. REFERRAL"
+                    className="bg-slate-900 border-slate-600 text-white text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-slate-300 text-xs">Display Label</Label>
+                  <Input
+                    value={typeForm.label}
+                    onChange={e => setTypeForm(f => ({ ...f, label: e.target.value }))}
+                    placeholder="e.g. Referral Reward"
+                    className="bg-slate-900 border-slate-600 text-white text-sm"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-slate-300 text-xs">Default Description</Label>
+                <Input
+                  value={typeForm.defaultDescription}
+                  onChange={e => setTypeForm(f => ({ ...f, defaultDescription: e.target.value }))}
+                  placeholder="e.g. Thank you for your referral!"
+                  className="bg-slate-900 border-slate-600 text-white text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-slate-300 text-xs">Default Amount ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={typeForm.defaultAmount}
+                  onChange={e => setTypeForm(f => ({ ...f, defaultAmount: e.target.value }))}
+                  placeholder="35.00"
+                  className="bg-slate-900 border-slate-600 text-white text-sm w-32"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setTypeFormOpen(false); setTypeForm({ name: '', label: '', defaultDescription: '', defaultAmount: '' }); }}
+                  className="border-slate-600 text-slate-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleCreateCouponType}
+                  disabled={typeFormSubmitting}
+                  className="bg-amber-500 hover:bg-amber-600 text-black"
+                >
+                  {typeFormSubmitting ? 'Creating...' : 'Create Type'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setTypeFormOpen(true)}
+              className="border-dashed border-slate-600 text-slate-300 hover:bg-slate-700 w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Type
+            </Button>
+          )}
+
+          <DialogFooter>
+            <Button
+              onClick={() => setTypeManagementOpen(false)}
+              className="bg-amber-500 hover:bg-amber-600 text-black"
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

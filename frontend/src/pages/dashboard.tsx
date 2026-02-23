@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
 import { AdminHeader } from '@/components/AdminHeader'
 import { toast } from "@/hooks/use-toast"
+import { Ticket } from 'lucide-react'
 import POSDashboard from "./pos/dashboard"
 
 const getStatusBadge = (status: 'BOOKED'|'COMPLETED'|'CANCELLED') => {
@@ -36,20 +37,34 @@ type ApiBooking = {
 
 type ApiRoom = { id: string; name: string; capacity: number };
 
+type ApiCoupon = {
+  id: string;
+  code: string;
+  description: string;
+  discountAmount: string;
+  status: 'ACTIVE' | 'REDEEMED' | 'EXPIRED';
+  expiresAt: string | null;
+  redeemedAt: string | null;
+  createdAt: string;
+  couponType: { name: string; label: string };
+};
+
 const CustomerDashboard = () => {
   const { user } = useAuth()
   const [bookings, setBookings] = React.useState<ApiBooking[]>([])
   const [roomsById, setRoomsById] = React.useState<Record<string, ApiRoom>>({})
   const [loading, setLoading] = React.useState(true)
   const [busyIds, setBusyIds] = React.useState<Record<string, boolean>>({})
+  const [myCoupons, setMyCoupons] = React.useState<ApiCoupon[]>([])
 
   React.useEffect(() => {
     const load = async () => {
       try {
         const apiBase = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : 'http://localhost:8080';
-        const [mineRes, roomsRes] = await Promise.all([
+        const [mineRes, roomsRes, couponRes] = await Promise.all([
           fetch(`${apiBase}/api/bookings/mine`, { credentials: 'include' }),
           fetch(`${apiBase}/api/bookings/rooms`, { credentials: 'include' }),
+          fetch(`${apiBase}/api/coupons/my`, { credentials: 'include' }),
         ])
         if (mineRes.ok) {
           const data = await mineRes.json()
@@ -66,6 +81,10 @@ const CustomerDashboard = () => {
           setRoomsById(Object.fromEntries(rooms.map(r => [r.id, r])))
         } else {
           setRoomsById({})
+        }
+        if (couponRes.ok) {
+          const data = await couponRes.json()
+          setMyCoupons(Array.isArray(data.coupons) ? data.coupons : [])
         }
       } finally {
         setLoading(false)
@@ -157,6 +176,69 @@ const CustomerDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* My Coupons */}
+        {myCoupons.length > 0 && (
+          <Card className="bg-slate-800/50 border-slate-700 mb-8">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white flex items-center gap-2">
+                <Ticket className="h-5 w-5 text-amber-400" />
+                My Coupons
+              </CardTitle>
+              <CardDescription className="text-slate-400">Your reward coupons</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {myCoupons.map((coupon) => (
+                  <div
+                    key={coupon.id}
+                    className={`border rounded-lg p-4 transition-colors ${
+                      coupon.status === 'ACTIVE'
+                        ? 'border-amber-500/50 bg-amber-500/5 hover:bg-amber-500/10'
+                        : 'border-slate-700 bg-slate-800/30 opacity-60'
+                    }`}
+                    onClick={() => {
+                      if (coupon.status === 'ACTIVE') {
+                        window.open(`/coupon/${coupon.code}`, '_blank');
+                      }
+                    }}
+                    style={{ cursor: coupon.status === 'ACTIVE' ? 'pointer' : 'default' }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-mono text-amber-400 font-bold">{coupon.code}</span>
+                      <Badge
+                        className={
+                          coupon.status === 'ACTIVE'
+                            ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                            : coupon.status === 'REDEEMED'
+                              ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                              : 'bg-red-500/20 text-red-400 border-red-500/30'
+                        }
+                        variant="outline"
+                      >
+                        {coupon.status}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-slate-300 mb-1">{coupon.description}</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold text-emerald-400">
+                        ${Number(coupon.discountAmount).toFixed(2)}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {coupon.couponType.label}
+                      </span>
+                    </div>
+                    {coupon.expiresAt && coupon.status === 'ACTIVE' && (
+                      <div className="text-xs text-slate-400 mt-2">
+                        Expires: {new Date(coupon.expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Halifax' })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Recent Bookings */}
         <Card className="bg-slate-800/50 border-slate-700">

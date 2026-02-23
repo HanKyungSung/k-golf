@@ -11,6 +11,7 @@ import SignUpPage from './pages/signup'
 import VerifyPage from './pages/verify'
 import ForgotPasswordPage from './pages/forgot-password'
 import ResetPasswordPage from './pages/reset-password'
+import CouponPage from './pages/coupon'
 import POSRoutes from './pages/pos'
 import ReceiptTestPage from './pages/receipt-test'
 import { AuthProvider } from '../hooks/use-auth'
@@ -41,6 +42,7 @@ function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/receipt-test" element={<ReceiptTestPage />} />
+        <Route path="/coupon/:code" element={<CouponPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster />

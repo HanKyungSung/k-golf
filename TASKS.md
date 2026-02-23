@@ -96,7 +96,26 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - [x] Includes business phone (902) 270-2259 and email
   - [x] Professional styling with Tailwind/shadcn
 - Ask no cleaning time between bookings.
-- The coupon. like every 30 times visit, free hours etc.
+- [x] ~~The coupon. like every 30 times visit, free hours etc.~~ **Coupon System Implemented**
+  - [x] Prisma models: CouponType + Coupon (with CouponStatus enum)
+  - [x] 3 seeded types: BIRTHDAY, LOYALTY, CUSTOM (admin can add more from UI)
+  - [x] Daily cron scheduler (8 AM Atlantic): birthday + loyalty (10 bookings) auto-coupons
+  - [x] Branded email with inline QR code (base64 PNG via cid: attachment)
+  - [x] Public coupon status page at `/coupon/:code` (no auth, no PII)
+  - [x] Full API: validate, redeem, create, list, types CRUD
+  - [x] Admin "Send Coupon" button in customer detail modal
+  - [x] POS "Apply Coupon" button with manual code entry + validate → seat selection → redeem
+  - [x] Redemption creates discount Order ($35 flat, negative price) in transaction
+  - [x] **Coupon Management Phase 2:**
+    - [x] Admin "Coupons" tab (3rd tab) with searchable table, status/type filters, pagination
+    - [x] Coupon detail card on row click (code, status, type, amount, customer, dates, booking, milestone)
+    - [x] Revoke coupon (admin) — expires active coupons via PATCH endpoint
+    - [x] Coupon type management dialog (view/create/toggle active status)
+    - [x] Customer detail modal: coupon history section (clickable badges)
+    - [x] Customer dashboard: "My Coupons" section with card grid (active/redeemed/expired)
+    - [x] `GET /api/coupons/my` endpoint for customer's own coupons
+    - [x] `PATCH /api/coupons/:id/revoke` endpoint for admin
+    - [x] `GET /api/coupons?userId=` filter for per-customer coupon lookup
 - When pay button clicks
   - per seat payment closure 
 - User signup
@@ -864,7 +883,7 @@ k-golf.inviteyou.ca (Legacy)  → Nginx → Docker:8082 → K-Golf App (backward
   - [ ] Reconciliation report (expected vs actual)
   - [ ] Payment method breakdown (Card vs Cash)
   - [ ] Employee/staff performance metrics (sales per staff)
-  - [ ] Discount/coupon tracking
+  - [x] Discount/coupon tracking
   - [ ] Period-based reports (daily, weekly, monthly, custom date range)
 - **Database Considerations:**
   - [ ] Ensure all transactions logged with proper timestamps
@@ -903,7 +922,7 @@ k-golf.inviteyou.ca (Legacy)  → Nginx → Docker:8082 → K-Golf App (backward
   - [ ] Add to calendar (Google Calendar, iCal export)
   - [ ] Group booking support (multiple rooms)
   - [ ] Waitlist if no availability
-  - [ ] Promo code/coupon application
+  - [x] Promo code/coupon application
   - [ ] Special requests/notes field
 - **Impact:** MEDIUM - Improves customer experience and reduces phone bookings
 - **Estimated Time:** 3-5 hours (per feature)
@@ -929,7 +948,7 @@ k-golf.inviteyou.ca (Legacy)  → Nginx → Docker:8082 → K-Golf App (backward
 - **Integration Points:**
   - [ ] Link to customer booking page for new bookings
   - [ ] Link to profile/settings page
-  - [ ] Display loyalty rewards/coupons
+  - [x] Display loyalty rewards/coupons
   - [ ] Show upcoming reminders
 - **Impact:** MEDIUM - Enhances customer experience and retention
 - **Estimated Time:** 4-6 hours
@@ -2573,7 +2592,7 @@ This feature will be implemented after the web POS is stable and in use. See `/P
 [ ] Order history for completed bookings
 [ ] Kitchen Display System (KDS) integration
 [ ] Analytics: Popular items, revenue per seat
-[ ] Discounts/Promotions and coupon codes
+[x] Discounts/Promotions and coupon codes
 [ ] Multi-currency support
 [ ] SMS/Email receipts
 [ ] Inventory management

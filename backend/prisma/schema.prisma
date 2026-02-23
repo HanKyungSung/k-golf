@@ -38,6 +38,7 @@ model User {
   sessions               Session[]
   emailVerificationToken EmailVerificationToken?
   passwordResetToken     PasswordResetToken?
+  coupons                Coupon[]
   settingsUpdates        Setting[]
   registeredByUser       User?                   @relation("UserRegistrations", fields: [registeredBy], references: [id], onDelete: SetNull)
   usersRegistered        User[]                  @relation("UserRegistrations") // Users this admin registered
@@ -87,6 +88,7 @@ model Booking {
   updatedAt       DateTime  @updatedAt @db.Timestamptz
   invoices        Invoice[]
   orders          Order[]
+  redeemedCoupons Coupon[]
 
   @@index([roomId, startTime])
   @@index([userId, startTime])
@@ -244,4 +246,44 @@ model MenuItem {
 
   @@index([category, sortOrder])
   @@index([available])
+}
+
+enum CouponStatus {
+  ACTIVE
+  REDEEMED
+  EXPIRED
+}
+
+model CouponType {
+  id                 String   @id @default(uuid())
+  name               String   @unique  // e.g. "BIRTHDAY", "LOYALTY", "CUSTOM"
+  label              String              // e.g. "Birthday", "Loyalty Reward"
+  defaultDescription String              // e.g. "1 Hour Free — Happy Birthday!"
+  defaultAmount      Decimal  @db.Decimal(10, 2) // e.g. 35.00
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now()) @db.Timestamptz
+  coupons            Coupon[]
+}
+
+model Coupon {
+  id                 String       @id @default(uuid())
+  code               String       @unique  // e.g. "KGOLF-A3X9"
+  user               User         @relation(fields: [userId], references: [id])
+  userId             String
+  couponType         CouponType   @relation(fields: [couponTypeId], references: [id])
+  couponTypeId       String
+  description        String       // Copied from type default, editable per coupon
+  discountAmount     Decimal      @db.Decimal(10, 2)
+  status             CouponStatus @default(ACTIVE)
+  expiresAt          DateTime?    @db.Timestamptz  // null = never expires
+  redeemedAt         DateTime?    @db.Timestamptz
+  redeemedBooking    Booking?     @relation(fields: [redeemedBookingId], references: [id])
+  redeemedBookingId  String?
+  redeemedSeatNumber Int?
+  milestone          Int?         // e.g. 10 = loyalty milestone
+  createdAt          DateTime     @default(now()) @db.Timestamptz
+
+  @@index([userId])
+  @@index([status])
+  @@index([couponTypeId])
 }

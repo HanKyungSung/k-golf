@@ -14,8 +14,10 @@ import menuRouter from './routes/menu';
 import receiptRouter from './routes/receipt';
 import { printRouter } from './routes/print';
 import contactRouter from './routes/contact';
+import couponsRouter from './routes/coupons';
 import cookieParser from 'cookie-parser';
 import { WebSocketManager } from './services/websocket-manager';
+import { startCouponScheduler } from './jobs/couponScheduler';
 
 const app = express();
 const logger = pino({ transport: { target: 'pino-pretty' } });
@@ -39,6 +41,7 @@ app.use('/api/menu', menuRouter);
 app.use('/api/receipts', receiptRouter);
 app.use('/api/print', printRouter);
 app.use('/api/contact', contactRouter);
+app.use('/api/coupons', couponsRouter);
 
 // Serve frontend static files (after API routes to avoid conflicts)
 // With rootDir='.', structure is: dist/src/server.js and dist/public/
@@ -79,6 +82,9 @@ server.listen(port, () => {
   logger.info(`Backend listening on port ${port}`);
   logger.info(`Serving static files from ${publicPath}`);
   logger.info(`WebSocket available for print servers`);
+
+  // Start daily coupon scheduler
+  startCouponScheduler();
 });
 
 // Graceful shutdown
