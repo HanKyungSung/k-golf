@@ -116,6 +116,11 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
     - [x] `GET /api/coupons/my` endpoint for customer's own coupons
     - [x] `PATCH /api/coupons/:id/revoke` endpoint for admin
     - [x] `GET /api/coupons?userId=` filter for per-customer coupon lookup
+    - [x] `PATCH /api/coupons/:id/status` endpoint — admin can change status (ACTIVE/REDEEMED/EXPIRED)
+    - [x] Status dropdown in coupon detail modal replaces revoke-only button
+    - [x] Clears redeemed fields when reverting coupon to ACTIVE
+    - [x] Deleting a coupon discount order reverts coupon back to ACTIVE automatically
+    - [x] Seeded 5 default coupon types in production (birthday, loyalty, referral, seasonal, custom)
 - When pay button clicks
   - per seat payment closure 
 - User signup
@@ -142,6 +147,20 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
   - Set up Gmail "Send As" with k-golf.ca SMTP credentials
   - Remove "via gmail.com" notice from sent emails
   - Alternative: Consider using SendGrid (already integrated in DNS)
+
+## 🎉 Recently Completed (2026-02-23)
+- [x] **Coupon Status Management** `01a7416` - Admin can change coupon status from detail modal
+  - [x] New `PATCH /api/coupons/:id/status` endpoint (ACTIVE/REDEEMED/EXPIRED)
+  - [x] Status dropdown replaces revoke-only button in coupon detail
+  - [x] Reverting to ACTIVE clears redeemedAt/redeemedBookingId/redeemedSeatNumber
+- [x] **Coupon Revert on Order Delete** `00a743d` - Deleting coupon discount order reverts coupon to ACTIVE
+  - [x] Backend detects coupon orders (🎟️ prefix + negative price + FLAT discount)
+  - [x] Finds matching REDEEMED coupon and resets status/fields
+- [x] **Fix Scroll Jump in Booking Detail Modal** `c9d498c` - Card/Cash buttons no longer cause scroll jump
+  - [x] Added `scrollContainerRef` to target modal scroll container instead of window
+  - [x] Replaced Radix RadioGroup with plain div onClick (eliminates roving focus scroll)
+- [x] **Seed Coupon Types in Production** - Populated CouponType table with 5 defaults
+  - [x] birthday ($10), loyalty ($15), referral ($10), seasonal ($20), custom ($5)
 
 ## 🎉 Recently Completed (2026-02-20)
 - [x] **Clickable Booking Rows in Customer Detail** `fb1d8a9` - Open POS booking detail from customer card
