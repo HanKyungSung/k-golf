@@ -190,14 +190,17 @@ router.get('/revenue-history', async (req, res) => {
       const monthEnd = range.end;
 
       // Get revenue, booking counts, and payment method breakdown for this month
-      const [revenueData, bookingStats, paymentBreakdown] = await Promise.all([
-        prisma.booking.aggregate({
+      // Revenue = sum of paid invoices from COMPLETED bookings (actual money collected for finished sessions)
+      const [revenueData, bookingStats, paymentBreakdown, completedBookingCount] = await Promise.all([
+        prisma.invoice.aggregate({
           where: {
-            startTime: { gte: monthStart, lte: monthEnd },
-            bookingStatus: { not: 'CANCELLED' }
+            status: 'PAID',
+            booking: {
+              startTime: { gte: monthStart, lte: monthEnd },
+              bookingStatus: 'COMPLETED'
+            }
           },
-          _sum: { price: true },
-          _count: true
+          _sum: { totalAmount: true },
         }),
         prisma.booking.groupBy({
           by: ['bookingStatus'],
@@ -212,15 +215,21 @@ router.get('/revenue-history', async (req, res) => {
             status: 'PAID',
             booking: {
               startTime: { gte: monthStart, lte: monthEnd },
-              bookingStatus: { not: 'CANCELLED' }
+              bookingStatus: 'COMPLETED'
             }
           },
           _sum: { totalAmount: true }
+        }),
+        prisma.booking.count({
+          where: {
+            startTime: { gte: monthStart, lte: monthEnd },
+            bookingStatus: 'COMPLETED'
+          }
         })
       ]);
 
-      const revenue = Number(revenueData._sum.price || 0);
-      const bookingCount = revenueData._count || 0;
+      const revenue = Number(revenueData._sum.totalAmount || 0);
+      const bookingCount = completedBookingCount;
       const completedCount = bookingStats.find(s => s.bookingStatus === 'COMPLETED')?._count || 0;
       const cancelledCount = bookingStats.find(s => s.bookingStatus === 'CANCELLED')?._count || 0;
       const cashRevenue = Number(paymentBreakdown.find(p => p.paymentMethod === 'CASH')?._sum.totalAmount || 0);
