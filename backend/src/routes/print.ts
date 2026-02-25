@@ -82,7 +82,7 @@ router.post('/receipt', requireAuth, async (req, res) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid request', details: error.errors });
     }
-    console.error('Print receipt error:', error);
+    req.log.error({ err: error }, 'Print receipt failed');
     res.status(500).json({ error: 'Failed to send print job' });
   }
 });
@@ -99,7 +99,7 @@ router.get('/status', requireAuth, async (req, res) => {
       printerCount: wsManager.getConnectedCount()
     });
   } catch (error) {
-    console.error('Print status error:', error);
+    req.log.error({ err: error }, 'Print status check failed');
     res.status(500).json({ error: 'Failed to get print status' });
   }
 });
@@ -147,7 +147,7 @@ router.post('/test', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Print test error:', error);
+    req.log.error({ err: error }, 'Print test failed');
     res.status(500).json({ error: 'Failed to send test print job' });
   }
 });

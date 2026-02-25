@@ -41,7 +41,7 @@ router.get('/items', async (req: Request, res: Response) => {
 
 		res.json({ success: true, items });
 	} catch (error: any) {
-		console.error('[MENU API] Error fetching menu items:', error);
+		req.log.error({ err: error }, 'Fetch menu items failed');
 		res.status(500).json({ 
 			success: false, 
 			error: 'Failed to fetch menu items',
@@ -84,7 +84,7 @@ router.get('/items/:id', async (req: Request, res: Response) => {
 
 		res.json({ success: true, item });
 	} catch (error: any) {
-		console.error('[MENU API] Error fetching menu item:', error);
+		req.log.error({ err: error, menuItemId: req.params.id }, 'Fetch menu item failed');
 		res.status(500).json({ 
 			success: false, 
 			error: 'Failed to fetch menu item',
@@ -137,7 +137,7 @@ router.post('/items', requireAuth, requireAdmin, async (req: Request, res: Respo
 
 		res.status(201).json({ success: true, item });
 	} catch (error: any) {
-		console.error('[MENU API] Error creating menu item:', error);
+		req.log.error({ err: error }, 'Create menu item failed');
 		res.status(500).json({
 			success: false,
 			error: 'Failed to create menu item',
@@ -185,7 +185,7 @@ router.patch('/items/:id', requireAuth, requireAdmin, async (req: Request, res: 
 
 		res.json({ success: true, item });
 	} catch (error: any) {
-		console.error('[MENU API] Error updating menu item:', error);
+		req.log.error({ err: error, menuItemId: req.params.id }, 'Update menu item failed');
 		
 		if (error.code === 'P2025') {
 			return res.status(404).json({
@@ -216,7 +216,7 @@ router.delete('/items/:id', requireAuth, requireAdmin, async (req: Request, res:
 
 		res.json({ success: true, message: 'Menu item deleted successfully' });
 	} catch (error: any) {
-		console.error('[MENU API] Error deleting menu item:', error);
+		req.log.error({ err: error, menuItemId: req.params.id }, 'Delete menu item failed');
 
 		if (error.code === 'P2025') {
 			return res.status(404).json({

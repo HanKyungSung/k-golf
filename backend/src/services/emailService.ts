@@ -1,6 +1,9 @@
 import nodemailer from 'nodemailer';
 import QRCode from 'qrcode';
 import type { ReceiptData } from '../repositories/receiptRepo';
+import logger from '../lib/logger';
+
+const log = logger.child({ module: 'email' });
 
 export interface VerificationEmailParams {
   to: string;
@@ -41,7 +44,7 @@ function getTransport() {
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
   if (!user || !pass) {
-    console.warn('[email] Missing GMAIL_USER/GMAIL_APP_PASSWORD; logging emails only.');
+    log.warn('Missing GMAIL_USER/GMAIL_APP_PASSWORD; logging emails only.');
     return null;
   }
   cachedTransport = nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
@@ -58,7 +61,7 @@ export async function sendVerificationEmail({ to, token, expiresAt, email }: Ver
   const html = `<!doctype html><html><body style="font-family:system-ui,sans-serif"><h2>K one Golf Sign-In</h2><p>Click the button below to sign in. Expires in 15 minutes.</p><p><a href="${link}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px">Verify & Sign In</a></p><p style="font-size:12px;color:#555">If the button doesn't work, use this URL:<br>${link}</p></body></html>`;
   const transport = getTransport();
   if (!transport) {
-    console.log(`[email:dev-log] to=${to} token=${token} link=${link}`);
+    log.info({ to, link }, 'Dev-log: verification email (no transport)');
     return;
   }
   await transport.sendMail({ from: process.env.EMAIL_FROM || 'K one Golf <no-reply@konegolf.ca>', to, subject, text, html });
@@ -79,7 +82,7 @@ export async function sendPasswordResetEmail({ to, email, token, expiresAt }: Pa
   const html = `<!doctype html><html><body style="font-family:system-ui,sans-serif;background:#f8fafc;padding:20px"><div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1)"><div style="background:linear-gradient(135deg,#f59e0b 0%,#eab308 100%);padding:24px;text-align:center"><h1 style="margin:0;color:#fff;font-size:24px;font-weight:700">K ONE GOLF</h1><p style="margin:4px 0 0;color:rgba(255,255,255,0.9);font-size:13px">Password Reset</p></div><div style="padding:32px 24px"><p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 20px">We received a request to reset your password. Click the button below to create a new password. This link expires in 15 minutes.</p><p style="text-align:center;margin:24px 0"><a href="${link}" style="display:inline-block;padding:12px 32px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">Reset Password</a></p><p style="font-size:12px;color:#64748b;margin:20px 0 0;line-height:1.5">If the button doesn't work, copy and paste this URL into your browser:<br><a href="${link}" style="color:#2563eb;word-break:break-all">${link}</a></p><p style="font-size:12px;color:#94a3b8;margin:16px 0 0">If you didn't request a password reset, you can safely ignore this email.</p></div></div></body></html>`;
   const transport = getTransport();
   if (!transport) {
-    console.log(`[email:dev-log] password-reset to=${to} token=${token} link=${link}`);
+    log.info({ to, link }, 'Dev-log: password reset email (no transport)');
     return;
   }
   await transport.sendMail({ from: process.env.EMAIL_FROM || 'K one Golf <no-reply@konegolf.ca>', to, subject, text, html });
@@ -281,8 +284,7 @@ ${receipt.business.phone}
 
   const transport = getTransport();
   if (!transport) {
-    console.log(`[email:dev-log] Receipt email to=${to} receipt=${receipt.receiptNumber}`);
-    console.log(text);
+    log.info({ to, receiptNumber: receipt.receiptNumber }, 'Dev-log: receipt email (no transport)');
     return;
   }
 
@@ -534,9 +536,7 @@ Hours: 10:00 AM - 12:00 AM Daily
 
   const transport = getTransport();
   if (!transport) {
-    console.log(`[email:dev-log] Booking confirmation to=${params.to}`);
-    console.log(text);
-    console.log('ICS file would be attached');
+    log.info({ to: params.to }, 'Dev-log: booking confirmation (no transport)');
     return;
   }
 
@@ -617,8 +617,7 @@ ${message}
 
   const transport = getTransport();
   if (!transport) {
-    console.log(`[email:dev-log] Contact form from=${email}`);
-    console.log(text);
+    log.info({ from: email }, 'Dev-log: contact form (no transport)');
     return;
   }
 
@@ -712,7 +711,7 @@ export async function sendCouponEmail(params: CouponEmailParams) {
 
   const transport = getTransport();
   if (!transport) {
-    console.log(`[email:dev-log] coupon to=${to} code=${couponCode} url=${couponUrl}`);
+    log.info({ to, couponCode }, 'Dev-log: coupon email (no transport)');
     return;
   }
 

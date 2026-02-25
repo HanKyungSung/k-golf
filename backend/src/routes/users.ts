@@ -130,7 +130,7 @@ router.get('/lookup', requireAuth, requireAdminOrStaff, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[USER LOOKUP] Error:', error);
+    req.log.error({ err: error }, 'User lookup failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -244,7 +244,7 @@ router.get('/recent', requireAuth, requireAdmin, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[RECENT USERS] Error:', error);
+    req.log.error({ err: error }, 'Recent users query failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

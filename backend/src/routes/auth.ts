@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { z } from 'zod';
+import logger from '../lib/logger';
 import { createUser, findUserByEmail, findUserByPhone, hashPassword, verifyPassword, createSession, getSession, invalidateSession, createEmailVerificationToken, consumeEmailVerificationToken, createPasswordResetToken, consumePasswordResetToken } from '../services/authService';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/emailService';
 import { normalizePhone } from '../utils/phoneUtils';
@@ -46,7 +47,7 @@ router.post('/register', async (req, res) => {
   `;
   
   if (linkedCount > 0) {
-    console.log(`[AUTH] Linked ${linkedCount} guest bookings to new user ${user.id}`);
+    req.log.info({ linkedCount, userId: user.id }, 'Linked guest bookings to new user');
   }
   
   const { plain, expiresAt } = await createEmailVerificationToken(user.id);
@@ -55,7 +56,7 @@ router.post('/register', async (req, res) => {
       await sendVerificationEmail({ to: user.email, email: user.email, token: plain, expiresAt });
     }
   } catch (e) {
-    console.error('sendVerificationEmail error', e);
+    req.log.error({ err: e }, 'Failed to send verification email');
   }
   return res.status(201).json({ message: 'Verification email sent', expiresAt });
 });
@@ -150,7 +151,7 @@ router.post('/resend', async (req, res) => {
   try {
     await sendVerificationEmail({ to: user.email, email: user.email, token: plain, expiresAt });
   } catch (e) {
-    console.error('sendVerificationEmail error (resend)', e);
+    req.log.error({ err: e }, 'Failed to send verification email (resend)');
     // Still return generic to avoid info leakage
   }
   return res.json({ message: 'Verification email resent.', expiresAt, retryAfterSeconds: Math.ceil(RESEND_COOLDOWN_MS / 1000) });
@@ -186,7 +187,7 @@ router.post('/forgot-password', async (req, res) => {
   try {
     await sendPasswordResetEmail({ to: user.email, email: user.email, token: plain, expiresAt });
   } catch (e) {
-    console.error('sendPasswordResetEmail error', e);
+    req.log.error({ err: e }, 'Failed to send password reset email');
   }
   return res.json({ ...generic, retryAfterSeconds: Math.ceil(FORGOT_COOLDOWN_MS / 1000) });
 });

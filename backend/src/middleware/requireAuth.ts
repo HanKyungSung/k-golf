@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { getSession } from '../services/authService';
+import logger from '../lib/logger';
 
 
 // POS admin API key (for Electron app that can't use cookies)
@@ -59,7 +60,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     (req as any).sessionToken = token;
     return next();
   } catch (e) {
-    console.error('requireAuth error', e);
+    logger.error({ err: e }, 'requireAuth error');
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

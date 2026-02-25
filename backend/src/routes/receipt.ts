@@ -17,7 +17,7 @@ router.get('/:bookingId', async (req: Request, res: Response) => {
     
     res.json({ receipt: receiptData });
   } catch (error: any) {
-    console.error('[Receipt] Error generating receipt:', error);
+    req.log.error({ err: error, bookingId: req.params.bookingId }, 'Generate receipt failed');
     res.status(500).json({ 
       error: 'Failed to generate receipt',
       message: error.message 
@@ -42,7 +42,7 @@ router.get('/:bookingId/seat/:seatIndex', async (req: Request, res: Response) =>
     
     res.json({ receipt: receiptData });
   } catch (error: any) {
-    console.error('[Receipt] Error generating seat receipt:', error);
+    req.log.error({ err: error, bookingId: req.params.bookingId, seatIndex: req.params.seatIndex }, 'Generate seat receipt failed');
     res.status(500).json({ 
       error: 'Failed to generate seat receipt',
       message: error.message 
@@ -90,7 +90,7 @@ router.post('/:bookingId/email', async (req: Request, res: Response) => {
       receiptNumber: receiptData.receiptNumber,
     });
   } catch (error: any) {
-    console.error('[Receipt] Error sending receipt email:', error);
+    req.log.error({ err: error, bookingId: req.params.bookingId }, 'Send receipt email failed');
     res.status(500).json({ 
       error: 'Failed to send receipt email',
       message: error.message 

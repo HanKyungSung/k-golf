@@ -61,7 +61,7 @@ router.get('/global_tax_rate', async (req: Request, res: Response) => {
     const taxRate = parseFloat(setting.value);
     res.json({ taxRate, key: setting.key, updatedAt: setting.updatedAt });
   } catch (error) {
-    console.error('[Settings API] Error fetching global_tax_rate:', error);
+    req.log.error({ err: error }, 'Fetch global_tax_rate failed');
     res.status(500).json({ error: 'Failed to fetch tax rate' });
   }
 });
@@ -112,7 +112,7 @@ router.put('/global_tax_rate', requireAuth, async (req: Request, res: Response) 
       message: 'Tax rate updated successfully' 
     });
   } catch (error) {
-    console.error('[Settings API] Error updating global_tax_rate:', error);
+    req.log.error({ err: error }, 'Update global_tax_rate failed');
     res.status(500).json({ error: 'Failed to update tax rate' });
   }
 });
@@ -149,7 +149,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
     res.json(parsedSettings);
   } catch (error) {
-    console.error('[Settings API] Error fetching settings:', error);
+    req.log.error({ err: error }, 'Fetch settings failed');
     res.status(500).json({ error: 'Failed to fetch settings' });
   }
 });
@@ -200,7 +200,7 @@ router.get('/:key', async (req: Request, res: Response) => {
       parsedValue: parseSettingValue(setting.value, setting.valueType),
     });
   } catch (error) {
-    console.error('[Settings API] Error fetching setting:', error);
+    req.log.error({ err: error, key: req.params.key }, 'Fetch setting failed');
     res.status(500).json({ error: 'Failed to fetch setting' });
   }
 });
@@ -248,7 +248,7 @@ router.put('/:key', requireAuth, async (req: Request, res: Response) => {
       parsedValue: parseSettingValue(updatedSetting.value, updatedSetting.valueType),
     });
   } catch (error) {
-    console.error('[Settings API] Error updating setting:', error);
+    req.log.error({ err: error, key: req.params.key }, 'Update setting failed');
     res.status(500).json({ error: 'Failed to update setting' });
   }
 });
@@ -298,7 +298,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       parsedValue: parseSettingValue(newSetting.value, newSetting.valueType),
     });
   } catch (error) {
-    console.error('[Settings API] Error creating setting:', error);
+    req.log.error({ err: error }, 'Create setting failed');
     res.status(500).json({ error: 'Failed to create setting' });
   }
 });
@@ -323,7 +323,7 @@ router.delete('/:key', requireAuth, async (req: Request, res: Response) => {
 
     res.json({ success: true, message: 'Setting deleted' });
   } catch (error) {
-    console.error('[Settings API] Error deleting setting:', error);
+    req.log.error({ err: error, key: req.params.key }, 'Delete setting failed');
     res.status(500).json({ error: 'Failed to delete setting' });
   }
 });

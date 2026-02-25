@@ -3447,6 +3447,46 @@ Refactor booking status model from complex 4-field approach to simplified 2-fiel
 ## ✅ Completed Tasks Archive
 
 <details>
+<summary>Backend Logging System with Pino - 2026-02-25</summary>
+
+**Structured Logging Implementation:**
+[x] Created shared pino logger module (`backend/src/lib/logger.ts`) — JSON in prod, pino-pretty in dev
+[x] Installed `pino-http` for automatic request/response logging with `reqId` correlation
+[x] Added request logging middleware to `server.ts` — logs method/url/statusCode/responseTime for all requests
+[x] Replaced all 98 `console.log/error/warn` calls across 12 backend route files + middleware + services + jobs
+[x] All route errors now use `req.log.error({ err, ...context }, 'message')` for structured backtracing
+[x] Added global Express error handler (catch-all middleware for unhandled route errors)
+[x] Added process crash handlers (`unhandledRejection`, `uncaughtException`) with fatal-level logging
+[x] Removed stale `@types/pino` v7 dependency (pino v9 ships its own types)
+
+**Docker Log Rotation:**
+[x] Added `logging: { driver: json-file, options: { max-size: "15m", max-file: "10" } }` to `docker-compose.release.yml`
+[x] Applied to both `backend` and `db` services (~150MB cap each)
+[x] CI/CD auto-picks up config changes via `docker compose up -d`
+
+**Frontend Error Handling:**
+[x] Created `ErrorBoundary` React component wrapping top-level `<App />`
+[x] Catches unhandled render crashes with fallback UI and "Go to Home" button
+[x] Shows error stack in dev, clean message in prod
+[x] Added `console.log` stripping in production builds via Terser `pure_funcs` config
+[x] `console.error` and `console.warn` preserved in prod for debugging
+
+**Files changed:**
+- `docker-compose.release.yml` — log rotation config
+- `backend/src/lib/logger.ts` — new shared pino logger
+- `backend/src/server.ts` — pino-http middleware, global error handler, crash handlers
+- `backend/src/routes/*.ts` (12 files) — all `console.*` → `req.log.*`
+- `backend/src/middleware/requireAuth.ts` — `console.error` → `logger.error`
+- `backend/src/services/emailService.ts` — `console.*` → `log.*` (child logger)
+- `backend/src/jobs/couponScheduler.ts` — `console.*` → `log.*` (child logger)
+- `backend/package.json` — added pino-http, removed @types/pino
+- `frontend/components/ErrorBoundary.tsx` — new React error boundary
+- `frontend/src/main.tsx` — wrapped App with ErrorBoundary
+- `frontend/webpack.config.js` — Terser config to strip console.log in prod
+
+</details>
+
+<details>
 <summary>Frontend Build & Deployment (Phase 1.8) - 2025-11-08</summary>
 
 **Production API URL Fix (2025-11-06):**

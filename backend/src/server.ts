@@ -1,7 +1,8 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import pino from 'pino';
+import pinoHttp from 'pino-http';
+import logger from './lib/logger';
 import path from 'path';
 import http from 'http';
 import { bookingRouter } from './routes/booking';
@@ -15,12 +16,25 @@ import receiptRouter from './routes/receipt';
 import { printRouter } from './routes/print';
 import contactRouter from './routes/contact';
 import couponsRouter from './routes/coupons';
+import reportsRouter from './routes/reports';
 import cookieParser from 'cookie-parser';
 import { WebSocketManager } from './services/websocket-manager';
 import { startCouponScheduler } from './jobs/couponScheduler';
 
 const app = express();
-const logger = pino({ transport: { target: 'pino-pretty' } });
+
+// HTTP request/response logging — auto-generates reqId, logs method/url/statusCode/responseTime
+app.use(pinoHttp({
+  logger: logger as any,
+  autoLogging: {
+    ignore: (req) => (req as any).url === '/health', // skip health check noise
+  },
+  customLogLevel: (_req, res, err) => {
+    if (res.statusCode >= 500 || err) return 'error';
+    if (res.statusCode >= 400) return 'warn';
+    return 'info';
+  },
+}));
 
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || '*', credentials: true }));
 app.use(express.json());
@@ -42,6 +56,7 @@ app.use('/api/receipts', receiptRouter);
 app.use('/api/print', printRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/coupons', couponsRouter);
+app.use('/api/reports', reportsRouter);
 
 // Serve frontend static files (after API routes to avoid conflicts)
 // With rootDir='.', structure is: dist/src/server.js and dist/public/
@@ -51,6 +66,12 @@ app.use(express.static(publicPath, {
   maxAge: '1h', // Cache static assets for 1 hour
   etag: true,
 }));
+
+// Global error handler — catches unhandled route errors
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  req.log.error({ err }, 'Unhandled route error');
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 // SPA fallback - serve index.html for all non-API routes
 app.get('*', (_req, res) => {
@@ -95,4 +116,14 @@ process.on('SIGTERM', () => {
     logger.info('Server closed');
     process.exit(0);
   });
+});
+
+// Crash handlers — log fatal errors before process exits
+process.on('unhandledRejection', (reason) => {
+  logger.fatal({ err: reason }, 'Unhandled promise rejection');
+});
+
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'Uncaught exception — shutting down');
+  process.exit(1);
 });

@@ -2,6 +2,9 @@ import cron from 'node-cron';
 import { prisma } from '../lib/prisma';
 import { createCoupon } from '../services/couponService';
 import { sendCouponEmail } from '../services/emailService';
+import logger from '../lib/logger';
+
+const log = logger.child({ module: 'coupon-scheduler' });
 
 /**
  * Daily coupon scheduler — runs at 8:00 AM Atlantic time
@@ -13,19 +16,19 @@ export function startCouponScheduler() {
   // 8:00 AM Atlantic = 12:00 PM UTC (AST, UTC-4) or 11:00 AM UTC (ADT, UTC-3)
   // Use cron with timezone support
   cron.schedule('0 8 * * *', async () => {
-    console.log('[coupon-scheduler] Running daily coupon check...');
+    log.info('Running daily coupon check...');
     try {
       await checkBirthdays();
       await checkLoyaltyMilestones();
-      console.log('[coupon-scheduler] Daily check complete.');
+      log.info('Daily check complete.');
     } catch (err) {
-      console.error('[coupon-scheduler] Error:', err);
+      log.error({ err }, 'Daily coupon check failed');
     }
   }, {
     timezone: 'America/Halifax',
   });
 
-  console.log('[coupon-scheduler] Scheduled daily coupon check at 8:00 AM Atlantic');
+  log.info('Scheduled daily coupon check at 8:00 AM Atlantic');
 }
 
 /**
@@ -43,7 +46,7 @@ async function checkBirthdays() {
   // Find the BIRTHDAY coupon type
   const birthdayType = await prisma.couponType.findUnique({ where: { name: 'BIRTHDAY' } });
   if (!birthdayType || !birthdayType.active) {
-    console.log('[coupon-scheduler] BIRTHDAY type not found or inactive, skipping.');
+    log.info('BIRTHDAY type not found or inactive, skipping.');
     return;
   }
 
@@ -61,7 +64,7 @@ async function checkBirthdays() {
       )
   `;
 
-  console.log(`[coupon-scheduler] Found ${birthdayUsers.length} birthday(s) today.`);
+  log.info({ count: birthdayUsers.length }, 'Birthday users found today');
 
   for (const user of birthdayUsers) {
     try {
@@ -82,9 +85,9 @@ async function checkBirthdays() {
         });
       }
 
-      console.log(`[coupon-scheduler] Birthday coupon ${coupon.code} created for ${user.name}`);
+      log.info({ couponCode: coupon.code, userName: user.name }, 'Birthday coupon created');
     } catch (err) {
-      console.error(`[coupon-scheduler] Failed to create birthday coupon for user ${user.id}:`, err);
+      log.error({ err, userId: user.id }, 'Failed to create birthday coupon');
     }
   }
 }
@@ -98,7 +101,7 @@ async function checkLoyaltyMilestones() {
 
   const loyaltyType = await prisma.couponType.findUnique({ where: { name: 'LOYALTY' } });
   if (!loyaltyType || !loyaltyType.active) {
-    console.log('[coupon-scheduler] LOYALTY type not found or inactive, skipping.');
+    log.info('LOYALTY type not found or inactive, skipping.');
     return;
   }
 
@@ -117,7 +120,7 @@ async function checkLoyaltyMilestones() {
       )
   `;
 
-  console.log(`[coupon-scheduler] Found ${eligibleUsers.length} loyalty milestone(s).`);
+  log.info({ count: eligibleUsers.length }, 'Loyalty milestone users found');
 
   for (const user of eligibleUsers) {
     try {
@@ -138,9 +141,9 @@ async function checkLoyaltyMilestones() {
         });
       }
 
-      console.log(`[coupon-scheduler] Loyalty coupon ${coupon.code} created for ${user.name} (${Number(user.completed)} bookings)`);
+      log.info({ couponCode: coupon.code, userName: user.name, bookings: Number(user.completed) }, 'Loyalty coupon created');
     } catch (err) {
-      console.error(`[coupon-scheduler] Failed to create loyalty coupon for user ${user.id}:`, err);
+      log.error({ err, userId: user.id }, 'Failed to create loyalty coupon');
     }
   }
 }

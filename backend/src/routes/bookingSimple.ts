@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { z } from 'zod';
+import logger from '../lib/logger';
 import { normalizePhone } from '../utils/phoneUtils';
 import { requireAuth } from '../middleware/requireAuth';
 import { addBookingOrderToSeat1 } from '../repositories/bookingRepo';
@@ -197,7 +198,7 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
     });
     
   } catch (error: any) {
-    console.error('[BOOKING_CREATE] Error:', error);
+    req.log.error({ err: error }, 'Booking create failed');
     
     if (error instanceof z.ZodError) {
       return res.status(400).json({

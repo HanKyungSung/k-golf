@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { UserRole } from '@prisma/client';
 import { requireAuth } from '../middleware/requireAuth';
 import { prisma } from '../lib/prisma';
+import logger from '../lib/logger';
 import { normalizePhone, validatePhone } from '../utils/phoneUtils';
 import { todayRange, monthRange, dayRange, getAtlanticComponents, toDateString } from '../utils/timezone';
 
@@ -151,7 +152,7 @@ router.get('/metrics', async (req, res) => {
       birthdayList: upcomingBirthdays.slice(0, 10) // Top 10 upcoming
     });
   } catch (error) {
-    console.error('[CUSTOMER METRICS] Error:', error);
+    req.log.error({ err: error }, 'Customer metrics failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -280,7 +281,7 @@ router.get('/revenue-history', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[REVENUE HISTORY] Error:', error);
+    req.log.error({ err: error }, 'Revenue history failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -467,7 +468,7 @@ router.get('/', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[CUSTOMER LIST] Error:', error);
+    req.log.error({ err: error }, 'Customer list failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -572,7 +573,7 @@ router.get('/:id', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[CUSTOMER GET] Error:', error);
+    req.log.error({ err: error, customerId: req.params.id }, 'Customer get failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -642,7 +643,7 @@ router.post('/', async (req, res) => {
 
     return res.status(201).json({ customer });
   } catch (error) {
-    console.error('[CUSTOMER CREATE] Error:', error);
+    req.log.error({ err: error }, 'Customer create failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -725,7 +726,7 @@ router.put('/:id', async (req, res) => {
 
     return res.json({ customer });
   } catch (error) {
-    console.error('[CUSTOMER UPDATE] Error:', error);
+    req.log.error({ err: error, customerId: req.params.id }, 'Customer update failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -760,7 +761,7 @@ router.delete('/:id', async (req, res) => {
 
     return res.json({ success: true, message: 'Customer deleted' });
   } catch (error) {
-    console.error('[CUSTOMER DELETE] Error:', error);
+    req.log.error({ err: error, customerId: req.params.id }, 'Customer delete failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -898,7 +899,7 @@ router.get('/bookings/search', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[BOOKING SEARCH] Error:', error);
+    req.log.error({ err: error }, 'Booking search failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

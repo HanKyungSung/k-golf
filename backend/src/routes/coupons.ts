@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
+import logger from '../lib/logger';
 import { requireAuth } from '../middleware/requireAuth';
 import { requireAdmin, requireStaffOrAdmin } from '../middleware/requireRole';
 import { createCoupon, validateCoupon, redeemCoupon, getPublicCoupon } from '../services/couponService';
@@ -21,7 +22,7 @@ router.get('/public/:code', async (req: Request, res: Response) => {
     }
     res.json(coupon);
   } catch (err) {
-    console.error('[coupons] public lookup error:', err);
+    req.log.error({ err, code: req.params.code }, 'Public coupon lookup failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -37,7 +38,7 @@ router.get('/validate/:code', requireAuth, requireStaffOrAdmin, async (req: Requ
     const result = await validateCoupon(req.params.code.toUpperCase());
     res.json(result);
   } catch (err) {
-    console.error('[coupons] validate error:', err);
+    req.log.error({ err, code: req.params.code }, 'Coupon validate failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -62,7 +63,7 @@ router.post('/:code/redeem', requireAuth, requireStaffOrAdmin, async (req: Reque
 
     res.json({ success: true, coupon });
   } catch (err: any) {
-    console.error('[coupons] redeem error:', err);
+    req.log.error({ err, code: req.params.code }, 'Coupon redeem failed');
     const message = err.message || 'Internal server error';
     const status = message.includes('not found') ? 404
       : message.includes('already') || message.includes('expired') ? 409
@@ -104,13 +105,13 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
           expiresAt: coupon.expiresAt,
         });
       } catch (emailErr) {
-        console.error('[coupons] email send failed (coupon still created):', emailErr);
+        req.log.error({ err: emailErr, couponCode: coupon.code }, 'Coupon email send failed (coupon still created)');
       }
     }
 
     res.status(201).json(coupon);
   } catch (err: any) {
-    console.error('[coupons] create error:', err);
+    req.log.error({ err }, 'Coupon create failed');
     res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
@@ -158,7 +159,7 @@ router.get('/', requireAuth, requireStaffOrAdmin, async (req: Request, res: Resp
       pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
     });
   } catch (err) {
-    console.error('[coupons] list error:', err);
+    req.log.error({ err }, 'Coupon list failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -194,7 +195,7 @@ router.get('/my', requireAuth, async (req: Request, res: Response) => {
 
     res.json({ coupons });
   } catch (err) {
-    console.error('[coupons] my coupons error:', err);
+    req.log.error({ err }, 'My coupons failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -221,7 +222,7 @@ router.patch('/:id/revoke', requireAuth, requireAdmin, async (req: Request, res:
 
     res.json(updated);
   } catch (err) {
-    console.error('[coupons] revoke error:', err);
+    req.log.error({ err, couponId: req.params.id }, 'Coupon revoke failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -267,7 +268,7 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req: Request, res:
 
     res.json(updated);
   } catch (err) {
-    console.error('[coupons] status change error:', err);
+    req.log.error({ err, couponId: req.params.id }, 'Coupon status change failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -278,7 +279,7 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req: Request, res:
  * GET /api/coupons/types
  * List all active coupon types (for dropdown)
  */
-router.get('/types', requireAuth, requireStaffOrAdmin, async (_req: Request, res: Response) => {
+router.get('/types', requireAuth, requireStaffOrAdmin, async (req: Request, res: Response) => {
   try {
     const types = await prisma.couponType.findMany({
       where: { active: true },
@@ -286,7 +287,7 @@ router.get('/types', requireAuth, requireStaffOrAdmin, async (_req: Request, res
     });
     res.json(types);
   } catch (err) {
-    console.error('[coupons] types list error:', err);
+    req.log.error({ err }, 'Coupon types list failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -317,7 +318,7 @@ router.post('/types', requireAuth, requireAdmin, async (req: Request, res: Respo
     });
     res.status(201).json(couponType);
   } catch (err) {
-    console.error('[coupons] type create error:', err);
+    req.log.error({ err }, 'Coupon type create failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -341,7 +342,7 @@ router.patch('/types/:id', requireAuth, requireAdmin, async (req: Request, res: 
     });
     res.json(couponType);
   } catch (err: any) {
-    console.error('[coupons] type update error:', err);
+    req.log.error({ err, typeId: req.params.id }, 'Coupon type update failed');
     if (err.code === 'P2025') {
       return res.status(404).json({ error: 'Coupon type not found' });
     }

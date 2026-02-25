@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
 
     res.json({ success: true, message: 'Contact form submitted successfully' });
   } catch (error) {
-    console.error('[contact] Error sending contact email:', error);
+    req.log.error({ err: error }, 'Contact email send failed');
     res.status(500).json({ error: 'Failed to send contact form' });
   }
 });

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import logger from '../lib/logger';
 import { createBooking, addBookingOrderToSeat1, findConflict, listBookings, listUserBookings, listRoomBookingsBetween } from '../repositories/bookingRepo';
 import { getBooking, cancelBooking, updatePaymentStatus, completeBooking, updateBookingStatus } from '../repositories/bookingRepo';
 import * as orderRepo from '../repositories/orderRepo';
@@ -93,18 +94,18 @@ router.get('/', async (req, res) => {
 });
 
 // Optional helper to fetch rooms (basic list)
-router.get('/rooms', async (_req, res) => {
+router.get('/rooms', async (req, res) => {
   try {
     const rooms = await prisma.room.findMany({ where: { active: true }, orderBy: { name: 'asc' } });
     res.json({ rooms });
   } catch (e) {
-    console.error(e);
+    req.log.error({ err: e }, 'Failed to load rooms');
     res.status(500).json({ error: 'Failed to load rooms' });
   }
 });
 
 // Get operating hours (from business settings)
-router.get('/operating-hours', async (_req, res) => {
+router.get('/operating-hours', async (req, res) => {
   try {
     const [openSetting, closeSetting] = await Promise.all([
       prisma.setting.findUnique({ where: { key: 'operating_hours_open' } }),
@@ -120,7 +121,7 @@ router.get('/operating-hours', async (_req, res) => {
       closeMinutes: parseInt(closeSetting.value, 10),
     });
   } catch (e) {
-    console.error(e);
+    req.log.error({ err: e }, 'Failed to load operating hours');
     res.status(500).json({ error: 'Failed to load operating hours' });
   }
 });
@@ -187,7 +188,7 @@ router.get('/by-room-date', async (req, res) => {
 
     res.json({ bookings: formattedBookings });
   } catch (error) {
-    console.error('[GET BY-ROOM-DATE] Error:', error);
+    req.log.error({ err: error }, 'Get by-room-date failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -222,7 +223,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({ booking: responseData });
   } catch (error) {
-    console.error('[GET BOOKING] Error:', error);
+    req.log.error({ err: error, bookingId: req.params.id }, 'Get booking failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -281,7 +282,7 @@ router.patch('/:id/status', requireAuth, requireStaffOrAdmin, async (req, res) =
       message: `Booking ${status.toLowerCase()} successfully` 
     });
   } catch (error) {
-    console.error('[UPDATE BOOKING STATUS] Error:', error);
+    req.log.error({ err: error, bookingId: req.params.id }, 'Update booking status failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -315,7 +316,7 @@ router.patch('/:id/players', requireAuth, requireStaffOrAdmin, async (req, res) 
       message: `Booking players updated to ${players}` 
     });
   } catch (error) {
-    console.error('[UPDATE BOOKING PLAYERS] Error:', error);
+    req.log.error({ err: error, bookingId: req.params.id }, 'Update booking players failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -334,7 +335,7 @@ router.patch('/:id/cancel', requireAuth, async (req, res) => {
     const updated = await cancelBooking(id);
     return res.json({ booking: presentBooking(updated) });
   } catch (e) {
-    console.error(e);
+    req.log.error({ err: e, bookingId: id }, 'Cancel booking failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -463,10 +464,10 @@ router.post('/', requireAuth, async (req, res) => {
           price: price.toFixed(2),
           customerTimezone: bookingTimezone,
         });
-        console.log(`[Booking] Confirmation email sent to ${userEmail}`);
+        req.log.info({ email: userEmail }, 'Confirmation email sent');
       } catch (emailError) {
         // Log but don't fail the booking if email fails
-        console.error('[Booking] Failed to send confirmation email:', emailError);
+        req.log.error({ err: emailError, email: userEmail }, 'Failed to send confirmation email');
       }
     }
     
@@ -475,7 +476,7 @@ router.post('/', requireAuth, async (req, res) => {
     if (e.code === 'P2002') { // unique constraint
       return res.status(409).json({ error: 'Time slot already booked' });
     }
-    console.error(e);
+    req.log.error({ err: e }, 'Create booking failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -567,8 +568,7 @@ router.patch('/rooms/:id', requireAuth, requireStaffOrAdmin, async (req, res) =>
     const updated = await prisma.room.update({ where: { id }, data });
     res.json({ room: updated });
   } catch (e) {
-    console.error('[ROOM UPDATE] Error updating room:', id, 'data:', data);
-    console.error('[ROOM UPDATE] Exception:', e);
+    req.log.error({ err: e, roomId: id, data }, 'Room update failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1045,14 +1045,12 @@ router.post('/admin/create', requireAuth, requireStaffOrAdmin, async (req, res) 
     });
 
   } catch (error: any) {
-    console.error('[ADMIN CREATE BOOKING] Error:', error);
+    req.log.error({ err: error }, 'Admin create booking failed');
     
     // Handle Prisma errors
     if (error.code === 'P2002') {
       // Log detailed information about which field caused the duplicate
-      console.error('[ADMIN CREATE BOOKING] P2002 Duplicate constraint violation');
-      console.error('[ADMIN CREATE BOOKING] Target fields:', error.meta?.target);
-      console.error('[ADMIN CREATE BOOKING] Request payload:', JSON.stringify(req.body, null, 2));
+      req.log.error({ target: error.meta?.target, payload: req.body }, 'P2002 Duplicate constraint violation');
       
       return res.status(409).json({ 
         error: 'Duplicate constraint violation',
@@ -1105,7 +1103,7 @@ router.patch('/:id/payment-status', requireAuth, requireStaffOrAdmin, async (req
 
     return res.json({ booking: presentBooking(updated) });
   } catch (error) {
-    console.error('[UPDATE PAYMENT STATUS] Error:', error);
+    req.log.error({ err: error, bookingId: req.params.id }, 'Update payment status failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1236,7 +1234,7 @@ router.post('/:bookingId/orders', requireAuth, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[CREATE ORDER] Error:', error);
+    req.log.error({ err: error, bookingId: req.params.bookingId }, 'Create order failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1282,7 +1280,7 @@ router.patch('/orders/:orderId', requireAuth, async (req, res) => {
 
     return res.json({ order: updatedOrder });
   } catch (error) {
-    console.error('[PATCH /orders/:orderId] Error:', error);
+    req.log.error({ err: error, orderId: req.params.orderId }, 'Update order failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1319,7 +1317,7 @@ router.delete('/orders/:orderId', requireAuth, async (req, res) => {
             redeemedSeatNumber: null,
           },
         });
-        console.log(`[DELETE ORDER] Reverted coupon ${coupon.code} back to ACTIVE`);
+        req.log.info({ couponCode: coupon.code, couponId: coupon.id }, 'Reverted coupon back to ACTIVE');
       }
     }
 
@@ -1346,7 +1344,7 @@ router.delete('/orders/:orderId', requireAuth, async (req, res) => {
 
     return res.json({ success: true });
   } catch (error) {
-    console.error('[DELETE ORDER] Error:', error);
+    req.log.error({ err: error, orderId: req.params.orderId }, 'Delete order failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1379,7 +1377,7 @@ router.get('/:bookingId/invoices', async (req, res) => {
 
     return res.json({ invoices: formatted });
   } catch (error) {
-    console.error('[GET INVOICES] Error:', error);
+    req.log.error({ err: error, bookingId: req.params.bookingId }, 'Get invoices failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1446,7 +1444,7 @@ router.patch('/invoices/:invoiceId/pay', requireAuth, async (req, res) => {
       bookingPaymentStatus: allPaid ? 'PAID' : 'UNPAID',
     });
   } catch (error) {
-    console.error('[PAY INVOICE] Error:', error);
+    req.log.error({ err: error, invoiceId: req.params.invoiceId }, 'Pay invoice failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1524,7 +1522,7 @@ router.patch('/invoices/:invoiceId/unpay', requireAuth, async (req, res) => {
       bookingPaymentStatus: 'UNPAID',
     });
   } catch (error) {
-    console.error('[UNPAY INVOICE] Error:', error);
+    req.log.error({ err: error, invoiceId: req.params.invoiceId }, 'Unpay invoice failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1562,7 +1560,7 @@ router.get('/:bookingId/payment-status', async (req, res) => {
       totalRevenue: totalRevenue,
     });
   } catch (error) {
-    console.error('[GET PAYMENT STATUS] Error:', error);
+    req.log.error({ err: error, bookingId: req.params.bookingId }, 'Get payment status failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1593,7 +1591,7 @@ router.post('/:bookingId/complete', requireAuth, async (req, res) => {
       message: 'Booking marked as completed',
     });
   } catch (error) {
-    console.error('[COMPLETE BOOKING] Error:', error);
+    req.log.error({ err: error, bookingId: req.params.bookingId }, 'Complete booking failed');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -22,6 +22,21 @@ module.exports = {
   },
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   devtool: 'source-map',
+  optimization: {
+    minimizer: [
+      // Strip console.log in production builds (keep console.error and console.warn)
+      ...(process.env.NODE_ENV === 'production' ? [
+        new (require('terser-webpack-plugin'))({
+          terserOptions: {
+            compress: {
+              drop_console: false, // don't drop all — use pure_funcs instead
+              pure_funcs: ['console.log'], // remove only console.log calls
+            },
+          },
+        }),
+      ] : []),
+    ],
+  },
   resolve: {
     extensions: ['.tsx', '.ts', '.jsx', '.js'],
     alias: {
