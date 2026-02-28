@@ -23,7 +23,6 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 ## Personal note (Do not touch)
 - daily report
   - card/cash etc
-- gift card input
 - create a new / change the account phone number
 - 
 
@@ -3655,7 +3654,26 @@ npm run test:e2e
 
 ---
 
-**Last Updated:** 2025-11-08
+**Last Updated:** 2026-02-28
 **Version:** 1.2 (Updated: Frontend build path simplification)
+
+<details>
+<summary>Daily Report & Gift Card Display - 2026-02-28</summary>
+
+**Gift Card Display Fixes:**
+[x] Monthly PDF report: Added `formatPaymentMethod()` helper to prettify labels (GIFT_CARD → Gift Card)
+[x] Revenue chart: Added purple gift card bar + tooltip row in `MonthlyRevenueChart.tsx`
+[x] Receipt: Prettified payment method display in `Receipt.tsx`
+[x] Revenue history API: Track `giftCardRevenue` separately, fix `otherRevenue` calculation
+
+**Daily Report (New Feature):**
+[x] Backend: Created `dailyReportRepo.ts` with `getDailySummary()` — payment breakdown, tips, tax, bookings, invoices
+[x] Backend: Added `GET /api/reports/daily-summary?date=YYYY-MM-DD` endpoint in `reports.ts`
+[x] Frontend: Daily report UI in Reports tab with date navigation (←/→/Today)
+[x] Frontend: Chart-tooltip-style table with payment color dots, indented sub-rows
+[x] Fix: Timezone bug — parse YYYY-MM-DD into Atlantic noon via `buildAtlanticDate` for correct `dayRange()`
+
+Commit: `805ea27`
+</details>
 
 ````
