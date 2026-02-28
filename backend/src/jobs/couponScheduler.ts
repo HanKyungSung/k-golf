@@ -43,10 +43,10 @@ async function checkBirthdays() {
   const todayDay = atlanticNow.getDate();
   const thisYear = atlanticNow.getFullYear();
 
-  // Find the BIRTHDAY coupon type
-  const birthdayType = await prisma.couponType.findUnique({ where: { name: 'BIRTHDAY' } });
+  // Find the birthday coupon type
+  const birthdayType = await prisma.couponType.findUnique({ where: { name: 'birthday' } });
   if (!birthdayType || !birthdayType.active) {
-    log.info('BIRTHDAY type not found or inactive, skipping.');
+    log.info('birthday type not found or inactive, skipping.');
     return;
   }
 
@@ -79,7 +79,7 @@ async function checkBirthdays() {
           to: user.email,
           customerName: user.name,
           couponCode: coupon.code,
-          couponType: 'BIRTHDAY',
+          couponType: 'birthday',
           description: coupon.description,
           discountAmount: Number(coupon.discountAmount),
         });
@@ -99,9 +99,9 @@ async function checkBirthdays() {
 async function checkLoyaltyMilestones() {
   const MILESTONE = 10;
 
-  const loyaltyType = await prisma.couponType.findUnique({ where: { name: 'LOYALTY' } });
+  const loyaltyType = await prisma.couponType.findUnique({ where: { name: 'loyalty' } });
   if (!loyaltyType || !loyaltyType.active) {
-    log.info('LOYALTY type not found or inactive, skipping.');
+    log.info('loyalty type not found or inactive, skipping.');
     return;
   }
 
@@ -135,7 +135,7 @@ async function checkLoyaltyMilestones() {
           to: user.email,
           customerName: user.name,
           couponCode: coupon.code,
-          couponType: 'LOYALTY',
+          couponType: 'loyalty',
           description: coupon.description,
           discountAmount: Number(coupon.discountAmount),
         });

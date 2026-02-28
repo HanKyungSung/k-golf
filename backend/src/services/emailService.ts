@@ -637,7 +637,7 @@ export interface CouponEmailParams {
   to: string;
   customerName: string;
   couponCode: string;
-  couponType: 'BIRTHDAY' | 'LOYALTY' | 'CUSTOM' | string;
+  couponType: 'birthday' | 'loyalty' | 'custom' | string;
   description: string;
   discountAmount: number;
   expiresAt?: Date | null;
@@ -645,9 +645,9 @@ export interface CouponEmailParams {
 
 function getCouponEmailContent(type: string): { emoji: string; heading: string; subtext: string } {
   switch (type) {
-    case 'BIRTHDAY':
+    case 'birthday':
       return { emoji: '🎂', heading: 'Happy Birthday!', subtext: 'We have a special gift for you to celebrate your birthday!' };
-    case 'LOYALTY':
+    case 'loyalty':
       return { emoji: '⭐', heading: 'Thank You for Your Loyalty!', subtext: 'You\'ve reached a milestone and earned a reward!' };
     default:
       return { emoji: '🎟️', heading: 'You\'ve Received a Coupon!', subtext: 'Here\'s a special offer just for you!' };
@@ -674,9 +674,9 @@ export async function sendCouponEmail(params: CouponEmailParams) {
     ? `<p style="font-size:13px;color:#94a3b8;margin:12px 0 0;text-align:center">Expires: ${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Halifax' })}</p>`
     : '';
 
-  const subject = couponType === 'BIRTHDAY'
+  const subject = couponType === 'birthday'
     ? `${emoji} Happy Birthday, ${customerName}! You've earned 1 hour free!`
-    : couponType === 'LOYALTY'
+    : couponType === 'loyalty'
       ? `${emoji} Thank you, ${customerName}! You've earned 1 hour free!`
       : `${emoji} ${customerName}, you've received a coupon from K one Golf!`;
 
