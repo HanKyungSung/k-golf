@@ -1,10 +1,39 @@
 import { Router, Response } from 'express';
 import { requireAuth } from '../middleware/requireAuth';
-import { requireAdmin } from '../middleware/requireRole';
+import { requireAdmin, requireStaffOrAdmin } from '../middleware/requireRole';
 import { getMonthlyReport } from '../repositories/monthlyReportRepo';
 import { generateMonthlyReportPdf } from '../services/reportPdfService';
+import { getDailySummary } from '../repositories/dailyReportRepo';
+import { buildAtlanticDate } from '../utils/timezone';
 
 const router = Router();
+
+/**
+ * GET /api/reports/daily-summary?date=YYYY-MM-DD
+ * Returns JSON daily summary (payment breakdown, tips, tax, bookings).
+ * Defaults to today if no date param provided.
+ * Staff + Admin.
+ */
+router.get('/daily-summary', requireAuth, requireStaffOrAdmin, async (req: any, res: Response) => {
+  try {
+    let target: Date | undefined;
+    if (req.query.date) {
+      const parts = (req.query.date as string).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!parts) {
+        return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+      }
+      // Build noon in Atlantic so dayRange() resolves to the correct day
+      target = buildAtlanticDate(Number(parts[1]), Number(parts[2]), Number(parts[3]), 12, 0, 0);
+    }
+
+    const data = await getDailySummary(target);
+    req.log.info({ date: data.date }, 'Daily summary generated');
+    return res.json(data);
+  } catch (error) {
+    req.log.error({ err: error, date: req.query.date }, 'Daily summary failed');
+    return res.status(500).json({ error: 'Failed to generate daily summary' });
+  }
+});
 
 /**
  * GET /api/reports/monthly-sales?month=MM&year=YYYY

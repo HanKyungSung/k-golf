@@ -18,6 +18,15 @@ function formatDate(date: Date): string {
   return date.toLocaleDateString('en-CA', { month: '2-digit', day: '2-digit', year: '2-digit' });
 }
 
+function formatPaymentMethod(method: string): string {
+  switch (method) {
+    case 'CARD': return 'Card';
+    case 'CASH': return 'Cash';
+    case 'GIFT_CARD': return 'Gift Card';
+    default: return method;
+  }
+}
+
 function drawTableRow(
   doc: PDFKit.PDFDocument,
   y: number,
@@ -89,7 +98,7 @@ export function generateMonthlyReportPdf(data: MonthlyReportData): PDFKit.PDFDoc
 
   for (const pt of data.paymentTypes) {
     y = drawTableRow(doc, y, [
-      { ...ptCols[0], text: pt.method },
+      { ...ptCols[0], text: formatPaymentMethod(pt.method) },
       { ...ptCols[1], text: pt.count.toString() },
       { ...ptCols[2], text: formatCurrency(pt.amount) },
     ]);

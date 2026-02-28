@@ -64,7 +64,8 @@ import {
   ExternalLink,
   Settings2,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  FileDown
 } from 'lucide-react';
 
 // Types
@@ -195,7 +196,7 @@ export default function CustomerManagement() {
   const navigate = useNavigate();
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<'customers' | 'bookings' | 'coupons'>('customers');
+  const [activeTab, setActiveTab] = useState<'customers' | 'bookings' | 'coupons' | 'reports'>('customers');
   
   // Common state
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -270,6 +271,108 @@ export default function CustomerManagement() {
   // Customer detail coupon history
   const [customerCoupons, setCustomerCoupons] = useState<CouponItem[]>([]);
   const [customerCouponsLoading, setCustomerCouponsLoading] = useState(false);
+
+  // Report state
+  const now = new Date();
+  const [reportMonth, setReportMonth] = useState(now.getMonth() + 1);
+  const [reportYear, setReportYear] = useState(now.getFullYear());
+  const [reportDownloading, setReportDownloading] = useState(false);
+
+  // Daily report state
+  const [dailyDate, setDailyDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+  const [dailyData, setDailyData] = useState<{
+    date: string;
+    paymentBreakdown: { method: string; count: number; amount: number }[];
+    totalRevenue: number;
+    totalTips: number;
+    totalTax: number;
+    totalSubtotal: number;
+    bookings: { completed: number; cancelled: number; booked: number; total: number };
+    invoices: { paid: number; unpaid: number };
+  } | null>(null);
+  const [dailyLoading, setDailyLoading] = useState(false);
+
+  const fetchDailySummary = useCallback(async (date: string) => {
+    setDailyLoading(true);
+    try {
+      const res = await fetch(`${getApiBase()}/api/reports/daily-summary?date=${date}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch daily summary');
+      const data = await res.json();
+      setDailyData(data);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setDailyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (dailyDate) fetchDailySummary(dailyDate);
+  }, [dailyDate, fetchDailySummary]);
+
+  const shiftDay = (offset: number) => {
+    const d = new Date(dailyDate + 'T12:00:00');
+    d.setDate(d.getDate() + offset);
+    setDailyDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+  };
+
+  const formatPaymentLabel = (method: string) => {
+    switch (method) {
+      case 'CARD': return 'Card';
+      case 'CASH': return 'Cash';
+      case 'GIFT_CARD': return 'Gift Card';
+      default: return method;
+    }
+  };
+
+  const paymentColor = (method: string) => {
+    switch (method) {
+      case 'CARD': return 'text-blue-400';
+      case 'CASH': return 'text-green-400';
+      case 'GIFT_CARD': return 'text-purple-400';
+      default: return 'text-slate-400';
+    }
+  };
+
+  const paymentBg = (method: string) => {
+    switch (method) {
+      case 'CARD': return 'bg-blue-500/10 border-blue-500/30';
+      case 'CASH': return 'bg-green-500/10 border-green-500/30';
+      case 'GIFT_CARD': return 'bg-purple-500/10 border-purple-500/30';
+      default: return 'bg-slate-500/10 border-slate-500/30';
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    setReportDownloading(true);
+    try {
+      const res = await fetch(
+        `/api/reports/monthly-sales?month=${reportMonth}&year=${reportYear}`,
+        { credentials: 'include' }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Download failed' }));
+        throw new Error(err.error || 'Download failed');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `K-Golf_Monthly_Report_${reportYear}-${String(reportMonth).padStart(2, '0')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: 'Report downloaded', description: `Monthly report for ${reportMonth}/${reportYear}` });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setReportDownloading(false);
+    }
+  };
 
   // Redirect if not admin
   useEffect(() => {
@@ -530,7 +633,7 @@ export default function CustomerManagement() {
 
   // Handle tab change
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab as 'customers' | 'bookings' | 'coupons');
+    setActiveTab(tab as 'customers' | 'bookings' | 'coupons' | 'reports');
   };
 
   // Handle customer sort change
@@ -1108,6 +1211,13 @@ export default function CustomerManagement() {
               <Ticket className="h-4 w-4 mr-2" />
               Coupons
             </TabsTrigger>
+            <TabsTrigger 
+              value="reports"
+              className="data-[state=active]:bg-amber-500 data-[state=active]:text-black"
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              Reports
+            </TabsTrigger>
           </TabsList>
 
           {/* Customers Tab */}
@@ -1656,6 +1766,205 @@ export default function CustomerManagement() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Reports Tab */}
+          <TabsContent value="reports" className="mt-0">
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <FileDown className="h-5 w-5" />
+                  Monthly Sales Report
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Generate and download a PDF sales report for a selected month.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Month</Label>
+                    <Select value={String(reportMonth)} onValueChange={(v) => setReportMonth(parseInt(v, 10))}>
+                      <SelectTrigger className="w-[140px] bg-slate-700 border-slate-600 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-700 border-slate-600">
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)} className="text-white">
+                            {new Date(2000, i, 1).toLocaleDateString('en-CA', { month: 'long' })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Year</Label>
+                    <Select value={String(reportYear)} onValueChange={(v) => setReportYear(parseInt(v, 10))}>
+                      <SelectTrigger className="w-[110px] bg-slate-700 border-slate-600 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-700 border-slate-600">
+                        {Array.from({ length: 5 }, (_, i) => {
+                          const y = new Date().getFullYear() - i;
+                          return (
+                            <SelectItem key={y} value={String(y)} className="text-white">
+                              {y}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    onClick={handleDownloadReport}
+                    disabled={reportDownloading}
+                    className="bg-amber-500 hover:bg-amber-600 text-black font-medium"
+                  >
+                    {reportDownloading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <FileDown className="h-4 w-4 mr-2" />
+                    )}
+                    {reportDownloading ? 'Generating...' : 'Download PDF'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Daily Summary Report */}
+            <Card className="bg-slate-800/50 border-slate-700 mt-6">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Daily Report
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Payment breakdown and summary for a specific day.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Date Navigation */}
+                <div className="flex items-center gap-3 mb-6">
+                  <Button variant="outline" size="sm" onClick={() => shiftDay(-1)}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700">
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="date"
+                    value={dailyDate}
+                    onChange={(e) => setDailyDate(e.target.value)}
+                    className="w-[180px] bg-slate-700 border-slate-600 text-white"
+                  />
+                  <Button variant="outline" size="sm" onClick={() => shiftDay(1)}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm"
+                    onClick={() => {
+                      const d = new Date();
+                      setDailyDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                    }}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs">
+                    Today
+                  </Button>
+                </div>
+
+                {dailyLoading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+                  </div>
+                ) : dailyData ? (
+                  <Table>
+                    <TableBody>
+                      {/* Revenue */}
+                      <TableRow className="border-slate-700">
+                        <TableCell className="text-slate-300 font-medium">Revenue</TableCell>
+                        <TableCell className="text-right font-bold text-emerald-400 text-lg">
+                          ${dailyData.totalRevenue.toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+
+                      {/* Payment method breakdown — indented like the chart tooltip */}
+                      {dailyData.paymentBreakdown.map((pb) => (
+                        <TableRow key={pb.method} className="border-slate-700/50">
+                          <TableCell className="pl-8">
+                            <span className="flex items-center gap-2">
+                              <span className={`inline-block w-2.5 h-2.5 rounded-sm ${
+                                pb.method === 'CARD' ? 'bg-blue-400' :
+                                pb.method === 'CASH' ? 'bg-amber-400' :
+                                pb.method === 'GIFT_CARD' ? 'bg-purple-400' :
+                                'bg-emerald-400'
+                              }`} />
+                              <span className={paymentColor(pb.method)}>
+                                {formatPaymentLabel(pb.method)}
+                              </span>
+                              <span className="text-slate-500 text-xs">({pb.count})</span>
+                            </span>
+                          </TableCell>
+                          <TableCell className={`text-right font-medium ${paymentColor(pb.method)}`}>
+                            ${pb.amount.toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+
+                      {dailyData.paymentBreakdown.length === 0 && (
+                        <TableRow className="border-slate-700/50">
+                          <TableCell colSpan={2} className="pl-8 text-slate-500 text-sm">
+                            No payments recorded
+                          </TableCell>
+                        </TableRow>
+                      )}
+
+                      {/* Separator */}
+                      <TableRow className="border-slate-600"><TableCell colSpan={2} className="py-0" /></TableRow>
+
+                      {/* Bookings */}
+                      <TableRow className="border-slate-700">
+                        <TableCell className="text-slate-300 font-medium">Bookings</TableCell>
+                        <TableCell className="text-right font-bold text-amber-400">{dailyData.bookings.total}</TableCell>
+                      </TableRow>
+                      <TableRow className="border-slate-700/50">
+                        <TableCell className="pl-8 text-slate-400">Completed</TableCell>
+                        <TableCell className="text-right text-green-400 font-medium">{dailyData.bookings.completed}</TableCell>
+                      </TableRow>
+                      <TableRow className="border-slate-700/50">
+                        <TableCell className="pl-8 text-slate-400">Active</TableCell>
+                        <TableCell className="text-right text-blue-400 font-medium">{dailyData.bookings.booked}</TableCell>
+                      </TableRow>
+                      <TableRow className="border-slate-700/50">
+                        <TableCell className="pl-8 text-slate-400">Cancelled</TableCell>
+                        <TableCell className="text-right text-red-400 font-medium">{dailyData.bookings.cancelled}</TableCell>
+                      </TableRow>
+
+                      {/* Separator */}
+                      <TableRow className="border-slate-600"><TableCell colSpan={2} className="py-0" /></TableRow>
+
+                      {/* Financial summary */}
+                      <TableRow className="border-slate-700">
+                        <TableCell className="text-slate-300 font-medium">Subtotal</TableCell>
+                        <TableCell className="text-right text-slate-300">${dailyData.totalSubtotal.toFixed(2)}</TableCell>
+                      </TableRow>
+                      <TableRow className="border-slate-700">
+                        <TableCell className="text-slate-300 font-medium">Tax</TableCell>
+                        <TableCell className="text-right text-slate-300">${dailyData.totalTax.toFixed(2)}</TableCell>
+                      </TableRow>
+                      <TableRow className="border-slate-700">
+                        <TableCell className="text-slate-300 font-medium">Tips</TableCell>
+                        <TableCell className="text-right text-amber-400">${dailyData.totalTips.toFixed(2)}</TableCell>
+                      </TableRow>
+                      <TableRow className="border-slate-700">
+                        <TableCell className="text-slate-400">Invoices (Paid / Unpaid)</TableCell>
+                        <TableCell className="text-right">
+                          <span className="text-green-400 font-medium">{dailyData.invoices.paid}</span>
+                          <span className="text-slate-500 mx-1">/</span>
+                          <span className="text-red-400 font-medium">{dailyData.invoices.unpaid}</span>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                ) : null}
               </CardContent>
             </Card>
           </TabsContent>

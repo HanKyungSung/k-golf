@@ -29,6 +29,7 @@ interface MonthData {
   revenue: number;
   cashRevenue: number;
   cardRevenue: number;
+  giftCardRevenue: number;
   otherRevenue: number;
   bookingCount: number;
   completedCount: number;
@@ -89,11 +90,20 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 </span>
                 <span className="text-amber-400 font-medium">{formatCurrency(data.cashRevenue)}</span>
               </div>
+              {data.giftCardRevenue > 0 && (
+                <div className="flex justify-between gap-4 pl-2">
+                  <span className="text-slate-500 flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-sm bg-purple-400"></span>
+                    Gift Card:
+                  </span>
+                  <span className="text-purple-400 font-medium">{formatCurrency(data.giftCardRevenue)}</span>
+                </div>
+              )}
               {data.otherRevenue > 0 && (
                 <div className="flex justify-between gap-4 pl-2">
                   <span className="text-slate-500 flex items-center gap-1">
                     <span className="inline-block w-2 h-2 rounded-sm bg-emerald-500"></span>
-                    Unpaid:
+                    Other:
                   </span>
                   <span className="text-emerald-400 font-medium">{formatCurrency(data.otherRevenue)}</span>
                 </div>
@@ -283,6 +293,14 @@ export function MonthlyRevenueChart() {
                 name="Card" 
                 stackId="revenue"
                 fill="#60a5fa" 
+                opacity={0.85}
+              />
+              <Bar 
+                yAxisId="left"
+                dataKey="giftCardRevenue" 
+                name="Gift Card" 
+                stackId="revenue"
+                fill="#c084fc" 
                 opacity={0.85}
               />
               <Bar 

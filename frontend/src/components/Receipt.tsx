@@ -232,7 +232,7 @@ export function Receipt({ data, printMode, printingSeatIndex }: ReceiptProps) {
         </div>
         {data.payment.method && (
           <p className="text-xs text-center text-slate-500 mt-2">
-            Payment Method: {data.payment.method}
+            Payment Method: {data.payment.method === 'GIFT_CARD' ? 'Gift Card' : data.payment.method === 'CARD' ? 'Card' : data.payment.method === 'CASH' ? 'Cash' : data.payment.method}
           </p>
         )}
       </div>
