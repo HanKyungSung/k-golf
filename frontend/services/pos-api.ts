@@ -499,7 +499,7 @@ export async function payInvoice(data: {
   invoiceId: string;
   bookingId: string;
   seatIndex: number;
-  paymentMethod: 'CARD' | 'CASH';
+  paymentMethod: 'CARD' | 'CASH' | 'GIFT_CARD';
   tip?: number;
 }): Promise<{ invoice: Invoice; bookingPaymentStatus: string }> {
   const res = await fetch(`${API_BASE}/api/bookings/invoices/${data.invoiceId}/pay`, {

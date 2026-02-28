@@ -1069,7 +1069,7 @@ router.post('/admin/create', requireAuth, requireStaffOrAdmin, async (req, res) 
 // Update payment status endpoint (admin only)
 const updatePaymentStatusSchema = z.object({
   paymentStatus: z.enum(['UNPAID', 'PAID']),
-  paymentMethod: z.enum(['CARD', 'CASH']).optional(),
+  paymentMethod: z.enum(['CARD', 'CASH', 'GIFT_CARD']).optional(),
   tipAmount: z.number().optional(),
 });
 
@@ -1386,7 +1386,7 @@ router.get('/:bookingId/invoices', async (req, res) => {
 const payInvoiceSchema = z.object({
   bookingId: z.string().uuid(),
   seatIndex: z.number().int().min(1).max(4),
-  paymentMethod: z.enum(['CARD', 'CASH']),
+  paymentMethod: z.enum(['CARD', 'CASH', 'GIFT_CARD']),
   tip: z.number().nonnegative().optional(),
 });
 

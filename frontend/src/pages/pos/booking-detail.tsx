@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, User, Clock, Calendar, Mail, X, Ticket, Loader2 } from 'lucide-react';
+import { Users, Plus, Minus, Trash2, Printer, Edit, CheckCircle2, AlertCircle, CreditCard, Banknote, Gift, User, Clock, Calendar, Mail, X, Ticket, Loader2 } from 'lucide-react';
 import Receipt from '../../components/Receipt';
 import { VENUE_TIMEZONE } from '@/lib/timezone';
 import { 
@@ -134,7 +134,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [expandedSeats, setExpandedSeats] = useState<string[]>([]);
   
   // Payment form state (for accordion-based payments)
-  const [paymentMethodBySeat, setPaymentMethodBySeat] = useState<Record<number, 'CARD' | 'CASH'>>({});
+  const [paymentMethodBySeat, setPaymentMethodBySeat] = useState<Record<number, 'CARD' | 'CASH' | 'GIFT_CARD'>>({});
   const [tipAmountBySeat, setTipAmountBySeat] = useState<Record<number, string>>({});
   const [processingPayment, setProcessingPayment] = useState<number | null>(null);
 
@@ -1586,6 +1586,11 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                     <CreditCard className="h-3 w-3" />
                                     Card
                                   </span>
+                                ) : payment?.method === 'GIFT_CARD' ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Gift className="h-3 w-3" />
+                                    Gift Card
+                                  </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1">
                                     <Banknote className="h-3 w-3" />
@@ -1611,7 +1616,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                             {/* Payment Method Selection */}
                             <div className="space-y-2">
                               <Label className="text-slate-300">Payment Method</Label>
-                              <div className="grid grid-cols-2 gap-3">
+                              <div className="grid grid-cols-3 gap-3">
                                 <div
                                   onClick={() => setPaymentMethodBySeat({ ...paymentMethodBySeat, [seat]: 'CARD' })}
                                   className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
@@ -1633,6 +1638,17 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                                 >
                                   <Banknote className="h-5 w-5 text-white" />
                                   <span className="text-white font-medium">Cash</span>
+                                </div>
+                                <div
+                                  onClick={() => setPaymentMethodBySeat({ ...paymentMethodBySeat, [seat]: 'GIFT_CARD' })}
+                                  className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                    paymentMethodBySeat[seat] === 'GIFT_CARD'
+                                      ? 'border-amber-500 bg-amber-500/10'
+                                      : 'border-slate-600 bg-slate-800/50'
+                                  }`}
+                                >
+                                  <Gift className="h-5 w-5 text-white" />
+                                  <span className="text-white font-medium">Gift Card</span>
                                 </div>
                               </div>
                             </div>

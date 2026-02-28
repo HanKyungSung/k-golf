@@ -21,10 +21,11 @@ Consolidated task tracking for the entire K one Golf platform (Backend, Frontend
 ---
 
 ## Personal note (Do not touch)
-- bday email notification with coupon
-- logs for FE/BE
-- mobile response
-- what is 'unknown' from upcoming birthday badge?
+- daily report
+  - card/cash etc
+- gift card input
+- create a new / change the account phone number
+- 
 
 ### 🔄 Ongoing Tasks
 - [ ] **Enable DigitalOcean Droplet Backups** 🔴 HIGH PRIORITY
@@ -3445,6 +3446,28 @@ Refactor booking status model from complex 4-field approach to simplified 2-fiel
 ---
 
 ## ✅ Completed Tasks Archive
+
+<details>
+<summary>Gift Card Payment Method - 2026-02-28</summary>
+
+**Added GIFT_CARD as a payment method alongside CARD and CASH:**
+[x] Backend: Added `GIFT_CARD` to zod validation schemas (`updatePaymentStatus`, `payInvoice`)
+[x] Frontend POS: Added Gift Card button (3-column grid) with `Gift` icon in booking detail payment UI
+[x] Frontend POS: Updated paid invoice display to show Gift Card with icon
+[x] Frontend API: Updated `payInvoice` type in `pos-api.ts` to accept `GIFT_CARD`
+[x] Updated Prisma schema comment to document `GIFT_CARD` as valid payment method
+</details>
+
+<details>
+<summary>Coupon Scheduler Case Mismatch Fix - 2026-02-28</summary>
+
+**Fixed birthday/loyalty coupon scheduler not finding coupon types:**
+[x] Root cause: scheduler queried `name = 'BIRTHDAY'` (uppercase) but DB had `name = 'birthday'` (lowercase)
+[x] Fixed `couponScheduler.ts` — changed to lowercase `'birthday'` and `'loyalty'`
+[x] Fixed `emailService.ts` — updated switch/case and subject line conditionals to match lowercase
+[x] Updated birthday coupon default amount from $10 to $35 in production DB
+[x] Manually created and emailed birthday coupon for James McKee (KGOLF-JE5G, $35)
+</details>
 
 <details>
 <summary>Backend Logging System with Pino - 2026-02-25</summary>

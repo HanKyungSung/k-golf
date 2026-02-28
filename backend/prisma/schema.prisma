@@ -111,7 +111,7 @@ model Invoice {
   
   // Payment tracking
   status          String    @default("UNPAID")  // UNPAID | PAID
-  paymentMethod   String?   // CARD | CASH | null if unpaid
+  paymentMethod   String?   // CARD | CASH | GIFT_CARD | null if unpaid
   paidAt          DateTime? @db.Timestamptz     // When payment was collected
   
   createdAt       DateTime  @default(now()) @db.Timestamptz
