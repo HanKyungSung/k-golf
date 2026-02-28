@@ -277,6 +277,8 @@ router.patch('/:id/status', requireAuth, requireStaffOrAdmin, async (req, res) =
       },
     });
 
+    req.log.info({ bookingId: id, from: booking.bookingStatus, to: status }, 'Booking status changed');
+
     return res.json({ 
       booking: presentBooking(updated),
       message: `Booking ${status.toLowerCase()} successfully` 
@@ -333,6 +335,7 @@ router.patch('/:id/cancel', requireAuth, async (req, res) => {
     if (booking.startTime <= new Date()) return res.status(400).json({ error: 'Cannot cancel past bookings' });
 
     const updated = await cancelBooking(id);
+    req.log.info({ bookingId: id, userId: req.user!.id }, 'Booking cancelled by customer');
     return res.json({ booking: presentBooking(updated) });
   } catch (e) {
     req.log.error({ err: e, bookingId: id }, 'Cancel booking failed');
@@ -471,6 +474,7 @@ router.post('/', requireAuth, async (req, res) => {
       }
     }
     
+    req.log.info({ bookingId: booking.id, userId: req.user!.id, roomId, hours, price }, 'Online booking created');
     res.status(201).json({ booking: presentBooking(booking) });
   } catch (e: any) {
     if (e.code === 'P2002') { // unique constraint
@@ -566,6 +570,7 @@ router.patch('/rooms/:id', requireAuth, requireStaffOrAdmin, async (req, res) =>
   
   try {
     const updated = await prisma.room.update({ where: { id }, data });
+    req.log.info({ roomId: id, ...data }, 'Room updated');
     res.json({ room: updated });
   } catch (e) {
     req.log.error({ err: e, roomId: id, data }, 'Room update failed');
@@ -920,6 +925,8 @@ router.post('/admin/create', requireAuth, requireStaffOrAdmin, async (req, res) 
         return { user: newUser, booking };
       });
 
+      req.log.info({ bookingId: result.booking.id, userId: result.user.id, customerMode: 'new', bookingSource, total: pricing.totalPrice }, 'Admin booking created (new customer)');
+
       return res.status(201).json({
         booking: presentBooking(result.booking),
         userCreated: true,
@@ -989,6 +996,8 @@ router.post('/admin/create', requireAuth, requireStaffOrAdmin, async (req, res) 
           return { user: newUser, booking };
         });
 
+        req.log.info({ bookingId: result.booking.id, userId: result.user.id, customerMode: 'guest', bookingSource, total: pricing.totalPrice }, 'Admin booking created (guest)');
+
         return res.status(201).json({
           booking: presentBooking(result.booking),
           userCreated: true,
@@ -1031,6 +1040,8 @@ router.post('/admin/create', requireAuth, requireStaffOrAdmin, async (req, res) 
         internalNotes,
       },
     });
+
+    req.log.info({ bookingId: booking.id, userId, customerMode: 'existing', bookingSource, total: pricing.totalPrice }, 'Admin booking created (existing customer)');
 
     res.status(201).json({
       booking: presentBooking(booking),
@@ -1100,6 +1111,8 @@ router.patch('/:id/payment-status', requireAuth, requireStaffOrAdmin, async (req
       paymentStatus,
       paidAt: paidAt ?? undefined,
     });
+
+    req.log.info({ bookingId: id, paymentStatus, paymentMethod }, 'Booking payment status updated');
 
     return res.json({ booking: presentBooking(updated) });
   } catch (error) {
@@ -1194,6 +1207,8 @@ router.post('/:bookingId/orders', requireAuth, async (req, res) => {
       discountType: discountType || undefined,
     });
 
+    req.log.info({ orderId: order.id, bookingId, seatIndex, menuItemId, customItemName, quantity, unitPrice, total: Number(order.totalPrice) }, 'Order added');
+
     // Recalculate invoice if seat-specific
     if (seatIndex) {
       const updatedInvoice = await invoiceRepo.recalculateInvoice(bookingId, seatIndex);
@@ -1259,6 +1274,7 @@ router.patch('/orders/:orderId', requireAuth, async (req, res) => {
 
     // Update order
     const updatedOrder = await orderRepo.updateOrder(orderId, quantity);
+    req.log.info({ orderId, bookingId, seatIndex, quantity }, 'Order updated');
 
     // Recalculate invoice if seat-specific
     if (seatIndex) {
@@ -1323,6 +1339,7 @@ router.delete('/orders/:orderId', requireAuth, async (req, res) => {
 
     // Delete order
     await orderRepo.deleteOrder(orderId);
+    req.log.info({ orderId, bookingId, seatIndex, unitPrice: Number(order.unitPrice), customItemName: order.customItemName }, 'Order deleted');
 
     // Recalculate invoice if seat-specific
     if (seatIndex) {
@@ -1429,6 +1446,8 @@ router.patch('/invoices/:invoiceId/pay', requireAuth, async (req, res) => {
       });
     }
 
+    req.log.info({ invoiceId, bookingId, seatIndex, paymentMethod, tip: tip || 0, total: Number(updatedInvoice.totalAmount), allPaid }, 'Invoice paid');
+
     return res.json({
       invoice: {
         id: updatedInvoice.id,
@@ -1506,6 +1525,8 @@ router.patch('/invoices/:invoiceId/unpay', requireAuth, async (req, res) => {
       paymentStatus: 'UNPAID',
       paidAt: undefined,
     });
+
+    req.log.info({ invoiceId, bookingId, seatIndex: invoice.seatIndex, previousMethod: invoice.paymentMethod }, 'Invoice payment cancelled');
 
     return res.json({
       invoice: {
@@ -1585,6 +1606,7 @@ router.post('/:bookingId/complete', requireAuth, async (req, res) => {
 
     // Mark booking as completed
     const completed = await completeBooking(bookingId);
+    req.log.info({ bookingId }, 'Booking completed');
 
     return res.json({
       booking: presentBooking(completed),

@@ -189,6 +189,7 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
     // Auto-add booking duration as order to seat 1
     await addBookingOrderToSeat1(booking.id, data.duration);
     
+    req.log.info({ bookingId: booking.id, customerName: data.customerName, roomId: data.roomId, players: data.players, source: data.bookingSource }, 'Simple booking created');
     return res.status(201).json({
       success: true,
       booking,

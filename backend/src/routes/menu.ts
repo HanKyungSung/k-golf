@@ -135,6 +135,7 @@ router.post('/items', requireAuth, requireAdmin, async (req: Request, res: Respo
 			updatedAt: menuItem.updatedAt.toISOString(),
 		};
 
+		req.log.info({ menuItemId: menuItem.id, name: menuItem.name, price: Number(menuItem.price), category: menuItem.category }, 'Menu item created');
 		res.status(201).json({ success: true, item });
 	} catch (error: any) {
 		req.log.error({ err: error }, 'Create menu item failed');
@@ -183,6 +184,7 @@ router.patch('/items/:id', requireAuth, requireAdmin, async (req: Request, res: 
 			updatedAt: menuItem.updatedAt.toISOString(),
 		};
 
+		req.log.info({ menuItemId: id, name: menuItem.name, price: Number(menuItem.price) }, 'Menu item updated');
 		res.json({ success: true, item });
 	} catch (error: any) {
 		req.log.error({ err: error, menuItemId: req.params.id }, 'Update menu item failed');
@@ -214,6 +216,7 @@ router.delete('/items/:id', requireAuth, requireAdmin, async (req: Request, res:
 			where: { id },
 		});
 
+		req.log.info({ menuItemId: id }, 'Menu item deleted');
 		res.json({ success: true, message: 'Menu item deleted successfully' });
 	} catch (error: any) {
 		req.log.error({ err: error, menuItemId: req.params.id }, 'Delete menu item failed');

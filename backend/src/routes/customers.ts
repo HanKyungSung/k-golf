@@ -641,6 +641,7 @@ router.post('/', async (req, res) => {
       }
     });
 
+    req.log.info({ customerId: customer.id, name: customer.name, phone: customer.phone }, 'Customer created');
     return res.status(201).json({ customer });
   } catch (error) {
     req.log.error({ err: error }, 'Customer create failed');
@@ -724,6 +725,7 @@ router.put('/:id', async (req, res) => {
       }
     });
 
+    req.log.info({ customerId: id, changes: Object.keys(updateData) }, 'Customer updated');
     return res.json({ customer });
   } catch (error) {
     req.log.error({ err: error, customerId: req.params.id }, 'Customer update failed');
@@ -759,6 +761,7 @@ router.delete('/:id', async (req, res) => {
 
     await prisma.user.delete({ where: { id } });
 
+    req.log.info({ customerId: id }, 'Customer deleted');
     return res.json({ success: true, message: 'Customer deleted' });
   } catch (error) {
     req.log.error({ err: error, customerId: req.params.id }, 'Customer delete failed');

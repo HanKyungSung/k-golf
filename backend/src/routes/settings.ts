@@ -105,6 +105,7 @@ router.put('/global_tax_rate', requireAuth, async (req: Request, res: Response) 
       },
     });
 
+    req.log.info({ taxRate, updatedBy: user?.id }, 'Tax rate updated');
     res.json({ 
       taxRate: parseFloat(updated.value), 
       key: updated.key, 
@@ -243,6 +244,7 @@ router.put('/:key', requireAuth, async (req: Request, res: Response) => {
       },
     });
 
+    req.log.info({ key, updatedBy: user.id }, 'Setting updated');
     res.json({
       ...updatedSetting,
       parsedValue: parseSettingValue(updatedSetting.value, updatedSetting.valueType),
@@ -293,6 +295,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       },
     });
 
+    req.log.info({ key, createdBy: user.id }, 'Setting created');
     res.status(201).json({
       ...newSetting,
       parsedValue: parseSettingValue(newSetting.value, newSetting.valueType),
@@ -321,6 +324,7 @@ router.delete('/:key', requireAuth, async (req: Request, res: Response) => {
       where: { key },
     });
 
+    req.log.info({ key, deletedBy: user?.id }, 'Setting deleted');
     res.json({ success: true, message: 'Setting deleted' });
   } catch (error) {
     req.log.error({ err: error, key: req.params.key }, 'Delete setting failed');

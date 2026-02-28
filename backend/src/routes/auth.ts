@@ -58,6 +58,7 @@ router.post('/register', async (req, res) => {
   } catch (e) {
     req.log.error({ err: e }, 'Failed to send verification email');
   }
+  req.log.info({ userId: user.id, email: normEmail, phone: normPhone }, 'User registered');
   return res.status(201).json({ message: 'Verification email sent', expiresAt });
 });
 
@@ -80,6 +81,7 @@ router.post('/login', async (req, res) => {
   if (!ok) return res.status(401).json({ code: 'WRONG_PASSWORD', message: 'Wrong password' });
   const { sessionToken } = await createSession(user.id);
   setAuthCookie(res, sessionToken);
+  req.log.info({ userId: user.id, email: normEmail, role: (user as any).role }, 'User logged in');
   return res.json({ user: { id: user.id, email: user.email, name: user.name, phone: (user as any).phone, role: (user as any).role } });
 });
 
@@ -100,6 +102,7 @@ router.post('/verify', async (req, res) => {
   const updated = await prisma.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
   const { sessionToken } = await createSession(user.id);
   setAuthCookie(res, sessionToken);
+  req.log.info({ userId: user.id, email: email.toLowerCase() }, 'Email verified');
   return res.json({ user: { id: updated.id, email: updated.email, name: updated.name, emailVerifiedAt: updated.emailVerifiedAt } });
 });
 
@@ -217,6 +220,7 @@ router.post('/reset-password', async (req, res) => {
   // Invalidate all existing sessions for security
   await prisma.session.deleteMany({ where: { userId: user.id } });
 
+  req.log.info({ userId: user.id, email: email.toLowerCase() }, 'Password reset completed');
   return res.json({ message: 'Password reset successfully. Please log in with your new password.' });
 });
 

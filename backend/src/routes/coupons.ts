@@ -61,6 +61,7 @@ router.post('/:code/redeem', requireAuth, requireStaffOrAdmin, async (req: Reque
       seatNumber: Number(seatNumber),
     });
 
+    req.log.info({ code: req.params.code.toUpperCase(), bookingId, seatNumber, couponId: coupon.id }, 'Coupon redeemed');
     res.json({ success: true, coupon });
   } catch (err: any) {
     req.log.error({ err, code: req.params.code }, 'Coupon redeem failed');
@@ -109,6 +110,7 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
       }
     }
 
+    req.log.info({ couponId: coupon.id, code: coupon.code, userId, couponTypeId, amount: Number(coupon.discountAmount) }, 'Coupon created');
     res.status(201).json(coupon);
   } catch (err: any) {
     req.log.error({ err }, 'Coupon create failed');
@@ -220,6 +222,7 @@ router.patch('/:id/revoke', requireAuth, requireAdmin, async (req: Request, res:
       include: { couponType: true, user: { select: { id: true, name: true, email: true } } },
     });
 
+    req.log.info({ couponId: req.params.id, code: coupon.code }, 'Coupon revoked');
     res.json(updated);
   } catch (err) {
     req.log.error({ err, couponId: req.params.id }, 'Coupon revoke failed');
@@ -266,6 +269,7 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req: Request, res:
       },
     });
 
+    req.log.info({ couponId: req.params.id, from: coupon.status, to: status }, 'Coupon status changed');
     res.json(updated);
   } catch (err) {
     req.log.error({ err, couponId: req.params.id }, 'Coupon status change failed');
@@ -316,6 +320,7 @@ router.post('/types', requireAuth, requireAdmin, async (req: Request, res: Respo
         defaultAmount: Number(defaultAmount),
       },
     });
+    req.log.info({ typeId: couponType.id, name: couponType.name }, 'Coupon type created');
     res.status(201).json(couponType);
   } catch (err) {
     req.log.error({ err }, 'Coupon type create failed');
@@ -340,6 +345,7 @@ router.patch('/types/:id', requireAuth, requireAdmin, async (req: Request, res: 
         ...(active != null && { active: Boolean(active) }),
       },
     });
+    req.log.info({ typeId: req.params.id, name: couponType.name }, 'Coupon type updated');
     res.json(couponType);
   } catch (err: any) {
     req.log.error({ err, typeId: req.params.id }, 'Coupon type update failed');
