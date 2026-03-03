@@ -142,6 +142,25 @@ export async function createBooking(data: {
   return json.booking;
 }
 
+export async function createQuickSale(): Promise<Booking> {
+  const res = await fetch(`${API_BASE}/api/bookings/simple/quick-sale`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-pos-admin-key': 'pos-dev-key-change-in-production'
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to create quick sale' }));
+    throw new Error(error.error || 'Failed to create quick sale');
+  }
+
+  const json = await res.json();
+  return json.booking;
+}
+
 export async function updateBookingStatus(id: string, status: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/bookings/${id}/status`, {
     method: 'PATCH',

@@ -6,7 +6,7 @@ import { buttonStyles } from '@/styles/buttonStyles';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus } from 'lucide-react';
+import { Plus, ShoppingBag } from 'lucide-react';
 import { 
   listBookings, 
   listRooms, 
@@ -14,6 +14,7 @@ import {
   updateRoomStatus as apiUpdateRoomStatus,
   getGlobalTaxRate,
   updateGlobalTaxRate,
+  createQuickSale,
   type Booking,
   type Room
 } from '@/services/pos-api';
@@ -358,13 +359,29 @@ export default function POSDashboard() {
               </CardTitle>
               <CardDescription>Live view of currently occupied rooms</CardDescription>
             </div>
-            <Button 
-              onClick={() => setShowCreateModal(true)}
-              className={`${buttonStyles.primarySemibold} flex items-center gap-2`}
-            >
-              <Plus className="h-4 w-4" />
-              <span>Create Booking</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={async () => {
+                  try {
+                    const booking = await createQuickSale();
+                    navigate(`/pos/bookings/${booking.id}`);
+                  } catch (err: any) {
+                    alert(err.message || 'Failed to create quick sale');
+                  }
+                }}
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                <span>Quick Sale</span>
+              </Button>
+              <Button 
+                onClick={() => setShowCreateModal(true)}
+                className={`${buttonStyles.primarySemibold} flex items-center gap-2`}
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create Booking</span>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {/* Status Legend */}
@@ -808,7 +825,8 @@ function TimelineView({ bookings, rooms, onBookingClick, currentWeekStart, setCu
             const dayStr = dateKey(day);
             const dayBookings = bookings.filter(b => b.date === dayStr);
             const filteredDayBookings = filterBookingsByStatus(dayBookings);
-            const totalHours = filteredDayBookings.reduce((sum, b) => sum + (b.duration || 0), 0);
+            const nonQuickSaleBookings = filteredDayBookings.filter(b => (b as any).bookingSource !== 'QUICK_SALE');
+            const totalHours = nonQuickSaleBookings.reduce((sum, b) => sum + (b.duration || 0), 0);
             const subtotal = filteredDayBookings.reduce((sum, b) => sum + (b.price || 0), 0);
             const totalRevenue = subtotal * (1 + taxRate / 100);
 

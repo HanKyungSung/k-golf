@@ -5,8 +5,12 @@ import logger from '../lib/logger';
 import { normalizePhone } from '../utils/phoneUtils';
 import { requireAuth } from '../middleware/requireAuth';
 import { addBookingOrderToSeat1 } from '../repositories/bookingRepo';
+import { requireStaffOrAdmin } from '../middleware/requireRole';
 
 const router = Router();
+
+// Admin-only account used for quick sales (no real customer)
+const QUICK_SALE_PHONE = '+11111111111';
 
 // Admin check middleware
 function requireAdmin(req: any, res: any, next: any) {
@@ -210,6 +214,101 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
     
     return res.status(500).json({
       error: 'Failed to create booking',
+      details: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/bookings/simple/quick-sale
+ * Creates a quick-sale booking (no room time charge).
+ * Auto-assigns admin account, first available room, current time, 1 hour, $0 price.
+ * Skips conflict check. Creates 1 empty invoice (seat 1).
+ * Staff + Admin.
+ */
+router.post('/quick-sale', requireAuth, requireStaffOrAdmin, async (req, res) => {
+  try {
+    // Find the admin account by phone
+    const adminUser = await prisma.user.findUnique({
+      where: { phone: QUICK_SALE_PHONE },
+    });
+
+    if (!adminUser) {
+      return res.status(500).json({ error: 'Quick sale admin account not found. Ensure admin@konegolf.ca exists with phone +11111111111.' });
+    }
+
+    // Pick the first active room
+    const room = await prisma.room.findFirst({
+      where: { status: 'ACTIVE' },
+      orderBy: { name: 'asc' },
+    });
+
+    if (!room) {
+      return res.status(500).json({ error: 'No active rooms found' });
+    }
+
+    // Current time → +1 hour (placeholder, no real time significance)
+    const now = new Date();
+    const endTime = new Date(now);
+    endTime.setHours(endTime.getHours() + 1);
+
+    const staffId = (req as any).user?.id;
+
+    // Create booking — no conflict check, $0 price, bookingSource = QUICK_SALE
+    const booking = await prisma.booking.create({
+      data: {
+        userId: adminUser.id,
+        customerName: 'Quick Sale',
+        customerPhone: QUICK_SALE_PHONE,
+        customerEmail: adminUser.email || null,
+        roomId: room.id,
+        startTime: now,
+        endTime,
+        players: 1,
+        price: 0,
+        bookingStatus: 'BOOKED',
+        paymentStatus: 'UNPAID',
+        bookingSource: 'QUICK_SALE',
+        createdBy: staffId,
+        internalNotes: 'Quick sale — items only, no room time.',
+      },
+      include: {
+        room: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    // Create 1 empty invoice (seat 1) — no hourly charge
+    await prisma.invoice.create({
+      data: {
+        bookingId: booking.id,
+        seatIndex: 1,
+        subtotal: 0,
+        tax: 0,
+        tip: null,
+        totalAmount: 0,
+        status: 'UNPAID',
+        paymentMethod: null,
+        paidAt: null,
+      },
+    });
+
+    req.log.info({ bookingId: booking.id, staffId }, 'Quick sale booking created');
+    return res.status(201).json({
+      success: true,
+      booking,
+    });
+  } catch (error: any) {
+    req.log.error({ err: error }, 'Quick sale create failed');
+    return res.status(500).json({
+      error: 'Failed to create quick sale',
       details: error.message,
     });
   }
