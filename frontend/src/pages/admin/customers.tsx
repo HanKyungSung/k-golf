@@ -1189,33 +1189,33 @@ export default function CustomerManagement() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="bg-slate-800/50 border border-slate-700 mb-4">
+          <TabsList className="bg-slate-800/50 border border-slate-700 mb-4 flex flex-wrap h-auto gap-1">
             <TabsTrigger 
               value="customers" 
-              className="data-[state=active]:bg-amber-500 data-[state=active]:text-black"
+              className="data-[state=active]:bg-amber-500 data-[state=active]:text-black text-xs sm:text-sm"
             >
-              <Users className="h-4 w-4 mr-2" />
+              <Users className="h-4 w-4 mr-1 sm:mr-2" />
               Customers
             </TabsTrigger>
             <TabsTrigger 
               value="bookings"
-              className="data-[state=active]:bg-amber-500 data-[state=active]:text-black"
+              className="data-[state=active]:bg-amber-500 data-[state=active]:text-black text-xs sm:text-sm"
             >
-              <CalendarDays className="h-4 w-4 mr-2" />
+              <CalendarDays className="h-4 w-4 mr-1 sm:mr-2" />
               Bookings
             </TabsTrigger>
             <TabsTrigger 
               value="coupons"
-              className="data-[state=active]:bg-amber-500 data-[state=active]:text-black"
+              className="data-[state=active]:bg-amber-500 data-[state=active]:text-black text-xs sm:text-sm"
             >
-              <Ticket className="h-4 w-4 mr-2" />
+              <Ticket className="h-4 w-4 mr-1 sm:mr-2" />
               Coupons
             </TabsTrigger>
             <TabsTrigger 
               value="reports"
-              className="data-[state=active]:bg-amber-500 data-[state=active]:text-black"
+              className="data-[state=active]:bg-amber-500 data-[state=active]:text-black text-xs sm:text-sm"
             >
-              <FileDown className="h-4 w-4 mr-2" />
+              <FileDown className="h-4 w-4 mr-1 sm:mr-2" />
               Reports
             </TabsTrigger>
           </TabsList>

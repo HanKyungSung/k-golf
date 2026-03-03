@@ -351,7 +351,7 @@ export default function POSDashboard() {
       <main className="max-w-[1800px] mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 w-full">
         {/* Real-Time Room Status */}
         <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 pb-4">
             <div>
               <CardTitle className="flex items-center gap-3">
                 Room Status (Real-Time)
@@ -361,7 +361,7 @@ export default function POSDashboard() {
               </CardTitle>
               <CardDescription>Live view of currently occupied rooms</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button 
                 onClick={async () => {
                   try {
@@ -371,14 +371,16 @@ export default function POSDashboard() {
                     alert(err.message || 'Failed to create quick sale');
                   }
                 }}
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs sm:text-sm"
+                size="sm"
               >
                 <ShoppingBag className="h-4 w-4" />
                 <span>Quick Sale</span>
               </Button>
               <Button 
                 onClick={() => setShowCreateModal(true)}
-                className={`${buttonStyles.primarySemibold} flex items-center gap-2`}
+                className={`${buttonStyles.primarySemibold} flex items-center gap-2 text-xs sm:text-sm`}
+                size="sm"
               >
                 <Plus className="h-4 w-4" />
                 <span>Create Booking</span>
