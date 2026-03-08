@@ -675,9 +675,9 @@ export async function sendCouponEmail(params: CouponEmailParams) {
     : '';
 
   const subject = couponType === 'birthday'
-    ? `${emoji} Happy Birthday, ${customerName}! You've earned 1 hour free!`
+    ? `${emoji} Happy Birthday, ${customerName}! Here's a gift from K one Golf!`
     : couponType === 'loyalty'
-      ? `${emoji} Thank you, ${customerName}! You've earned 1 hour free!`
+      ? `${emoji} Thank you, ${customerName}! You've earned a reward from K one Golf!`
       : `${emoji} ${customerName}, you've received a coupon from K one Golf!`;
 
   const text = `${heading}\n\nHi ${customerName},\n\n${subtext}\n\n${description}\nValue: $${discountAmount.toFixed(2)}\n\nYour coupon code: ${couponCode}\nView your coupon: ${couponUrl}\n\nShow this code or QR to staff to redeem.\n${expiresAt ? `Expires: ${new Date(expiresAt).toLocaleDateString()}\n` : ''}`;
