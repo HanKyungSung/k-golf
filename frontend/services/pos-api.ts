@@ -386,6 +386,7 @@ export interface Invoice {
   paymentMethod: string | null;
   paidAt: string | null;
   orders?: Order[];
+  payments?: { id: string; method: string; amount: number }[];
 }
 
 export interface PaymentStatus {
@@ -518,8 +519,9 @@ export async function payInvoice(data: {
   invoiceId: string;
   bookingId: string;
   seatIndex: number;
-  paymentMethod: 'CARD' | 'CASH' | 'GIFT_CARD';
+  paymentMethod: 'CARD' | 'CASH' | 'GIFT_CARD' | 'SPLIT';
   tip?: number;
+  payments?: { method: 'CARD' | 'CASH' | 'GIFT_CARD'; amount: number }[];
 }): Promise<{ invoice: Invoice; bookingPaymentStatus: string }> {
   const res = await fetch(`${API_BASE}/api/bookings/invoices/${data.invoiceId}/pay`, {
     method: 'PATCH',
@@ -533,12 +535,49 @@ export async function payInvoice(data: {
       seatIndex: data.seatIndex,
       paymentMethod: data.paymentMethod,
       tip: data.tip,
+      payments: data.payments,
     })
   });
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: 'Failed to process payment' }));
     throw new Error(error.error || 'Failed to process payment');
+  }
+
+  const json = await res.json();
+  return json;
+}
+
+/**
+ * Add a single partial payment to an invoice (incremental collect)
+ */
+export async function addPayment(data: {
+  invoiceId: string;
+  bookingId: string;
+  seatIndex: number;
+  method: 'CARD' | 'CASH' | 'GIFT_CARD';
+  amount: number;
+  tip?: number;
+}): Promise<{ invoice: Invoice; remaining: number; bookingPaymentStatus: string }> {
+  const res = await fetch(`${API_BASE}/api/bookings/invoices/${data.invoiceId}/add-payment`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-pos-admin-key': 'pos-dev-key-change-in-production'
+    },
+    body: JSON.stringify({
+      bookingId: data.bookingId,
+      seatIndex: data.seatIndex,
+      method: data.method,
+      amount: data.amount,
+      tip: data.tip,
+    })
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to add payment' }));
+    throw new Error(error.error || 'Failed to add payment');
   }
 
   const json = await res.json();

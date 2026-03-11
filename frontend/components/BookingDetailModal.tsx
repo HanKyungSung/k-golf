@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import POSBookingDetail from '../src/pages/pos/booking-detail';
 
@@ -33,7 +34,9 @@ export function BookingDetailModal({
       <DialogContent 
         className="bg-slate-900 border-slate-700 text-white !w-[95vw] !max-w-[95vw] !h-[95vh] !max-h-[95vh] p-0 overflow-hidden"
         showCloseButton={false}
+        aria-describedby={undefined}
       >
+        <DialogTitle className="sr-only">Booking Detail</DialogTitle>
         {bookingId && (
           <POSBookingDetail 
             bookingId={bookingId} 

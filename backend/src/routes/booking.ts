@@ -1390,6 +1390,11 @@ router.get('/:bookingId/invoices', async (req, res) => {
       paymentMethod: inv.paymentMethod,
       paidAt: inv.paidAt,
       orders: inv.orders || [],
+      payments: (inv.payments || []).map((p) => ({
+        id: p.id,
+        method: p.method,
+        amount: p.amount,
+      })),
     }));
 
     return res.json({ invoices: formatted });
@@ -1403,8 +1408,12 @@ router.get('/:bookingId/invoices', async (req, res) => {
 const payInvoiceSchema = z.object({
   bookingId: z.string().uuid(),
   seatIndex: z.number().int().min(1).max(4),
-  paymentMethod: z.enum(['CARD', 'CASH', 'GIFT_CARD']),
+  paymentMethod: z.enum(['CARD', 'CASH', 'GIFT_CARD', 'SPLIT']),
   tip: z.number().nonnegative().optional(),
+  payments: z.array(z.object({
+    method: z.enum(['CARD', 'CASH', 'GIFT_CARD']),
+    amount: z.number().positive(),
+  })).optional(),
 });
 
 router.patch('/invoices/:invoiceId/pay', requireAuth, async (req, res) => {
@@ -1419,7 +1428,25 @@ router.patch('/invoices/:invoiceId/pay', requireAuth, async (req, res) => {
       });
     }
 
-    const { bookingId, seatIndex, paymentMethod, tip } = parsed.data;
+    const { bookingId, seatIndex, paymentMethod, tip, payments } = parsed.data;
+
+    // Validate split payments sum matches total
+    if (paymentMethod === 'SPLIT' && payments && payments.length > 1) {
+      // Get the invoice to verify amounts
+      const invoice = await prisma.invoice.findUnique({
+        where: { bookingId_seatIndex: { bookingId, seatIndex } },
+      });
+      if (invoice) {
+        const expectedTotal = Number(invoice.subtotal) + Number(invoice.tax) + (tip || 0);
+        const paymentsTotal = payments.reduce((sum, p) => sum + p.amount, 0);
+        // Allow small rounding tolerance (1 cent)
+        if (Math.abs(paymentsTotal - expectedTotal) > 0.01) {
+          return res.status(400).json({
+            error: `Split payments total ($${paymentsTotal.toFixed(2)}) does not match invoice total ($${expectedTotal.toFixed(2)})`,
+          });
+        }
+      }
+    }
 
     // Verify booking exists
     const booking = await getBooking(bookingId);
@@ -1432,7 +1459,8 @@ router.patch('/invoices/:invoiceId/pay', requireAuth, async (req, res) => {
       bookingId,
       seatIndex,
       paymentMethod,
-      tip
+      tip,
+      payments
     );
 
     // Check if all invoices are now paid
@@ -1446,7 +1474,7 @@ router.patch('/invoices/:invoiceId/pay', requireAuth, async (req, res) => {
       });
     }
 
-    req.log.info({ invoiceId, bookingId, seatIndex, paymentMethod, tip: tip || 0, total: Number(updatedInvoice.totalAmount), allPaid }, 'Invoice paid');
+    req.log.info({ invoiceId, bookingId, seatIndex, paymentMethod, tip: tip || 0, total: Number(updatedInvoice.totalAmount), allPaid, paymentsCount: updatedInvoice.payments.length }, 'Invoice paid');
 
     return res.json({
       invoice: {
@@ -1459,12 +1487,98 @@ router.patch('/invoices/:invoiceId/pay', requireAuth, async (req, res) => {
         status: updatedInvoice.status,
         paymentMethod: updatedInvoice.paymentMethod,
         paidAt: updatedInvoice.paidAt,
+        payments: updatedInvoice.payments.map((p) => ({
+          id: p.id,
+          method: p.method,
+          amount: p.amount,
+        })),
       },
       bookingPaymentStatus: allPaid ? 'PAID' : 'UNPAID',
     });
   } catch (error) {
     req.log.error({ err: error, invoiceId: req.params.invoiceId }, 'Pay invoice failed');
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/bookings/invoices/:invoiceId/add-payment - Add a single partial payment
+const addPaymentSchema = z.object({
+  bookingId: z.string().uuid(),
+  seatIndex: z.number().int().min(1).max(4),
+  method: z.enum(['CARD', 'CASH', 'GIFT_CARD']),
+  amount: z.number().positive(),
+  tip: z.number().nonnegative().optional(),
+});
+
+router.post('/invoices/:invoiceId/add-payment', requireAuth, async (req, res) => {
+  const { invoiceId } = req.params;
+
+  try {
+    const parsed = addPaymentSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const { bookingId, seatIndex, method, amount, tip } = parsed.data;
+
+    // Verify booking exists
+    const booking = await getBooking(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Add the payment
+    const updatedInvoice = await invoiceRepo.addSinglePayment(
+      bookingId,
+      seatIndex,
+      method,
+      amount,
+      tip
+    );
+
+    // Check if all invoices are now paid
+    const allPaid = await invoiceRepo.checkAllInvoicesPaid(bookingId);
+
+    if (allPaid) {
+      await updatePaymentStatus(bookingId, {
+        paymentStatus: 'PAID',
+        paidAt: new Date(),
+      });
+    }
+
+    const totalPaid = updatedInvoice.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const invoiceTotal = Number(updatedInvoice.subtotal) + Number(updatedInvoice.tax) + Number(updatedInvoice.tip || 0);
+    const remaining = Math.max(0, Math.round((invoiceTotal - totalPaid) * 100) / 100);
+
+    req.log.info({ invoiceId, bookingId, seatIndex, method, amount, remaining, status: updatedInvoice.status }, 'Payment added');
+
+    return res.json({
+      invoice: {
+        id: updatedInvoice.id,
+        seatIndex: updatedInvoice.seatIndex,
+        subtotal: updatedInvoice.subtotal,
+        tax: updatedInvoice.tax,
+        tip: updatedInvoice.tip,
+        totalAmount: updatedInvoice.totalAmount,
+        status: updatedInvoice.status,
+        paymentMethod: updatedInvoice.paymentMethod,
+        paidAt: updatedInvoice.paidAt,
+        payments: updatedInvoice.payments.map((p) => ({
+          id: p.id,
+          method: p.method,
+          amount: p.amount,
+        })),
+      },
+      remaining,
+      bookingPaymentStatus: allPaid ? 'PAID' : 'UNPAID',
+    });
+  } catch (error) {
+    req.log.error({ err: error, invoiceId: req.params.invoiceId }, 'Add payment failed');
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    res.status(500).json({ error: message });
   }
 });
 
@@ -1506,7 +1620,8 @@ router.patch('/invoices/:invoiceId/unpay', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invoice is not paid' });
     }
 
-    // Reset invoice to unpaid
+    // Reset invoice to unpaid and delete payment records
+    await prisma.payment.deleteMany({ where: { invoiceId } });
     const updatedInvoice = await prisma.invoice.update({
       where: { id: invoiceId },
       data: {
@@ -1539,6 +1654,7 @@ router.patch('/invoices/:invoiceId/unpay', requireAuth, async (req, res) => {
         status: recalculated.status,
         paymentMethod: recalculated.paymentMethod,
         paidAt: recalculated.paidAt,
+        payments: [],
       },
       bookingPaymentStatus: 'UNPAID',
     });

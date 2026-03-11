@@ -50,17 +50,28 @@ export async function getMonthlyReport(month: number, year: number): Promise<Mon
       tip: true,
       bookingId: true,
       seatIndex: true,
+      payments: { select: { method: true, amount: true } },
     },
   });
 
-  // Payment type breakdown
+  // Payment type breakdown from Payment records (accurate for split payments)
   const paymentMap = new Map<string, { count: number; amount: number }>();
   for (const inv of invoices) {
-    const method = inv.paymentMethod || 'OTHER';
-    const entry = paymentMap.get(method) || { count: 0, amount: 0 };
-    entry.count++;
-    entry.amount += Number(inv.totalAmount);
-    paymentMap.set(method, entry);
+    if (inv.payments && inv.payments.length > 0) {
+      for (const p of inv.payments) {
+        const method = p.method || 'OTHER';
+        const entry = paymentMap.get(method) || { count: 0, amount: 0 };
+        entry.count++;
+        entry.amount += Number(p.amount);
+        paymentMap.set(method, entry);
+      }
+    } else {
+      const method = inv.paymentMethod || 'OTHER';
+      const entry = paymentMap.get(method) || { count: 0, amount: 0 };
+      entry.count++;
+      entry.amount += Number(inv.totalAmount);
+      paymentMap.set(method, entry);
+    }
   }
   const paymentTypes = Array.from(paymentMap.entries()).map(([method, data]) => ({
     method,

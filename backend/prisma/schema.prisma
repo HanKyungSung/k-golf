@@ -111,9 +111,11 @@ model Invoice {
   
   // Payment tracking
   status          String    @default("UNPAID")  // UNPAID | PAID
-  paymentMethod   String?   // CARD | CASH | GIFT_CARD | null if unpaid
+  paymentMethod   String?   // CARD | CASH | GIFT_CARD | SPLIT | null if unpaid
   paidAt          DateTime? @db.Timestamptz     // When payment was collected
   
+  payments        Payment[] // Split payment records (one-to-many)
+
   createdAt       DateTime  @default(now()) @db.Timestamptz
   updatedAt       DateTime  @updatedAt @db.Timestamptz
 
@@ -121,6 +123,18 @@ model Invoice {
   @@index([bookingId])
   @@index([status])
   @@index([paidAt])
+}
+
+// Individual payment record for split payments
+model Payment {
+  id         String   @id @default(uuid())
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId  String
+  method     String   // CARD | CASH | GIFT_CARD
+  amount     Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now()) @db.Timestamptz
+
+  @@index([invoiceId])
 }
 
 // Order model - tracks individual menu items ordered per seat

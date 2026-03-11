@@ -1,9 +1,10 @@
-import { Invoice } from '@prisma/client';
+import { Invoice, Payment } from '@prisma/client';
 import * as orderRepo from './orderRepo';
 import { prisma } from '../lib/prisma';
 
 export interface InvoiceWithItems extends Invoice {
   orders?: any[];
+  payments?: Payment[];
 }
 
 async function getGlobalTaxRate(): Promise<number> {
@@ -21,6 +22,7 @@ export async function getInvoiceBySeat(bookingId: string, seatIndex: number): Pr
         seatIndex,
       },
     },
+    include: { payments: true },
   });
 
   if (!invoice) return null;
@@ -38,6 +40,7 @@ export async function getAllInvoices(bookingId: string): Promise<InvoiceWithItem
   const invoices = await prisma.invoice.findMany({
     where: { bookingId },
     orderBy: { seatIndex: 'asc' },
+    include: { payments: true },
   });
 
   // Fetch orders for each invoice
@@ -103,12 +106,18 @@ export async function recalculateInvoice(bookingId: string, seatIndex: number): 
   });
 }
 
+export interface PaymentInput {
+  method: string; // CARD | CASH | GIFT_CARD
+  amount: number;
+}
+
 export async function updateInvoicePayment(
   bookingId: string,
   seatIndex: number,
   paymentMethod: string,
-  tip?: number
-): Promise<Invoice> {
+  tip?: number,
+  payments?: PaymentInput[]
+): Promise<Invoice & { payments: Payment[] }> {
   // Get current invoice to calculate total
   const invoice = await prisma.invoice.findUnique({
     where: {
@@ -125,7 +134,17 @@ export async function updateInvoicePayment(
 
   const totalAmount = Number(invoice.subtotal) + Number(invoice.tax) + (tip || 0);
 
-  return prisma.invoice.update({
+  // Delete any existing payment records for this invoice
+  await prisma.payment.deleteMany({ where: { invoiceId: invoice.id } });
+
+  // Determine payment records to create
+  const paymentRecords = payments && payments.length > 1
+    ? payments  // Split payment: use provided array
+    : [{ method: paymentMethod, amount: totalAmount }]; // Single payment
+
+  const effectiveMethod = paymentRecords.length > 1 ? 'SPLIT' : paymentMethod;
+
+  const updated = await prisma.invoice.update({
     where: {
       bookingId_seatIndex: {
         bookingId,
@@ -134,12 +153,93 @@ export async function updateInvoicePayment(
     },
     data: {
       status: 'PAID',
-      paymentMethod: paymentMethod,
+      paymentMethod: effectiveMethod,
       paidAt: new Date(),
       tip: tip,
       totalAmount: totalAmount,
+      payments: {
+        create: paymentRecords.map((p) => ({
+          method: p.method,
+          amount: p.amount,
+        })),
+      },
+    },
+    include: { payments: true },
+  });
+
+  return updated;
+}
+
+/**
+ * Add a single partial payment to an invoice.
+ * If total payments >= invoice total (subtotal + tax + tip), auto-mark as PAID.
+ */
+export async function addSinglePayment(
+  bookingId: string,
+  seatIndex: number,
+  method: string,
+  amount: number,
+  tip?: number
+): Promise<Invoice & { payments: Payment[] }> {
+  const invoice = await prisma.invoice.findUnique({
+    where: { bookingId_seatIndex: { bookingId, seatIndex } },
+    include: { payments: true },
+  });
+
+  if (!invoice) {
+    throw new Error(`Invoice not found for booking ${bookingId}, seat ${seatIndex}`);
+  }
+
+  // Update tip if provided (accumulates with any existing tip)
+  const newTip = tip && tip > 0 ? (Number(invoice.tip) || 0) + tip : Number(invoice.tip) || 0;
+  const invoiceTotal = Number(invoice.subtotal) + Number(invoice.tax) + newTip;
+
+  // Check existing payments
+  const existingPaid = invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const remaining = Math.round((invoiceTotal - existingPaid) * 100) / 100;
+
+  if (amount > remaining + 0.01) {
+    throw new Error(`Payment amount ($${amount.toFixed(2)}) exceeds remaining balance ($${remaining.toFixed(2)})`);
+  }
+
+  // Clamp to remaining (handle rounding)
+  const clampedAmount = Math.min(amount, remaining);
+
+  // Create the payment record
+  await prisma.payment.create({
+    data: {
+      invoiceId: invoice.id,
+      method,
+      amount: clampedAmount,
     },
   });
+
+  // Check if fully paid now
+  const newTotalPaid = existingPaid + clampedAmount;
+  const isFullyPaid = newTotalPaid >= invoiceTotal - 0.01;
+
+  // Determine effective payment method
+  const allPayments = [...invoice.payments, { method, amount: clampedAmount }];
+  const uniqueMethods = new Set(allPayments.map(p => p.method));
+  const effectiveMethod = uniqueMethods.size > 1 ? 'SPLIT' : method;
+
+  const updated = await prisma.invoice.update({
+    where: { bookingId_seatIndex: { bookingId, seatIndex } },
+    data: {
+      tip: newTip,
+      totalAmount: invoiceTotal,
+      ...(isFullyPaid ? {
+        status: 'PAID',
+        paymentMethod: effectiveMethod,
+        paidAt: new Date(),
+      } : {
+        paymentMethod: effectiveMethod,
+      }),
+    },
+    include: { payments: true },
+  });
+
+  return updated;
 }
 
 export async function checkAllInvoicesPaid(bookingId: string): Promise<boolean> {

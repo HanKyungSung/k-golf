@@ -42,17 +42,30 @@ export async function getDailySummary(dateInput?: Date): Promise<DailySummaryDat
       subtotal: true,
       tax: true,
       tip: true,
+      payments: { select: { method: true, amount: true } },
     },
   });
 
-  // Payment breakdown
+  // Payment breakdown from Payment records (accurate for split payments)
   const paymentMap = new Map<string, { count: number; amount: number }>();
   for (const inv of paidInvoices) {
-    const method = inv.paymentMethod || 'OTHER';
-    const entry = paymentMap.get(method) || { count: 0, amount: 0 };
-    entry.count++;
-    entry.amount += Number(inv.totalAmount);
-    paymentMap.set(method, entry);
+    if (inv.payments && inv.payments.length > 0) {
+      // Use individual Payment records
+      for (const p of inv.payments) {
+        const method = p.method || 'OTHER';
+        const entry = paymentMap.get(method) || { count: 0, amount: 0 };
+        entry.count++;
+        entry.amount += Number(p.amount);
+        paymentMap.set(method, entry);
+      }
+    } else {
+      // Fallback for legacy invoices without Payment records
+      const method = inv.paymentMethod || 'OTHER';
+      const entry = paymentMap.get(method) || { count: 0, amount: 0 };
+      entry.count++;
+      entry.amount += Number(inv.totalAmount);
+      paymentMap.set(method, entry);
+    }
   }
   const paymentBreakdown = Array.from(paymentMap.entries()).map(([method, data]) => ({
     method,

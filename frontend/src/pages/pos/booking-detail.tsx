@@ -24,8 +24,8 @@ import {
   createOrder as apiCreateOrder,
   updateOrder as apiUpdateOrder,
   deleteOrder as apiDeleteOrder,
-  payInvoice as apiPayInvoice,
   unpayInvoice as apiUnpayInvoice,
+  addPayment as apiAddPayment,
   getReceipt,
   getSeatReceipt,
   sendReceiptEmail,
@@ -105,7 +105,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [orderLoading, setOrderLoading] = useState(false);
   
   // Seat payment tracking
-  const [seatPayments, setSeatPayments] = useState<Record<number, { status: 'UNPAID' | 'PAID'; method?: string; tip?: number; total?: number }>>({});
+  const [seatPayments, setSeatPayments] = useState<Record<number, { status: 'UNPAID' | 'PAID'; method?: string; tip?: number; total?: number; payments?: { id: string; method: string; amount: number }[] }>>({});
   
   // Dialog state
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
@@ -133,10 +133,14 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
   const [printingSeat, setPrintingSeat] = useState<number | null>(null);
   const [expandedSeats, setExpandedSeats] = useState<string[]>([]);
   
-  // Payment form state (for accordion-based payments)
-  const [paymentMethodBySeat, setPaymentMethodBySeat] = useState<Record<number, 'CARD' | 'CASH' | 'GIFT_CARD'>>({});
+  // Payment state
   const [tipAmountBySeat, setTipAmountBySeat] = useState<Record<number, string>>({});
   const [processingPayment, setProcessingPayment] = useState<number | null>(null);
+  
+  // Collect payment dialog state
+  const [paymentDialogSeat, setPaymentDialogSeat] = useState<number | null>(null);
+  const [paymentDialogAmount, setPaymentDialogAmount] = useState<string>('');
+  const [paymentDialogMethod, setPaymentDialogMethod] = useState<'CARD' | 'CASH' | 'GIFT_CARD'>('CARD');
 
   // Receipt modal state
   const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -284,9 +288,9 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     console.log('[BookingDetail] Loaded', items.length, 'order items from backend');
   }
 
-  // Load payment status from invoices
+  // Load payment status from invoices (with split payment support)
   function loadPaymentStatusFromInvoices(invoicesData: Invoice[]) {
-    const payments: Record<number, { status: 'UNPAID' | 'PAID'; method?: string; tip?: number; total?: number }> = {};
+    const payments: Record<number, { status: 'UNPAID' | 'PAID'; method?: string; tip?: number; total?: number; payments?: { id: string; method: string; amount: number }[] }> = {};
     
     invoicesData.forEach((invoice) => {
       payments[invoice.seatIndex] = {
@@ -294,6 +298,7 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
         method: invoice.paymentMethod || undefined,
         tip: invoice.tip ? parseFloat(String(invoice.tip)) : undefined,
         total: parseFloat(String(invoice.totalAmount)) || 0,
+        payments: invoice.payments || [],
       };
     });
     
@@ -662,87 +667,6 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
     window.print();
   };
 
-  // Payment processing for accordion-based interface
-  const processPayment = async (seat: number) => {
-    if (!booking) return;
-    
-    setProcessingPayment(seat);
-
-    try {
-      const tipAmount = parseFloat(tipAmountBySeat[seat] || '0') || 0;
-      const paymentMethod = paymentMethodBySeat[seat] || 'CARD';
-      
-      // Find the invoice for this seat
-      const invoice = invoices.find((inv) => inv.seatIndex === seat);
-      if (!invoice) {
-        throw new Error(`No invoice found for seat ${seat}`);
-      }
-      
-      console.log('[BookingDetail] Processing payment:', { 
-        invoiceId: invoice.id, 
-        seat, 
-        paymentMethod, 
-        tip: tipAmount 
-      });
-      
-      // Call backend API to mark invoice as paid
-      const result = await apiPayInvoice({
-        invoiceId: invoice.id,
-        bookingId: booking.id,
-        seatIndex: seat,
-        paymentMethod,
-        tip: tipAmount,
-      });
-      
-      console.log('[BookingDetail] Payment processed:', result.invoice);
-      console.log('[BookingDetail] Booking payment status:', result.bookingPaymentStatus);
-
-      // Update seat payment status
-      setSeatPayments(prev => ({
-        ...prev,
-        [seat]: { 
-          status: 'PAID', 
-          method: paymentMethod, 
-          tip: tipAmount,
-          total: result.invoice.totalAmount
-        },
-      }));
-      
-      // Refetch invoices to ensure we have latest data
-      const updatedInvoices = await getInvoices(booking.id);
-      setInvoices(updatedInvoices);
-      
-      // Reload booking to get updated payment status
-      await loadData();
-
-    } catch (err) {
-      console.error('[BookingDetail] Failed to process payment:', err);
-      alert(`Failed to process payment: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setProcessingPayment(null);
-    }
-
-    // Auto-scroll to next unpaid seat
-    const nextUnpaidSeat = Array.from({ length: numberOfSeats }, (_, i) => i + 1).find(
-      (s) => s > seat && (seatPayments[s]?.status || 'UNPAID') === 'UNPAID'
-    );
-
-    if (nextUnpaidSeat && seatRefs.current[nextUnpaidSeat]) {
-      setTimeout(() => {
-        const el = seatRefs.current[nextUnpaidSeat];
-        if (el && scrollContainerRef.current) {
-          // Inside modal — manually scroll the container
-          const containerRect = scrollContainerRef.current.getBoundingClientRect();
-          const elRect = el.getBoundingClientRect();
-          const offset = elRect.top - containerRect.top - containerRect.height / 2 + elRect.height / 2;
-          scrollContainerRef.current.scrollBy({ top: offset, behavior: 'smooth' });
-        } else {
-          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 300);
-    }
-  };
-
   const unpayInvoice = async (seat: number) => {
     if (!booking) return;
     
@@ -804,12 +728,6 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
 
   const getSeatPayment = (seat: number) => {
     return seatPayments[seat];
-  };
-
-  const setQuickTip = (seat: number, percentage: number) => {
-    const subtotal = calculateSeatSubtotal(seat);
-    const tipAmount = ((subtotal * percentage) / 100).toFixed(2);
-    setTipAmountBySeat({ ...tipAmountBySeat, [seat]: tipAmount });
   };
 
   // Receipt modal handlers
@@ -1343,10 +1261,11 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
             {/* Seat Panels with Order Items and Invoices */}
             <Accordion type="multiple" value={expandedSeats} onValueChange={setExpandedSeats} className="space-y-4">
               {Array.from({ length: numberOfSeats }, (_, i) => i + 1).map((seat) => {
+                // Always define isPaid at the top of each seat panel
+                const isPaid = isSeatPaid(seat);
                 const seatItems = getItemsForSeat(seat);
                 const regularItems = seatItems.filter(item => (item.splitPrice || item.menuItem.price) >= 0);
                 const discountItems = seatItems.filter(item => (item.splitPrice || item.menuItem.price) < 0);
-                const isPaid = isSeatPaid(seat);
                 const payment = getSeatPayment(seat);
                 const subtotal = calculateSeatSubtotal(seat); // backend subtotal (includes discounts)
                 const preDiscountSubtotal = regularItems.reduce((sum, item) => sum + (item.splitPrice || item.menuItem.price) * item.quantity, 0);
@@ -1579,26 +1498,29 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                               <span className="font-semibold">PAID</span>
                             </div>
                             <div className="text-sm text-slate-300 space-y-1">
-                              <p>
-                                Method:{' '}
-                                {payment?.method === 'CARD' ? (
-                                  <span className="inline-flex items-center gap-1">
-                                    <CreditCard className="h-3 w-3" />
-                                    Card
-                                  </span>
-                                ) : payment?.method === 'GIFT_CARD' ? (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Gift className="h-3 w-3" />
-                                    Gift Card
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Banknote className="h-3 w-3" />
-                                    Cash
-                                  </span>
-                                )}
-                              </p>
-                              <p>Amount: ${total.toFixed(2)}</p>
+                              {payment?.payments && payment.payments.length > 0 ? (
+                                <>
+                                  {payment.payments.length > 1 && <p className="font-medium text-slate-200">Payment History:</p>}
+                                  {payment.payments.map((p, idx) => (
+                                    <p key={idx} className="inline-flex items-center gap-1 ml-2">
+                                      {p.method === 'CARD' ? <CreditCard className="h-3 w-3" /> : p.method === 'GIFT_CARD' ? <Gift className="h-3 w-3" /> : <Banknote className="h-3 w-3" />}
+                                      {p.method === 'GIFT_CARD' ? 'Gift Card' : p.method === 'CARD' ? 'Card' : 'Cash'}: ${Number(p.amount).toFixed(2)}
+                                    </p>
+                                  ))}
+                                </>
+                              ) : (
+                                <p>
+                                  Method:{' '}
+                                  {payment?.method === 'CARD' ? (
+                                    <span className="inline-flex items-center gap-1"><CreditCard className="h-3 w-3" /> Card</span>
+                                  ) : payment?.method === 'GIFT_CARD' ? (
+                                    <span className="inline-flex items-center gap-1"><Gift className="h-3 w-3" /> Gift Card</span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1"><Banknote className="h-3 w-3" /> Cash</span>
+                                  )}
+                                </p>
+                              )}
+                              <p>Total: ${total.toFixed(2)}</p>
                             </div>
                             <Button
                               onClick={() => unpayInvoice(seat)}
@@ -1610,87 +1532,53 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
                             </Button>
                           </div>
                         ) : (
-                          <div className="space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
-                            <h4 className="text-sm font-semibold text-white">Payment</h4>
+                          <div className="space-y-3 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+                            {/* Show existing partial payments if any */}
+                            {(() => {
+                              const invoice = invoices.find((inv) => inv.seatIndex === seat);
+                              const existingPayments = invoice?.payments || [];
+                              const paidSoFar = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+                              const seatTotal = subtotal + tax;
+                              const remaining = Math.max(0, Math.round((seatTotal - paidSoFar) * 100) / 100);
 
-                            {/* Payment Method Selection */}
-                            <div className="space-y-2">
-                              <Label className="text-slate-300">Payment Method</Label>
-                              <div className="grid grid-cols-3 gap-3">
-                                <div
-                                  onClick={() => setPaymentMethodBySeat({ ...paymentMethodBySeat, [seat]: 'CARD' })}
-                                  className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                    paymentMethodBySeat[seat] === 'CARD' || !paymentMethodBySeat[seat]
-                                      ? 'border-amber-500 bg-amber-500/10'
-                                      : 'border-slate-600 bg-slate-800/50'
-                                  }`}
-                                >
-                                  <CreditCard className="h-5 w-5 text-white" />
-                                  <span className="text-white font-medium">Card</span>
-                                </div>
-                                <div
-                                  onClick={() => setPaymentMethodBySeat({ ...paymentMethodBySeat, [seat]: 'CASH' })}
-                                  className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                    paymentMethodBySeat[seat] === 'CASH'
-                                      ? 'border-amber-500 bg-amber-500/10'
-                                      : 'border-slate-600 bg-slate-800/50'
-                                  }`}
-                                >
-                                  <Banknote className="h-5 w-5 text-white" />
-                                  <span className="text-white font-medium">Cash</span>
-                                </div>
-                                <div
-                                  onClick={() => setPaymentMethodBySeat({ ...paymentMethodBySeat, [seat]: 'GIFT_CARD' })}
-                                  className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                    paymentMethodBySeat[seat] === 'GIFT_CARD'
-                                      ? 'border-amber-500 bg-amber-500/10'
-                                      : 'border-slate-600 bg-slate-800/50'
-                                  }`}
-                                >
-                                  <Gift className="h-5 w-5 text-white" />
-                                  <span className="text-white font-medium">Gift Card</span>
-                                </div>
-                              </div>
-                            </div>
+                              return (
+                                <>
+                                  {existingPayments.length > 0 && (
+                                    <div className="space-y-2">
+                                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Payments Received</h4>
+                                      {existingPayments.map((p, idx) => (
+                                        <div key={idx} className="flex items-center justify-between text-sm bg-slate-800/70 rounded-md px-3 py-2">
+                                          <span className="inline-flex items-center gap-1.5 text-slate-300">
+                                            {p.method === 'CARD' ? <CreditCard className="h-3.5 w-3.5" /> : p.method === 'GIFT_CARD' ? <Gift className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />}
+                                            {p.method === 'GIFT_CARD' ? 'Gift Card' : p.method === 'CARD' ? 'Card' : 'Cash'}
+                                          </span>
+                                          <span className="text-emerald-400 font-medium">${Number(p.amount).toFixed(2)}</span>
+                                        </div>
+                                      ))}
+                                      <div className="flex justify-between text-sm font-medium pt-1 border-t border-slate-700">
+                                        <span className="text-slate-400">Remaining</span>
+                                        <span className="text-amber-400">${remaining.toFixed(2)}</span>
+                                      </div>
+                                    </div>
+                                  )}
 
-                            {/* Tip Input */}
-                            <div className="space-y-2">
-                              <Label className="text-white font-medium">Add Tip (optional)</Label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300">$</span>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  placeholder="0.00"
-                                  value={tipAmountBySeat[seat] || ''}
-                                  onChange={(e) => setTipAmountBySeat({ ...tipAmountBySeat, [seat]: e.target.value })}
-                                  className="pl-7 bg-slate-700 border-slate-500 text-white placeholder:text-slate-400 focus:border-amber-500 focus:ring-amber-500"
-                                />
-                              </div>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                {[10, 15, 18, 20].map((percentage) => (
                                   <Button
-                                    key={percentage}
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setQuickTip(seat, percentage)}
-                                    className="bg-slate-600 !border-slate-500 border-2 hover:bg-amber-500 hover:text-black hover:!border-amber-500 text-white font-medium"
+                                    onClick={() => {
+                                      setPaymentDialogSeat(seat);
+                                      setPaymentDialogAmount(remaining > 0 ? remaining.toFixed(2) : seatTotal.toFixed(2));
+                                      setPaymentDialogMethod('CARD');
+                                    }}
+                                    disabled={subtotal === 0}
+                                    className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold h-12"
                                   >
-                                    {percentage}%
+                                    <CreditCard className="h-4 w-4 mr-2" />
+                                    {existingPayments.length > 0 
+                                      ? `Add Payment ($${remaining.toFixed(2)} remaining)` 
+                                      : `Collect Payment — $${seatTotal.toFixed(2)}`}
                                   </Button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Submit Payment Button */}
-                            <Button
-                              onClick={() => processPayment(seat)}
-                              disabled={processingPayment === seat || subtotal === 0}
-                              className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold h-12"
-                            >
-                              {processingPayment === seat ? 'Processing...' : 'Collect Payment'}
-                            </Button>
+                                </>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
@@ -2483,6 +2371,218 @@ export default function POSBookingDetail({ bookingId, onBack }: POSBookingDetail
               Save Tax Rate
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Collect Payment Dialog */}
+      <Dialog open={paymentDialogSeat !== null} onOpenChange={(open) => { if (!open) setPaymentDialogSeat(null); }}>
+        <DialogContent className="max-w-md bg-slate-800 text-white border-slate-700">
+          <DialogHeader>
+            <DialogTitle>Collect Payment — Seat {paymentDialogSeat}</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Select payment method and enter amount
+            </DialogDescription>
+          </DialogHeader>
+          {paymentDialogSeat !== null && (() => {
+            const invoice = invoices.find((inv) => inv.seatIndex === paymentDialogSeat);
+            const existingPayments = invoice?.payments || [];
+            const paidSoFar = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+            const invoiceTotal = Number(invoice?.subtotal || 0) + Number(invoice?.tax || 0) + Number(invoice?.tip || 0);
+            const remaining = Math.max(0, Math.round((invoiceTotal - paidSoFar) * 100) / 100);
+
+            return (
+              <div className="space-y-4">
+                {/* Existing payments */}
+                {existingPayments.length > 0 && (
+                  <div className="space-y-2 p-3 bg-slate-900/60 rounded-lg border border-slate-700">
+                    <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Payments Received</h4>
+                    {existingPayments.map((p, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="inline-flex items-center gap-1.5 text-slate-300">
+                          {p.method === 'CARD' ? <CreditCard className="h-3.5 w-3.5" /> : p.method === 'GIFT_CARD' ? <Gift className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />}
+                          {p.method === 'GIFT_CARD' ? 'Gift Card' : p.method === 'CARD' ? 'Card' : 'Cash'}
+                        </span>
+                        <span className="text-emerald-400 font-medium">${Number(p.amount).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <Separator className="bg-slate-600" />
+                    <div className="flex justify-between text-sm font-medium">
+                      <span className="text-slate-400">Paid</span>
+                      <span className="text-emerald-400">${paidSoFar.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Remaining balance */}
+                <div className="flex justify-between items-center p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                  <span className="text-amber-300 font-medium">Remaining</span>
+                  <span className="text-amber-400 font-bold text-lg">${remaining.toFixed(2)}</span>
+                </div>
+
+                {/* Tip Input */}
+                <div className="space-y-2">
+                  <Label className="text-slate-300 text-sm">Add Tip (optional)</Label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={tipAmountBySeat[paymentDialogSeat] || ''}
+                        onChange={(e) => setTipAmountBySeat({ ...tipAmountBySeat, [paymentDialogSeat!]: e.target.value })}
+                        className="pl-7 bg-slate-700 border-slate-600 text-white placeholder:text-slate-500"
+                      />
+                    </div>
+                    {[10, 15, 18, 20].map((pct) => (
+                      <Button
+                        key={pct}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const seat = paymentDialogSeat!;
+                          const inv = invoices.find((i) => i.seatIndex === seat);
+                          if (inv) {
+                            const sub = Number(inv.subtotal);
+                            const tipVal = (sub * pct) / 100;
+                            setTipAmountBySeat({ ...tipAmountBySeat, [seat]: tipVal.toFixed(2) });
+                          }
+                        }}
+                        className="bg-slate-700 border-slate-600 hover:bg-amber-500 hover:text-black text-white text-xs px-2"
+                      >
+                        {pct}%
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Payment Method */}
+                <div className="space-y-2">
+                  <Label className="text-slate-300 text-sm">Payment Method</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([['CARD', 'Card', CreditCard], ['CASH', 'Cash', Banknote], ['GIFT_CARD', 'Gift Card', Gift]] as const).map(([method, label, Icon]) => (
+                      <div
+                        key={method}
+                        onClick={() => setPaymentDialogMethod(method)}
+                        className={`flex items-center justify-center gap-1.5 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          paymentDialogMethod === method
+                            ? 'border-amber-500 bg-amber-500/10'
+                            : 'border-slate-600 bg-slate-800/50 hover:border-slate-500'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 text-white" />
+                        <span className="text-white font-medium text-sm">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Amount */}
+                <div className="space-y-2">
+                  <Label className="text-slate-300 text-sm">Amount</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <Input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={paymentDialogAmount}
+                      onChange={e => setPaymentDialogAmount(e.target.value)}
+                      className="pl-7 bg-slate-700 border-slate-600 text-white text-lg font-medium placeholder:text-slate-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {/* Quick amount buttons */}
+                  {remaining > 0 && (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPaymentDialogAmount(remaining.toFixed(2))}
+                        className="flex-1 bg-slate-700 border-slate-600 hover:bg-amber-500 hover:text-black text-white text-xs"
+                      >
+                        Full (${remaining.toFixed(2)})
+                      </Button>
+                      {remaining > 1 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPaymentDialogAmount((remaining / 2).toFixed(2))}
+                          className="flex-1 bg-slate-700 border-slate-600 hover:bg-amber-500 hover:text-black text-white text-xs"
+                        >
+                          Half (${(remaining / 2).toFixed(2)})
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={async () => {
+                      if (!booking || paymentDialogSeat === null) return;
+                      const seat = paymentDialogSeat;
+                      setProcessingPayment(seat);
+                      try {
+                        const inv = invoices.find((i) => i.seatIndex === seat);
+                        if (!inv) throw new Error('No invoice found');
+                        const amount = parseFloat(paymentDialogAmount);
+                        if (isNaN(amount) || amount <= 0) throw new Error('Enter a valid amount');
+
+                        const tipVal = parseFloat(tipAmountBySeat[seat] || '0') || 0;
+
+                        const result = await apiAddPayment({
+                          invoiceId: inv.id,
+                          bookingId: booking.id,
+                          seatIndex: seat,
+                          method: paymentDialogMethod,
+                          amount,
+                          tip: tipVal > 0 ? tipVal : undefined,
+                        });
+
+                        // Reset tip after first payment that includes it
+                        if (tipVal > 0) {
+                          setTipAmountBySeat({ ...tipAmountBySeat, [seat]: '' });
+                        }
+
+                        if (result.remaining <= 0.01) {
+                          // Fully paid — close dialog and reload
+                          setPaymentDialogSeat(null);
+                          await loadData();
+                        } else {
+                          // Still remaining — update amount and stay open
+                          setPaymentDialogAmount(result.remaining.toFixed(2));
+                          // Reload to refresh invoice data in background
+                          await loadData();
+                        }
+                      } catch (err) {
+                        alert(err instanceof Error ? err.message : String(err));
+                      } finally {
+                        setProcessingPayment(null);
+                      }
+                    }}
+                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-black font-bold h-12"
+                    disabled={processingPayment === paymentDialogSeat}
+                  >
+                    {processingPayment === paymentDialogSeat ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
+                    ) : (
+                      'Add Payment'
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPaymentDialogSeat(null)}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
