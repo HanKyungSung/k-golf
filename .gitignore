@@ -97,3 +97,7 @@ screen_capture/captures/
 screen_capture/*.log
 screen_capture/Pipfile
 screen_capture/Pipfile.lock
+screen_capture/konegolf-*.json
+screen_capture/token.json
+screen_capture/client_secret*.json
+screen_capture/config.json
