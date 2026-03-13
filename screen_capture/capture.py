@@ -18,19 +18,19 @@ from datetime import datetime
 # Config
 # ---------------------------------------------------------------------------
 CONFIG_FILE = "config.json"
-SCRIPT_VERSION = "2026-03-13-v5.4-paddleocr"
+SCRIPT_VERSION = "2026-03-13-v5.5-fast-detect"
 
 def load_config():
     defaults = {
         "bay_number": 1,
         "pos_server_url": "",
         "ingest_secret": "",
-        "capture_interval_seconds": 5,
+        "capture_interval_seconds": 1,
         "ocr_language": ["en"],
         "log_file": "score_capture.log",
         "save_captures": True,
         "capture_save_dir": "captures",
-        "cooldown_seconds": 300,
+        "cooldown_seconds": 120,
         "confidence_threshold": 0.7,
         # Detection region for "SCORE CARD" text (% of screen)
         "detect_region": {"x": 0.28, "y": 0.12, "w": 0.44, "h": 0.16},
@@ -111,6 +111,39 @@ def ocr_read(ocr_engine, image, detail=False):
         bbox = polys[i].tolist() if i < len(polys) else [[0, 0], [0, 0], [0, 0], [0, 0]]
         out.append((bbox, txt, score))
     return out
+
+
+# ---------------------------------------------------------------------------
+# Color pre-filter: fast scorecard screen detection (~0ms)
+# ---------------------------------------------------------------------------
+# The scorecard has a distinctive dark gray background (≈45,48,55) in areas
+# where game screens would show course content. Checking 5 pixel samples is
+# nearly instant and avoids running OCR on every frame.
+_PREFILTER_POINTS = [
+    (0.50, 0.13),  # above "SCORE CARD" text, center
+    (0.30, 0.13),  # above "SCORE CARD" text, left
+    (0.70, 0.13),  # above "SCORE CARD" text, right
+    (0.85, 0.30),  # right margin outside table
+    (0.85, 0.40),  # right margin lower
+]
+_DARK_GRAY = (45, 48, 55)
+_GRAY_TOLERANCE = 12
+
+
+def scorecard_color_check(frame):
+    """Fast check: does the frame look like a scorecard based on background color?
+    Returns True if 4+ of 5 sample points match the scorecard's dark gray.
+    """
+    h, w = frame.shape[:2]
+    matches = 0
+    for x_pct, y_pct in _PREFILTER_POINTS:
+        x, y = int(x_pct * w), int(y_pct * h)
+        r, g, b = int(frame[y, x, 0]), int(frame[y, x, 1]), int(frame[y, x, 2])
+        if (abs(r - _DARK_GRAY[0]) <= _GRAY_TOLERANCE and
+                abs(g - _DARK_GRAY[1]) <= _GRAY_TOLERANCE and
+                abs(b - _DARK_GRAY[2]) <= _GRAY_TOLERANCE):
+            matches += 1
+    return matches >= 4
 
 
 NAME_SKIP_WORDS = {
@@ -625,7 +658,7 @@ def main():
         sys.exit(1)
 
     log.info("Capture loop started. Watching for scorecard...")
-    log.info("Strategy: rolling capture — each scorecard sighting overwrites previous.")
+    log.info("Strategy: color pre-filter (1s) → OCR confirm → rolling capture.")
     log.info("When scorecard disappears, the last capture is the final score.")
 
     frame_count = 0
@@ -634,8 +667,8 @@ def main():
     pending_detection_text = "" # Detection OCR text from last scorecard frame
     scorecard_streak = 0       # How many consecutive scorecard frames
     last_finalized_time = 0    # When we last finalized a capture (cooldown anchor)
-    MIN_STREAK = 2             # Need at least 2 consecutive detections before tracking
-    GONE_THRESHOLD = 2         # Must be gone for 2 frames (~6s) to confirm it disappeared
+    MIN_STREAK = 1             # Single confirmed detection is enough to start tracking
+    GONE_THRESHOLD = 2         # Must be gone for 2 frames to confirm it disappeared
 
     gone_count = 0
 
@@ -646,7 +679,7 @@ def main():
             # Cooldown — don't re-detect within cooldown window
             if time.time() - last_finalized_time < cfg["cooldown_seconds"]:
                 remaining = int(cfg["cooldown_seconds"] - (time.time() - last_finalized_time))
-                if frame_count % 20 == 0:
+                if frame_count % 60 == 0:
                     log.debug(f"Cooldown active, {remaining}s remaining")
                 frame_count += 1
                 scorecard_streak = 0
@@ -660,30 +693,13 @@ def main():
             frame_count += 1
 
             if frame is None:
-                if frame_count % 12 == 0:
+                if frame_count % 30 == 0:
                     log.debug("Empty frame (screen idle)")
                 continue
 
-            # Detect scorecard
-            is_scorecard, det_text = detect_scorecard(
-                frame, reader, cfg["detect_region"], log
-            )
-
-            if frame_count % 12 == 0:
-                log.debug(f"Frame #{frame_count} — scorecard: {is_scorecard}, streak: {scorecard_streak}")
-
-            if is_scorecard:
-                gone_count = 0
-                scorecard_streak += 1
-                if scorecard_streak >= MIN_STREAK:
-                    pending_frame = frame
-                    pending_detection_text = det_text
-                    if scorecard_streak == MIN_STREAK:
-                        log.info(f"Scorecard detected — tracking (streak={scorecard_streak})")
-                    elif scorecard_streak % 5 == 0:
-                        log.debug(f"Scorecard still visible (streak={scorecard_streak})")
-            else:
-                # Scorecard not visible
+            # Stage 0: Fast color pre-filter (~0ms)
+            if not scorecard_color_check(frame):
+                # Not a scorecard — handle gone logic if we were tracking
                 if pending_frame is not None:
                     gone_count += 1
                     if gone_count >= GONE_THRESHOLD:
@@ -735,6 +751,81 @@ def main():
                         log.info("=" * 60)
 
                         # Reset state
+                        pending_frame = None
+                        pending_detection_text = ""
+                        scorecard_streak = 0
+                        gone_count = 0
+                    else:
+                        log.debug(f"Scorecard gone ({gone_count}/{GONE_THRESHOLD}) — waiting to confirm")
+                else:
+                    scorecard_streak = 0
+                    gone_count = 0
+                continue
+
+            # Stage 1: Color matched — run OCR to confirm "SCORE CARD" text
+            is_scorecard, det_text = detect_scorecard(
+                frame, reader, cfg["detect_region"], log
+            )
+
+            if frame_count % 30 == 0:
+                log.debug(f"Frame #{frame_count} — color: yes, ocr: {is_scorecard}, streak: {scorecard_streak}")
+
+            if is_scorecard:
+                gone_count = 0
+                scorecard_streak += 1
+                if scorecard_streak >= MIN_STREAK:
+                    pending_frame = frame
+                    pending_detection_text = det_text
+                    if scorecard_streak == MIN_STREAK:
+                        log.info(f"Scorecard detected — tracking (streak={scorecard_streak})")
+                    elif scorecard_streak % 10 == 0:
+                        log.debug(f"Scorecard still visible (streak={scorecard_streak})")
+            else:
+                # Color matched but OCR didn't find SCORE CARD — might be a similar screen
+                if pending_frame is not None:
+                    gone_count += 1
+                    if gone_count >= GONE_THRESHOLD:
+                        log.info("=" * 60)
+                        log.info(f"SCORECARD GONE after {scorecard_streak} detections — finalizing!")
+                        log.info("=" * 60)
+
+                        screenshot_path = save_screenshot(
+                            pending_frame, cfg["capture_save_dir"], prefix="scorecard"
+                        )
+                        log.info(f"Screenshot saved locally: {screenshot_path}")
+
+                        log.info("Running OCR extraction...")
+                        results = extract_scores(
+                            pending_frame, reader, cfg, log,
+                            detection_text=pending_detection_text,
+                        )
+
+                        log.info("-" * 40)
+                        log.info("EXTRACTION RESULTS:")
+                        log.info(f"  Course: {results.get('course', 'unknown')}")
+                        for p in results["players"]:
+                            nc = p.get('name_confidence', '?')
+                            sc = p.get('score_confidence', '?')
+                            log.info(f"  Player: {p['name']} (conf={nc}) | Score: {p['total_score']} (conf={sc})")
+                        if not results["players"]:
+                            log.warning("  No players extracted — OCR may need region tuning")
+                        log.info("-" * 40)
+
+                        drive_ok = submit_to_pos(results, screenshot_path, cfg, log)
+
+                        if drive_ok:
+                            try:
+                                os.remove(screenshot_path)
+                                log.debug(f"Cleaned up local screenshot: {screenshot_path}")
+                            except OSError:
+                                pass
+                        else:
+                            log.info(f"Keeping local screenshot (Drive upload failed): {screenshot_path}")
+
+                        last_finalized_time = time.time()
+                        log.info(f"Cooldown started ({cfg['cooldown_seconds']}s)")
+                        log.info("=" * 60)
+
                         pending_frame = None
                         pending_detection_text = ""
                         scorecard_streak = 0
