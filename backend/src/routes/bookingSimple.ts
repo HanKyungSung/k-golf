@@ -75,11 +75,12 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
     const endTime = new Date(startTime);
     endTime.setHours(endTime.getHours() + data.duration);
     
-    // Check for booking conflicts
+    // Check for booking conflicts (exclude quick sales — they don't reserve rooms)
     const conflictingBooking = await prisma.booking.findFirst({
       where: {
         roomId: data.roomId,
         bookingStatus: { not: 'CANCELLED' },
+        bookingSource: { not: 'QUICK_SALE' },
         OR: [
           {
             // New booking starts during existing booking
@@ -229,18 +230,11 @@ router.post('/create', requireAuth, requireAdmin, async (req, res) => {
  */
 router.post('/quick-sale', requireAuth, requireStaffOrAdmin, async (req, res) => {
   try {
-    // Find the admin account by email (primary) or phone (fallback)
-    const adminUser = await prisma.user.findUnique({
-      where: { email: QUICK_SALE_EMAIL },
-    }) ?? await prisma.user.findUnique({
-      where: { phone: QUICK_SALE_PHONE },
-    });
+    const staffUser = (req as any).user;
+    const staffId = staffUser?.id;
+    const staffName = staffUser?.name || 'Staff';
 
-    if (!adminUser) {
-      return res.status(500).json({ error: 'Quick sale admin account not found. Ensure admin@konegolf.ca exists.' });
-    }
-
-    // Pick the first active room
+    // Pick the first active room (placeholder — quick sales don't actually reserve rooms)
     const room = await prisma.room.findFirst({
       where: { status: 'ACTIVE' },
       orderBy: { name: 'asc' },
@@ -255,15 +249,14 @@ router.post('/quick-sale', requireAuth, requireStaffOrAdmin, async (req, res) =>
     const endTime = new Date(now);
     endTime.setHours(endTime.getHours() + 1);
 
-    const staffId = (req as any).user?.id;
-
     // Create booking — no conflict check, $0 price, bookingSource = QUICK_SALE
+    // Link to the staff/admin who created it (not a dummy admin account)
     const booking = await prisma.booking.create({
       data: {
-        userId: adminUser.id,
+        userId: staffId,
         customerName: 'Quick Sale',
-        customerPhone: QUICK_SALE_PHONE,
-        customerEmail: adminUser.email || null,
+        customerPhone: staffUser?.phone || QUICK_SALE_PHONE,
+        customerEmail: staffUser?.email || null,
         roomId: room.id,
         startTime: now,
         endTime,

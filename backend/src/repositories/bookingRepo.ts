@@ -27,6 +27,7 @@ export async function findConflict(roomId: string, startTime: Date, endTime: Dat
     where: {
       roomId,
       bookingStatus: { not: 'CANCELLED' },
+      bookingSource: { not: 'QUICK_SALE' }, // Quick sales don't reserve rooms
       startTime: { lt: endTime },
       endTime: { gt: startTime },
     },
