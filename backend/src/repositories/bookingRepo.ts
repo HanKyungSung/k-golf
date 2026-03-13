@@ -213,6 +213,7 @@ export async function listRoomBookingsBetween(
       startTime: { lt: rangeEnd },
       endTime: { gt: rangeStart },
       bookingStatus: { not: 'CANCELLED' },
+      bookingSource: { not: 'QUICK_SALE' }, // Quick sales don't reserve rooms
     },
     orderBy: { startTime: 'asc' },
   });

@@ -162,11 +162,12 @@ router.get('/by-room-date', async (req, res) => {
       dayEndUTC = buildAtlanticDate(y, m, d, 23, 59, 59, 999);
     }
 
-    // Fetch all bookings for this room (not cancelled)
+    // Fetch all bookings for this room (not cancelled, not quick sales)
     const allBookings = await prisma.booking.findMany({
       where: {
         roomId,
         bookingStatus: { not: 'CANCELLED' },
+        bookingSource: { not: 'QUICK_SALE' },
       },
       orderBy: { startTime: 'asc' },
     });
